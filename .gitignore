@@ -1,3 +1,7 @@
+*.ttf
+*.otf
 *.tmp
+*.zip
+venv/
 local/
 release/
