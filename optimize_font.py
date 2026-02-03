@@ -14,13 +14,13 @@ def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
     scale_total = float(ratio_total) / 100.0
     w_offset = float(weight_offset) # 正の値で太く、負の値で細く
 
-    print(f"--- 錬成開始: {input_file} ---")
+    print(f"--- 最適化開始: {input_file} ---")
     print(f"設定: 長体{ratio_h}%, 拡大{ratio_total}%, ウェイト調整{weight_offset}")
     
     font = fontforge.open(input_file)
     font.em = 1024
 
-    # 1. サブセット化 (物理削除ループ)
+    # サブセット化
     print(f"サブセット適用中: {subset_txt}")
     with open(subset_txt, 'r', encoding='utf-8') as f:
         subset_content = f.read()
@@ -50,7 +50,7 @@ def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
         font.removeOverlap()
         font.correctDirection()
 
-    # 3. サイズと長体の変換
+    # サイズと長体の変換
     final_scale_x = scale_total * scale_h
     final_scale_y = scale_total
 
@@ -60,11 +60,11 @@ def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
         matrix = psMat.scale(final_scale_x, final_scale_y)
         font.transform(matrix)
 
-    # 4. メトリクス固定
+    # メトリクス固定
     font.ascent = 880
     font.descent = 144
 
-    # 5 センター配置（手動計算）
+    # センター配置
     print("文字の位置を中央に調整中...")
     for glyph in font.glyphs():
         # 現在の「送り幅(width)」を取得
