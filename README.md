@@ -13,25 +13,13 @@
 OSに直接インストールするか、[uv](https://docs.astral.sh/uv/getting-started/)などのPython環境仮想化を用いてOS環境を汚さないようにしても良い。
 本READMEにおいては、`python`へのパスが通っているものとする。
 
-* pythonの場所
-    * Windows版: `C:\Users\%username%\AppData\Local\Python\bin`
-	* GNU+Linux版: ``
-
 ### FontForgeインストール
 フォントファイルを編集するため、[FontForge](https://fontforge.org/en-US/) をインストールする。
 本READMEにおいては、`fontforge`へのパスが通っているものとする。
 
-* fontforgeの場所
-    * Windows版: `C:\Program Files\FontForgeBuilds\bin`
-    * GNU+Linux版: `/実際の環境で確認`
-
 ### JPEXS Free Flash Decompilerのインストール
 フォントファイルをSWFに変換するため、[JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) をインストールする。
 本READMEにおいては、`ffdec-cli`及び`ffdec`へのパスが通っているものとする。
-
-* ffdec-cli/ffdecの場所
-    * Windows版: `C:\Program Files (x86)\FFDec`
-    * GNU+Linux版: `/`
 
 ## フォントを最適化する
 最適化したいフォントなどをパラメーターとして渡す。
