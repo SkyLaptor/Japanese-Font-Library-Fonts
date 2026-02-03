@@ -35,7 +35,16 @@ def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
             # 物理削除。これが最も確実です。
             font.removeGlyph(glyph)
 
-    # 2. ウェイト調整 (太らせ / 細らせ)
+    # 変形前の事前洗浄
+    print("変形前のパス最適化を実行中...")
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        # 変形前に細かい点を取り除き、計算の矛盾を防ぐ
+        glyph.simplify(1.0)
+        glyph.removeOverlap()
+        glyph.correctDirection()
+
+    # ウェイト調整 (太らせ / 細らせ)
     if w_offset != 0:
         print(f"ウェイト調整中 ({weight_offset})...")
         font.selection.all()
