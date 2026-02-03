@@ -91,25 +91,63 @@ def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
         # 最後に送り幅を元の数値に戻して固定（変形による意図しない拡大を防止）
         glyph.width = current_width
 
+    # 上下位置の調整（ベースラインへの接地）
+    print("文字の上下位置を調整中...")
+    for glyph in font.glyphs():
+        # グリフの境界（上下左右の端）を取得
+        # (x_min, y_min, x_max, y_max)
+        bbox = glyph.boundingBox()
+        y_min = bbox[1]
+        
+        # y_min（文字の底）が 0 になるように垂直移動させる
+        # これにより、縮小しても文字が基準線に乗るようになります
+        if y_min != 0:
+            matrix = psMat.translate(0, -y_min)
+            glyph.transform(matrix)
 
-    # 6. 最終最適化
-    print("最終最適化 (Simplify & Round)...")
-    font.selection.all()
-    # 重なりを除去（ChangeWeightの後のゴミを掃除）
-    font.removeOverlap()
-    # アウトラインの向きを修正
-    font.correctDirection()
-    # 冗長な点を削減（引数を数値1つに絞るのが最も安全です）
-    font.simplify(1)
-    # 座標を整数に丸める
-    font.round()
 
-    # 7. 書き出し
+    # 最終最適化
+    print("構造の最終再構築を実行中...")
+    for glyph in font.selection.byGlyphs:
+        # パスの重なりを物理的に一度リセット
+        glyph.removeOverlap()
+        glyph.correctDirection()
+        
+        # 構造のクリーンアップ（最新版の機能を安全に呼び出し）
+        try:
+            glyph.canonicalStart()
+            glyph.canonicalContours()
+        except:
+            pass
+
+        # 冗長な点を削除（フラグを使わず、数値のみで実行）
+        # 引数を 1.0 にすることで、最新エンジンのデフォルト最適化を適用
+        glyph.simplify(1.0)
+        
+        # 最終的な重なり除去（白抜け防止）
+        glyph.removeOverlap()
+        glyph.correctDirection()
+        
+        # 座標の整数化
+        glyph.round()
+
+    # 出力パスの生成
+    # input_file からディレクトリとファイル名を取り出します
+    directory = os.path.dirname(input_file)
+    # もしディレクトリが空（カレントディレクトリ）なら '.' を補完
+    if not directory:
+        directory = "."
+        
     base_name = os.path.splitext(os.path.basename(input_file))[0]
-    output_name = f"mod_{base_name}.ttf"
-    font.generate(output_name)
+    
+    # 命名規則: 元の名前_W{幅}.ttf
+    output_file = f"{base_name}_W{ratio_h}.ttf"
+    output_path = os.path.join(directory, output_file)
+
+    # 保存
+    print(f"--- 最適化完了: {output_path} ---")
+    font.generate(output_path)
     font.close()
-    print(f"--- 錬成完了: {output_name} ---")
 
 if __name__ == "__main__":
     if len(sys.argv) < 6:
