@@ -3,16 +3,11 @@
 フォントファイルをスカイリム向けに最適化するためのスクリプト類及び最適化済フォントファイルを保管する。
 
 ## 動作確認環境
-* [Python](https://www.python.org/) v3.14.2
+* OS: Windows11 Pro build26200.7628
 * [FontForge](https://fontforge.org/en-US/) v2025-10-09
 * [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) v24.1.2
 
-
 ## 動作環境のセットアップ
-### Pythonインストール
-OSに直接インストールするか、[uv](https://docs.astral.sh/uv/getting-started/)などのPython環境仮想化を用いてOS環境を汚さないようにしても良い。
-本READMEにおいては、`python`へのパスが通っているものとする。
-
 ### FontForgeインストール
 フォントファイルを編集するため、[FontForge](https://fontforge.org/en-US/) をインストールする。
 本READMEにおいては、`fontforge`へのパスが通っているものとする。
@@ -21,16 +16,31 @@ OSに直接インストールするか、[uv](https://docs.astral.sh/uv/getting-
 フォントファイルをSWFに変換するため、[JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) をインストールする。
 本READMEにおいては、`ffdec-cli`及び`ffdec`へのパスが通っているものとする。
 
-## フォントを最適化する
-最適化したいフォントなどをパラメーターとして渡す。
+## 使い方
+### フォントを最適化する
+最適化したいフォントに対し、サブセットなどをパラメーターとして渡す。
 
 ```
-$ fontforge -script optimize_font.py <フォントファイル> <サブセット> <横幅%> <サイズ%> <ウェイト調整>
+$ fontforge -quiet -script optimize_font.py <フォントファイル> <サブセット> <横幅%> <サイズ%> <ウェイト調整>
 
 例: fonts/test_font.ttf をsubset.txtの内容でサブセット化しつつ、ウェイトを15増やす（太字にする）
-$ fontforge -script optimize_font.py fonts/source_font.ttf subset.txt 100 100 15
+$ fontforge -quiet -script optimize_font.py fonts/source_font.ttf subset.txt 100 100 15
 ```
 
+### フォントをSWFに変換する
+TODO
+
+
+## サブセットファイルについて
+フォントファイルの中に含めたい文字を記述したテキストファイル（UTF-8エンコードされていること）を用意する。
+フォント最適化時に読み込むことで、フォントを軽量化することができる。
+
+### プリセット
+#### subset_jp_full.txt
+シンボルを含めJIS第4水準まで網羅した、おおよそ日本語圏であれば表示できない文字は無いであろうサブセット。非常に大きい。
+
+#### subset_jp_skyrim.txt
+[TESVKanjiChecker v1.4.2](https://www.nexusmods.com/skyrim/mods/66768)を参考に、バニラのSkyrimで表示可能な文字のみに絞ったサブセット。非常に軽量。
 
 
 
