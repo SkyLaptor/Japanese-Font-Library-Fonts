@@ -4,154 +4,156 @@ import psMat
 import sys
 import os
 
-def process_font(input_file, subset_txt, ratio_h, ratio_total, weight_offset):
+
+def process_font(input_file, subset_txt, ratio_total, ratio_width, weight_offset):
+    """フォントを加工する
+           input_file: 加工対象のフォントファイル
+           subset_txt: サブセット対象文字列ファイル
+           ratio_total: サイズ指定(%)
+           ratio_width: 横幅指定(%)
+           weight_offset: ウェイト調整値 正の値で太く、負の値で細く
+           return: なし
+    """
+
     if not os.path.exists(input_file) or not os.path.exists(subset_txt):
-        print("エラー: 必要なファイルが見つかりません。")
+        print("エラー: フォントファイルが見つかりません。")
         return
 
     # パラメータ解析
-    scale_h = float(ratio_h) / 100.0
-    scale_total = float(ratio_total) / 100.0
-    w_offset = float(weight_offset) # 正の値で太く、負の値で細く
+    ratio_width_f = float(ratio_width) / 100.0
+    ratio_total_f = float(ratio_total) / 100.0
+    weight_offset_f = float(weight_offset)
 
+    # 処理開始
     print(f"--- 最適化開始: {input_file} ---")
-    print(f"設定: 長体{ratio_h}%, 拡大{ratio_total}%, ウェイト調整{weight_offset}")
-    
-    font = fontforge.open(input_file)
-    font.em = 1024
+    print(f"設定: サブセット{subset_txt}, サイズ{ratio_total}%, 横幅{ratio_width}%, ウェイト{weight_offset}em")
+    font = fontforge.open(input_file,("fstypepermitted",))
+    # 計算精度を向上させるため、前面レイヤを3次曲線モードへ移行
+    font.layers[1].is_quadratic = False
 
-    # サブセット化
-    print(f"サブセット適用中: {subset_txt}")
-    with open(subset_txt, 'r', encoding='utf-8') as f:
-        subset_content = f.read()
-    
-    # 必要なUnicodeの集合を作成
-    allowed_unichars = set(ord(c) for c in subset_content)
-    
-    # フォント内の全グリフをスキャンして削除
-    print("不要なグリフを物理的に削除中...")
-    for glyph in list(font.glyphs()): # リスト化してループ回すのが安全
-        if glyph.unicode not in allowed_unichars:
-            # 物理削除。これが最も確実です。
-            font.removeGlyph(glyph)
+    # OpenType機能の削除
+    print("OpenType機能の削除中...")
+    for lookup in font.gsub_lookups:
+        font.removeLookup(lookup)
+    for lookup in font.gpos_lookups:
+        font.removeLookup(lookup)
 
-    # 変形前の事前洗浄
-    print("変形前のパス最適化を実行中...")
+    # ヒント命令の削除
+    print("ヒント命令の削除中...")
+    font.selection.none()
     font.selection.all()
     for glyph in font.selection.byGlyphs:
-        # 変形前に細かい点を取り除き、計算の矛盾を防ぐ
-        glyph.simplify(1.0)
-        glyph.removeOverlap()
-        glyph.correctDirection()
+        glyph.manualHints = 0
+        glyph.dhints = ()
+        glyph.hhints = ()
+        glyph.vhints = ()
 
-    # ウェイト調整 (太らせ / 細らせ)
-    if w_offset != 0:
-        print(f"ウェイト調整中 ({weight_offset})...")
-        font.selection.all()
-        # 引数をシンプルに w_offset だけ、あるいは標準的な引数構成に変更します
+    # 参照の解除
+    print("参照の解除中...")
+    font.unlinkReferences()
+
+    # サブセット化
+    print(f"サブセット化を実行中...: {subset_txt}")
+    with open(subset_txt, 'r', encoding='utf-8') as f:
+        subset_content = f.read()
+    allowed_unichars = set(ord(c) for c in subset_content)
+    for glyph in list(font.glyphs()):
+        if glyph.unicode not in allowed_unichars:
+            font.removeGlyph(glyph)
+
+    # 意図しない空白グリフの削除
+    print(f"意図しない空白グリフを削除中...")
+    protected_glyphs = [
+        "space", "uni3000", "ideographicspace", ".notdef", 
+        "NULL", "nonmarkingreturn", "nbspace", "uni00A0",
+        "emspace", "enspace", "thinspace", "hairspace",
+        "uni2003", "uni2002", "uni2009", "uni200A",
+        "zerowidthspace", "uni200B"
+    ]
+    target_names = set()
+    font.selection.none()
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        if glyph.glyphname in protected_glyphs:
+            continue
+        if len(glyph.layers[1]) == 0:
+            target_names.add(glyph.glyphname)
+    for name in target_names:
         try:
-            # 最新の安定した呼び出し方に修正
-            font.changeWeight(w_offset) 
-        except TypeError:
-            # 万が一上記で失敗する場合の予備
-            font.changeWeight(w_offset, "custom")
-            
-        font.removeOverlap()
-        font.correctDirection()
+            font.removeGlyph(name)
+        except:
+            continue
 
-    # サイズと長体の変換
-    final_scale_x = scale_total * scale_h
-    final_scale_y = scale_total
-
-    if final_scale_x != 1.0 or final_scale_y != 1.0:
-        print(f"スケール変換中: X={final_scale_x:.2f}, Y={final_scale_y:.2f}")
-        font.selection.all()
-        matrix = psMat.scale(final_scale_x, final_scale_y)
-        font.transform(matrix)
-
-    # メトリクス固定
+    # EM及びメトリクス調整
+    print("EMサイズおよびメトリクス調整を実行中...")
+    font.em = 1024
     font.ascent = 880
     font.descent = 144
+    font.round()
 
-    # センター配置
-    print("文字の位置を中央に調整中...")
-    for glyph in font.glyphs():
-        # 現在の「送り幅(width)」を取得
-        current_width = glyph.width
-        # 現在の「左余白(lb)」と「右余白(rb)」を取得
-        lb = glyph.left_side_bearing
-        rb = glyph.right_side_bearing
-        
-        # 左右の余白を足して2で割り、均等に分配する
-        # これにより、全体の幅を変えずに文字を中央に寄せます
-        average_bearing = (lb + rb) / 2
-        glyph.left_side_bearing = int(average_bearing)
-        glyph.right_side_bearing = int(average_bearing)
-        
-        # 最後に送り幅を元の数値に戻して固定（変形による意図しない拡大を防止）
-        glyph.width = current_width
+    # サイズ変換
+    if ratio_total_f != 1.0:
+        print(f"グリフのサイズを変換中...: {ratio_total_f:.2f}")
+        font.selection.none()
+        font.selection.all()
+        for glyph in font.glyphs():
+            glyph.psMat.scale(ratio_total_f,ratio_total_f)
 
-    # 上下位置の調整（ベースラインへの接地）
-    print("文字の上下位置を調整中...")
-    for glyph in font.glyphs():
-        # グリフの境界（上下左右の端）を取得
-        # (x_min, y_min, x_max, y_max)
-        bbox = glyph.boundingBox()
-        y_min = bbox[1]
-        
-        # y_min（文字の底）が 0 になるように垂直移動させる
-        # これにより、縮小しても文字が基準線に乗るようになります
-        if y_min != 0:
-            matrix = psMat.translate(0, -y_min)
-            glyph.transform(matrix)
+    # 横幅変換
+    if ratio_width_f != 1.0:
+        print(f"グリフの横幅を変換中...: {ratio_width_f:.2f}")
+        font.selection.all()
+        matrix_width = psMat.scale(ratio_width_f, 1.0)
+        font.transform(matrix_width)
+        for glyph in font.glyphs():
+            # 左右の余白を均等に分配する
+            current_width = glyph.width
+            lb = glyph.left_side_bearing
+            rb = glyph.right_side_bearing
+            average_bearing = (lb + rb) / 2
+            glyph.left_side_bearing = int(average_bearing)
+            glyph.right_side_bearing = int(average_bearing)
+            # 送り幅を元の数値に戻して固定し、変形による意図しない拡大を防止する
+            glyph.width = current_width
 
+    # ウェイト調整
+    if weight_offset_f != 0:
+        print(f"グリフのウェイトを調整中...: {weight_offset}")
+        font.selection.none()
+        font.selection.all()
+        for glyph in font.selection.byGlyphs:
+            glyph.changeWeight(weight_offset_f,"auto",0,0,"squish")
 
-    # 最終最適化
-    print("構造の最終再構築を実行中...")
+    # 最適化
+    print("グリフの最適化を実行中...")
+    # TTF出力のため、3次曲線モードを解除
+    font.layers[1].is_quadratic = True
+    font.selection.none()
+    font.selection.all()
     for glyph in font.selection.byGlyphs:
-        # パスの重なりを物理的に一度リセット
-        glyph.removeOverlap()
-        glyph.correctDirection()
-        
-        # 構造のクリーンアップ（最新版の機能を安全に呼び出し）
-        try:
-            glyph.canonicalStart()
-            glyph.canonicalContours()
-        except:
-            pass
-
-        # 冗長な点を削除（フラグを使わず、数値のみで実行）
-        # 引数を 1.0 にすることで、最新エンジンのデフォルト最適化を適用
-        glyph.simplify(1.0)
-        
-        # 最終的な重なり除去（白抜け防止）
-        glyph.removeOverlap()
-        glyph.correctDirection()
-        
-        # 座標の整数化
+        # パスを簡略化
+        glyph.simplify(0.5, ("choosehv", "mergelines", "nearlyhvlines", "removesingletonpoints"), 0.02, 0.1, 0)
+        # 座標を整数丸め
         glyph.round()
 
-    # 出力パスの生成
-    # input_file からディレクトリとファイル名を取り出します
-    directory = os.path.dirname(input_file)
-    # もしディレクトリが空（カレントディレクトリ）なら '.' を補完
-    if not directory:
-        directory = "."
-        
+    # フォントの出力
+    print("最適化済フォントを出力中...")
+    directory = os.path.dirname(input_file) or "."
     base_name = os.path.splitext(os.path.basename(input_file))[0]
-    
-    # 命名規則: 元の名前_W{幅}.ttf
-    output_file = f"{base_name}_W{ratio_h}.ttf"
+    output_file = f"mod_{base_name}_s{ratio_total}_w{ratio_width}_b{weight_offset}.ttf"
     output_path = os.path.join(directory, output_file)
-
-    # 保存
-    print(f"--- 最適化完了: {output_path} ---")
     font.generate(output_path)
+    
+    # 処理終了
+    print(f"--- 最適化完了: {output_path} ---")
     font.close()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 6:
-        print("使用法: fontforge -script build_master.py <font> <subset> <長体%> <大きさ%> <ウェイト値>")
-        print("例(細くする): fontforge -script ... font.otf subset.txt 100 100 -10")
+        print("使用法: fontforge -script build_master.py <フォント> <サブセット> <大きさ%> <横幅%> <ウェイトem>")
+        print("例(小さくする): fontforge -script ... example.ttf subset.txt 50 100 0")
+        print("例(長形にする): fontforge -script ... example.ttf subset.txt 100 70 0")
+        print("例(細くする): fontforge -script ... example.ttf subset.txt 100 100 -15")
     else:
         process_font(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
