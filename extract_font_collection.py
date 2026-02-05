@@ -3,13 +3,15 @@ import fontforge
 import sys
 import os
 
+import constants
+
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def extract_font_collection(input_path):
+def main(input_path):
     """OTC及びTTCといったフォントコレクションを抽出する
            input_path: フォントコレクションファイルパス
-           return: フォントファイルパスリスト
+           return: 抽出したフォントファイルパスのリスト
     """
 
     # ファイルが存在しない場合
@@ -21,7 +23,7 @@ def extract_font_collection(input_path):
     print(f"--- 抽出開始: {input_path} ---")
 
     # 抽出して出力
-    generated_files = []
+    output_paths = []
     target_dir = os.path.dirname(os.path.abspath(input_path))
     ext = os.path.splitext(input_path)[1].lower()
     default_out_ext = ".ttf" if ext == ".ttc" else ".otf"
@@ -31,19 +33,20 @@ def extract_font_collection(input_path):
         safe_name = name.replace(" ", "_").replace("/", "-")
         output_filename = f"{safe_name}{default_out_ext}"
         full_path = os.path.join(target_dir, output_filename)
-        print(f"フォントを抽出中:{output_filename:<50}", end="\r")
+        print(f"フォントを抽出中:{output_filename}")
         font.generate(full_path)
         font.close()
-        generated_files.append(full_path)
+        output_paths.append(full_path)
 
     # 処理終了
-    print(f"--- 抽出完了: {generated_files} ---")
+    print("--- 抽出完了 ---")
 
-    return generated_files
+    return output_paths
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("使用法: fontforge -quiet -script extract_font_collection.py <フォントコレクションファイル>")
-        print("例: fontforge -quiet -script convert_otf2ttf.py example.otc")
+        print("例: fontforge -quiet -script extract_font_collection.py example.otc")
     else :
-        extract_font_collection(sys.argv[1])
+        args = sys.argv[1:]
+        main(*args)

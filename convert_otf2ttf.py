@@ -3,10 +3,12 @@ import fontforge
 import sys
 import os
 
+import constants
+
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def convert_otf2ttf(input_path):
+def main(input_path):
     """OTFをTTFに変換する
            input_path: OTFファイルパス
            return: TTFファイルパス
@@ -64,4 +66,5 @@ if __name__ == "__main__":
         print("使用法: fontforge -quiet -script convert_otf2ttf.py <OTFフォント>")
         print("例: fontforge -quiet -script convert_otf2ttf.py example.otf")
     else :
-        convert_otf2ttf(sys.argv[1])
+        args = sys.argv[1:]
+        main(*args)

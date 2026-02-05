@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+
+# EMサイズ
+EMSIZE = 1024
+
+# デフォルトメトリクス
+#  合計値がEMサイズと同じであること。
+DEFAULT_METRICS = (880, 144)
+
+# 最適化レベル 0.1~1.0
+#  あまり大きくするとグリフが破綻する場合あり
+SIMPLIFY = 0.5
+
+# デフォルトサブセットファイルパス
+DEFAULT_SUBSET = "subset_jp_skyrim.txt"
+
+# 最適化フォントのフォント情報
+FONT_VERSION = 1.000
+FONT_ID = 1
+FONT_COPYRIGHT = ""
+FONT_VENDOR = "    "
+
+# フォントに含まれるグリフの縦横サイズを算出するための対象範囲
+ANALYZE_RANGE = (0x4E00, 0x9FFF + 1)
+
