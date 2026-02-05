@@ -37,8 +37,15 @@ $ fontforge -quiet -script convert_otf2ttf.py <OTFフォントファイル>
 $ fontforge -quiet -script convert_otf2ttf.py local/source_font.otf
 ```
 
-### TTC(TTFコレクション)を分解する
-TODO
+### OTCやTTCといったフォントコレクションからフォントを抽出する
+フォントコレクションの中のフォントを処理する場合、フォントを取り出す必要がある。
+
+```
+$ fontforge -quiet -script extract_font_collection.py <フォントコレクションファイル>
+
+例: local/test_fonts.otc 内のフォントを local 内に抽出する
+$ fontforge -quiet -script extract_font_collection.py local/source_fonts.otc
+```
 
 ### フォントをSWFに変換する
 TODO
