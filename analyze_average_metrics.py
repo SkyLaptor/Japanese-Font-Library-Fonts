@@ -71,9 +71,5 @@ def main(input_path):
     return ascent, descent, avg_x, avg_y, glyph_count, constants.EMSIZE
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("使用法: fontforge -quiet -script analyze_metrics.py <フォントファイル>")
-        print("例: fontforge -quiet -script analyze_metrics.py example.ttf")
-    else :
-        args = sys.argv[1:]
-        main(*args)
+    args = sys.argv[1:]
+    main(*args)

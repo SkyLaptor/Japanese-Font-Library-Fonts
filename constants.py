@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env fontforge
 
 # EMサイズ
 EMSIZE = 1024

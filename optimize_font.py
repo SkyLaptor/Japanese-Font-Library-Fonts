@@ -242,12 +242,5 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, rati
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("使用法: fontforge -quiet -script optimize_font.py <フォント> [サブセット=subset_jp_skyrim.txt] [サイズ指定%=100] [横幅指定%=100] [ウェイト調整em=0] [メトリクス=None]")
-        print("例(小さくする): fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 50")
-        print("例(長形にする): fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 100 70")
-        print("例(細くする): fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 100 100 -15")
-        print("例(メトリクス値を変更): fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 100 100 0 880,150")
-    else:
-        args = sys.argv[1:]
-        main(*args)
+    args = sys.argv[1:]
+    main(*args)

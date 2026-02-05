@@ -17,8 +17,6 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, mode=constants.MODE_E
            return: 最適化済みフォントファイルパス
     """
 
-
-
     # パラメータ解析
     mode_map = {
         constants.MODE_EVERY:     constants.SKYRIM_EVERY_FONT,
@@ -53,11 +51,5 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, mode=constants.MODE_E
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("使用法: fontforge -quiet -script optimize_skyrim_font.py <フォント> [サブセット=subset_jp_skyrim.txt] [モード=every]")
-        print("例(Everywereフォント向けに最適化): fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt every")
-        print("例(Bookフォント向けに最適化): fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt book")
-        print("例(Handwriteフォント向けに最適化): fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt hand")
-    else:
-        args = sys.argv[1:]
-        main(*args)
+    args = sys.argv[1:]
+    main(*args)

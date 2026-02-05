@@ -44,9 +44,5 @@ def main(input_path):
     return output_paths
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("使用法: fontforge -quiet -script extract_font_collection.py <フォントコレクションファイル>")
-        print("例: fontforge -quiet -script extract_font_collection.py example.otc")
-    else :
-        args = sys.argv[1:]
-        main(*args)
+    args = sys.argv[1:]
+    main(*args)

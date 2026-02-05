@@ -62,9 +62,5 @@ def main(input_path):
     return output_path
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("使用法: fontforge -quiet -script convert_otf2ttf.py <OTFフォント>")
-        print("例: fontforge -quiet -script convert_otf2ttf.py example.otf")
-    else :
-        args = sys.argv[1:]
-        main(*args)
+    args = sys.argv[1:]
+    main(*args)
