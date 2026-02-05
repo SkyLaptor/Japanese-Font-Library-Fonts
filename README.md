@@ -23,9 +23,22 @@
 ```
 $ fontforge -quiet -script optimize_font.py <フォントファイル> <サブセット> <横幅%> <サイズ%> <ウェイト調整>
 
-例: fonts/test_font.ttf をsubset.txtの内容でサブセット化しつつ、ウェイトを15増やす（太字にする）
-$ fontforge -quiet -script optimize_font.py fonts/source_font.ttf subset.txt 100 100 15
+例: local/test_font.ttf をsubset.txtの内容でサブセット化しつつ、ウェイトを15増やす（太字にする）
+$ fontforge -quiet -script optimize_font.py local/source_font.ttf subset.txt 100 100 15
 ```
+
+### OTFフォントをTTFフォントに変換する
+最適化スクリプトにも組み込んでいるが、単体でOTF→TTFへの変換も可能。
+
+```
+$ fontforge -quiet -script convert_otf2ttf.py <OTFフォントファイル>
+
+例: local/test_font.otf を local/test_font.ttf に変換する
+$ fontforge -quiet -script convert_otf2ttf.py local/source_font.otf
+```
+
+### TTC(TTFコレクション)を分解する
+TODO
 
 ### フォントをSWFに変換する
 TODO
