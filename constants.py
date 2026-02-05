@@ -23,3 +23,12 @@ FONT_VENDOR = "    "
 # フォントに含まれるグリフの縦横サイズを算出するための対象範囲
 ANALYZE_RANGE = (0x4E00, 0x9FFF + 1)
 
+# スカイリムフォント向け最適化モード
+MODE_EVERY = "every"
+MODE_BOOK = "book"
+MODE_HANDWRITE = "hand"
+
+# スカイリムの標準フォント
+SKYRIM_EVERY_FONT = "skyrim_jp_every.ttf"
+SKYRIM_BOOK_FONT = "skyrim_jp_book.ttf"
+SKYRIM_HANDWRITE_FONT = "skyrim_jp_handwrite.ttf"

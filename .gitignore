@@ -6,3 +6,6 @@ venv/
 local/
 release/
 __pycache__/
+!skyrim_jp_every.ttf
+!skyrim_jp_book.ttf
+!skyrim_jp_handwrite.ttf

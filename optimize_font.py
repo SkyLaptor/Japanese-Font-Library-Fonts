@@ -10,7 +10,7 @@ import convert_otf2ttf
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, ratio_width=100, weight_offset=0, metrics=constants.DEFAULT_METRICS):
+def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, ratio_width=100, weight_offset=0, metrics=constants.DEFAULT_METRICS, prefix="", suffix=""):
     """フォントを最適化されたTTFフォントにする
            input_path: フォントファイルパス
            subset_path: サブセットファイルパス
@@ -18,6 +18,8 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, rati
            ratio_width: 横幅指定(%)
            weight_offset: ウェイト調整値(em)
            metrics: Ascent値,Descent値のカンマ区切り文字列もしくはタプルまたはリスト
+           prefix: 最適化済みフォントファイル名の先頭に付与する文字
+           suffix: 最適化済みフォントファイル名の末尾に付与する文字
            return: 最適化済みフォントファイルパス
     """
 
@@ -217,7 +219,7 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, rati
     print("最適化済フォントを出力中...")
     directory = os.path.dirname(input_path) or "."
     base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_file = f"{base_name}_s{ratio_total}_w{ratio_width}_b{weight_offset}"
+    output_file = f"{prefix}{base_name}_s{ratio_total}_w{ratio_width}_b{weight_offset}{suffix}"
     output_path = os.path.join(directory, output_file+".ttf")
     # 匿名化処理
     font.sfnt_names = ()
