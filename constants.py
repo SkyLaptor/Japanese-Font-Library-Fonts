@@ -26,7 +26,7 @@ ANALYZE_RANGE = (0x4E00, 0x9FFF + 1)
 # スカイリムフォント向け最適化モード
 MODE_EVERY = "every"
 MODE_BOOK = "book"
-MODE_HANDWRITE = "hand"
+MODE_HANDWRITE = "handwrite"
 
 # スカイリムの標準フォント
 SKYRIM_EVERY_FONT = "skyrim_jp_every.ttf"

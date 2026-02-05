@@ -17,34 +17,38 @@
 本READMEにおいては、`ffdec-cli`及び`ffdec`へのパスが通っているものとする。
 
 ## 使い方
-### フォントを最適化する
-最適化したいフォントに対し、サブセットなどをパラメーターとして渡す。
+### スカイリム向けにフォントを最適化する
+任意のフォントを、バニラのフォント類(Everywere,Book,Handwritten)に準拠した形で最適化することができる。
 
 ```
-$ fontforge -quiet -script optimize_font.py <フォントファイル> <サブセット> <横幅%> <サイズ%> <ウェイト調整>
+$ fontforge -quiet -script optimize_skyrim_font.py <フォントファイルパス> [サブセットファイルパス] [モード(every/book/handwrite
+)] [横幅指定(%)] [ウェイト調整値(em)] [サフィックス]
 
-例: local/test_font.ttf をsubset.txtの内容でサブセット化しつつ、ウェイトを15増やす（太字にする）
-$ fontforge -quiet -script optimize_font.py local/source_font.ttf subset.txt 100 100 15
+例: example.ttfをEverywereフォントに準拠した形で最適化する。
+$ fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt every
+
+例: example.ttfをEverywereフォントに準拠した形で、横幅を70%にして最適化する。
+$ fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt every 70
 ```
 
-### OTFフォントをTTFフォントに変換する
-最適化スクリプトにも組み込んでいるが、単体でOTF→TTFへの変換も可能。
+### フォントを任意に最適化する
+任意のフォントをサブセット化したり、サイズや太さを変形したりしつつ最適化することができる。
 
 ```
-$ fontforge -quiet -script convert_otf2ttf.py <OTFフォントファイル>
+$ fontforge -quiet -script optimize_font.py <フォントファイルパス> [サブセットファイルパス] [サイズ指定(%)] [横幅指定(%)] [ウェイト調整値(em)] [メトリック値(x,y em)] [プレフィクス] [サフィックス]
 
-例: local/test_font.otf を local/test_font.ttf に変換する
-$ fontforge -quiet -script convert_otf2ttf.py local/source_font.otf
+例: example.ttfをsubset_jp_skyrim.txtに従いサブセット化しつつ横幅を70%にする。
+$ fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 100 70
 ```
 
 ### OTCやTTCといったフォントコレクションからフォントを抽出する
-フォントコレクションの中のフォントを処理する場合、フォントを取り出す必要がある。
+フォントコレクションの中のフォントを処理する場合、事前にフォントを取り出しておく必要がある。
 
 ```
 $ fontforge -quiet -script extract_font_collection.py <フォントコレクションファイル>
 
-例: local/test_fonts.otc 内のフォントを local 内に抽出する
-$ fontforge -quiet -script extract_font_collection.py local/source_fonts.otc
+例: example.ttc内のttfファイルを抽出する。
+$ fontforge -quiet -script extract_font_collection.py example.ttc
 ```
 
 ### フォントをSWFに変換する
