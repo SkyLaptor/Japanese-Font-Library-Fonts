@@ -80,6 +80,10 @@ if __name__ == "__main__":
     
     parser.add_argument("-i", "--input", help="Font file paths subject to calculate.")
     
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    
     args = parser.parse_args()
     
     main(

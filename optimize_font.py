@@ -269,6 +269,10 @@ if __name__ == "__main__":
     parser.add_argument("--weight_offset", type=int, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.", default=0)
     parser.add_argument("--shift_height", type=int, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.", default=0)
     
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    
     args = parser.parse_args()
     
     main(

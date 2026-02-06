@@ -97,6 +97,10 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input", help="Font file paths subject to convert.")
     parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
     
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    
     args = parser.parse_args()
     
     main(
