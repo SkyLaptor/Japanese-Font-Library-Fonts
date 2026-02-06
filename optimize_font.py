@@ -19,6 +19,7 @@ PROTECTED_BLANKGLYPHS = [
     "zerowidthspace", "uni200B"
 ]
 DEFAULT_OUTPUTNAME_SUFFIX = "_optimized"
+FONTNAME = "OptimizedFont"
 
 def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100, ratio_width=100, weight_offset=0, shift_height=0):
     """Apply various processing and optimization to the font and output it as a TTF font.
@@ -118,12 +119,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
     font.hasvmetrics = False
     font.upos = -100
     font.uwidth = 50
-    anonumous_fontname = "PreOptimizedFont"
     font.gasp = ()
     font.sfntRevision = 1.000
-    font.fontname = anonumous_fontname
-    font.fullname = anonumous_fontname
-    font.familyname = anonumous_fontname
+    font.fontname = FONTNAME
+    font.fullname = FONTNAME
+    font.familyname = FONTNAME
     font.uniqueid = 1
     font.version = "1.000"
     font.copyright = ""
@@ -131,11 +131,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
     new_names = []
     for lang in ("English (US)",):
         new_names.append((lang, "Copyright", font.copyright))
-        new_names.append((lang, "Family", anonumous_fontname))
+        new_names.append((lang, "Family", FONTNAME))
         new_names.append((lang, "SubFamily", "Regular"))
-        new_names.append((lang, "Fullname", anonumous_fontname))
+        new_names.append((lang, "Fullname", FONTNAME))
         new_names.append((lang, "Version", f"Version {font.version}"))
-        new_names.append((lang, "PostScriptName", anonumous_fontname))
+        new_names.append((lang, "PostScriptName", FONTNAME))
     font.sfnt_names = tuple(new_names)
 
     glyph_count = len(list(font.glyphs()))
