@@ -10,12 +10,12 @@ os.environ["LC_ALL"] = "C"
 
 SIMPLIFY = 0.5
 
-def main(input_font_path, output_font_path=None):
+def main(input_font_path, output_font_path=""):
     """Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).
            
            Args:
                input_font_path (str): Font file paths subject to convert.
-               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: None
+               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: ''
            
            Returns:
                str: Output font file path.
@@ -92,7 +92,7 @@ def main(input_font_path, output_font_path=None):
     return output_font_path
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="OTF to TTF Convert Script")
+    parser = argparse.ArgumentParser(description="Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).")
     
     parser.add_argument("-i", "--input", help="Font file paths subject to convert.")
     parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
