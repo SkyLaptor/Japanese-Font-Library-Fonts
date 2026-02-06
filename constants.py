@@ -1,10 +1,13 @@
 #!/usr/bin/env fontforge
 
 # EMサイズ
+#  デフォルトメトリクスの合計値と同じであること。
 EMSIZE = 1024
 
 # デフォルトメトリクス
 #  合計値がEMサイズと同じであること。
+#  尚且つ 日本語フォントSWFのメトリクス値と同じであること。
+#  参考: Ascent:17600twips, Descent:2880twips 1px=1em=20twips
 DEFAULT_METRICS = (880, 144)
 
 # 最適化レベル 0.1~1.0

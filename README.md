@@ -51,9 +51,25 @@ $ fontforge -quiet -script extract_font_collection.py <フォントコレクシ�
 $ fontforge -quiet -script extract_font_collection.py example.ttc
 ```
 
-### フォントをSWFに変換する
-TODO
+### フォントSWFファイルに変換する
+TTFのままではスカイリムでは使用できないため、フォントSWFに変換する必要がある。
+ただ、FFDecでは単純に埋め込むだけしかできないため、結局FFDecで開いてフォント名、ExportAssetsの修正が必要。
 
+```:cmd
+$ ffdec-cli.exe -replace fonts_template.swf <出力フォントSWF名> 1 <埋め込むフォントファイル(TTF)>
+
+例: example_s97_w100_b0_every.ttfを埋め込んだfonts_test.swfというSWFを作成する。
+$ ffdec-cli.exe -replace fonts_template.swf fonts_example_test.swf 1 example_s97_w100_b0_every.ttf
+```
+
+#### フォントSWFの命名規則
+```
+fonts_<フォント名>[特殊ウェイト:_light|_bold|_heavy]<調整モード:_every|_book|_handwrite>[長形:_condensed|_skinny][サブセット:_jp-full|_jp-skyrim].swf
+
+例: noto-sansというフォント名で、ウェイトがBoldで、Everywere向け調整で、70%長形になっていて、サブセットがJPSkyrimの場合
+フォント名= noto-sans_bold_every_condensed_jp-skyrim
+SWF名: fonts_noto-sans_bold_every_condensed_jp-skyrim.swf
+```
 
 ## サブセットファイルについて
 フォントファイルの中に含めたい文字を記述したテキストファイル（UTF-8エンコードされていること）を用意する。
