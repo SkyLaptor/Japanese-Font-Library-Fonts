@@ -49,12 +49,13 @@ def main(input_font_path, output_font_path=None, ascent=None, descent=None):
     # If an OTF file is provided, convert it to TTF.
     ext = os.path.splitext(input_font_path)[1].lower()
     if ext == ".otf":
-        input_font_path = convert_otf2ttf.main(input_font_path)
+        input_font_path = convert_otf2ttf.main(input_font_path=input_font_path)
         if not os.path.exists(input_font_path):
             msg = f"No such file: {input_font_path}. The conversion from OTF to TTF may have failed."
             logging.error(msg)
             raise FileNotFoundError(msg)
 
+    print(f"Open target: {input_font_path}")
     print("Opening font...")
     font = fontforge.open(input_font_path,("fstypepermitted",))
     font.encoding = "UnicodeFull"
@@ -188,7 +189,6 @@ def main(input_font_path, output_font_path=None, ascent=None, descent=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Font Pre-Optimization Script")
     
-    # 引数の定義
     parser.add_argument("-i", "--input", help="Font file paths subject to pre-optimization.")
     parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
     parser.add_argument("--ascent", type=int, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.", default=None)
