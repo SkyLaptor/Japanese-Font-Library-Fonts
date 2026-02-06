@@ -2,69 +2,94 @@
 import fontforge
 import sys
 import os
+import logging
+import argparse
 
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def main(base_font_path, sub_font_path, output_path=None):
-    """フォントを結合して新たなフォントとして出力する
-           基本フォントファイルに存在しないグリフが補間される。
-           base_font_path: 基本フォントファイルパス
-           sub_font_path: 補間フォントファイルパス
-           output_path: 出力フォントファイルパス
-           return: output_path
+DEFAULT_OUTPUTNAME_SUFFIX = "_merged"
+
+def main(base_font_path, sub_font_path, output_font_path):
+    """Merge fonts and output them as a new font.
+           
+           Glyphs not present in the base font file are interpolated using glyphs from the interpolation font.
+           
+           Args:
+               base_font_path (str): Base font file. The side that is interpolated.
+               sub_font_path (str): Interpolation font file.
+           
+           Returns:
+               str: Output font file path.
     """
-    print("=== フォント結合機能を開始 ===")
+    print("=== Start of Merge fonts ===")
 
-    # 基本フォントファイルが存在しない場合
     if not os.path.exists(base_font_path):
-        print(f"エラー: 基本フォントファイル {base_font_path} が存在しないため処理を終了。")
-        return None
+        msg = f"No such file: {base_font_path}"
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
-    # 補間フォントファイルが存在しない場合
     if not os.path.exists(sub_font_path):
-        print(f"エラー: 補間フォントファイル {sub_font_path} が存在しないため処理を終了。")
-        return None
+        msg = f"No such file: {sub_font_path}"
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
-    # フォントのオープン
-    print("フォントファイルをオープン中...")
+    print("Opening font...")
     base_font = fontforge.open(base_font_path,("fstypepermitted",))
+    base_font.encoding = "UnicodeFull"
+    base_font.reencode("unicode")
     sub_font = fontforge.open(sub_font_path,("fstypepermitted",))
+    sub_font.encoding = "UnicodeFull"
+    sub_font.reencode("unicode")
 
-    # EMサイズチェック
     if base_font.em != sub_font.em:
-        print(f"エラー: フォントファイル同士のEMサイズが不一致。基本:{base_font.em},補間:{sub_font.em} 処理を終了。")
-        print("フォントファイルをクローズ中...")
         base_font.close()
         sub_font.close()
-        return None
+        msg = f"Font files have inconsistent EM sizes. Base:{base_font.em}, Sub:{sub_font.em}"
+        logging.error(msg)
+        raise ValueError(msg)
 
-    # フォントの結合
-    print("フォントファイルの結合中...")
+    glyph_count = len(list(base_font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
+
+    print("Merge font...")
     base_font.mergeFonts(sub_font_path)
 
-    # フォントの出力
-    print("結合済みフォントを出力中...")
-    if not output_path:
-        print("出力先が未指定のため、基本フォントと同じ場所に出力。")
+    glyph_count = len(list(base_font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
+
+    print("Outputting optimized fonts...")
+    if output_font_path == "":
+        print("INFO:Since the output destination is unspecified, output to the same location as the base font.")
         directory = os.path.dirname(base_font_path) or "."
         base_name = os.path.splitext(os.path.basename(base_font_path))[0]
-        output_file = f"{base_name}_merged"
-        output_path = os.path.join(directory, output_file+".ttf")
-    base_font.generate(output_path)
+        output_file_name = f"{base_name + DEFAULT_OUTPUTNAME_SUFFIX}"
+        output_font_path = os.path.join(directory, output_file_name+".ttf")
+    base_font.generate(output_font_path)
 
-    # フォントのクローズ
-    print("フォントファイルをクローズ中...")
     base_font.close()
     sub_font.close()
 
-    print("=== フォント結合機能を終了 ===")
-    return output_path
+
+    print("=== End of Merge fonts ===")
+    return output_font_path
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    if len(args) < 2:
-        print("使用方法: fontforge -quiet -script merge_font.py <基本フォントファイルパス> <補間フォントファイルパス> [出力フォントファイルパス]")
-    else:
-        main(*args)
+    parser = argparse.ArgumentParser(description="Merge fonts and output them as a new font.")
+    
+    parser.add_argument("-b", "--base", help="Base font file. The side that is interpolated.")
+    parser.add_argument("-s", "--sub", help="Interpolation font file.")
+    parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    
+    args = parser.parse_args()
+    
+    main(
+        base_font_path=args.base,
+        sub_font_path=args.sub,
+        output_font_path=args.output
+    )
