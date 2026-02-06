@@ -10,6 +10,15 @@ EMSIZE = 1024
 #  参考: Ascent:17600twips, Descent:2880twips 1px=1em=20twips
 DEFAULT_METRICS = (880, 144)
 
+# 空白で正しいグリフの名前
+PROTECTED_BLANKGLYPHS = [
+        "space", "uni3000", "ideographicspace", ".notdef", 
+        "NULL", "nonmarkingreturn", "nbspace", "uni00A0",
+        "emspace", "enspace", "thinspace", "hairspace",
+        "uni2003", "uni2002", "uni2009", "uni200A",
+        "zerowidthspace", "uni200B"
+    ]
+
 # 最適化レベル 0.1~1.0
 #  あまり大きくするとグリフが破綻する場合あり
 SIMPLIFY = 0.5

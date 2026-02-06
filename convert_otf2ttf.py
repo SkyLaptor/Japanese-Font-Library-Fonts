@@ -2,65 +2,69 @@
 import fontforge
 import sys
 import os
-
-import constants
+import logging
 
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def main(input_path):
-    """OTFをTTFに変換する
-           input_path: OTFファイルパス
-           return: TTFファイルパス
+def main(input_font_path, output_font_path=None):
+    """Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).
+           
+           Args:
+               input_font_path (str): Font file paths subject to convert.
+               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: None
+           
+           Returns:
+               str: Output font file path.
     """
+    print("=== Start of OTF to TTF Convert ===")
 
-    # フォントファイルが存在しない場合
-    if not os.path.exists(input_path):
-        print(f"エラー: {input_path}が存在しないため処理を終了。")
-        return
+    if not os.path.exists(input_font_path):
+        msg = f"No such file: {input_font_path}"
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
-    # 処理開始
-    print(f"--- 変換開始: {input_path} ---")
-    font = fontforge.open(input_path,("fstypepermitted",))
-    # TTF出力を行うため、前面レイヤを2次曲線モードへ設定
-    font.layers[1].is_quadratic = True
+    print("Opening font...")
+    font = fontforge.open(input_font_path,("fstypepermitted",))
 
-    # CID単一化
-    print("CID単一化を実施")
+    print("Implementation of CID Unification...")
     font.cidFlatten()
 
-    # OpenType機能の削除
-    print("OpenType機能の削除を実施")
+    print("Removing OpenType features...")
     for lookup in font.gsub_lookups:
         font.removeLookup(lookup)
     for lookup in font.gpos_lookups:
         font.removeLookup(lookup)
 
-    # CID単一化による未マップグリフ削除
-    print("CID単一化による未マップグリフ削除を開始")
+    print("Unmapped glyph deletion in progress...")
     unmapped_glyphs = []
     for glyph in font.glyphs():
         if glyph.unicode == -1 and glyph.glyphname != ".notdef":
             unmapped_glyphs.append(glyph.glyphname)
     for name in unmapped_glyphs:
-        print(f"CID単一化による未マップグリフを削除中:{name:<50}", end="\r")
+        print(f"{name:<50}", end="\r")
         font.removeGlyph(name)
 
-    # フォントの出力
-    print("TTFフォントを出力中...")
-    directory = os.path.dirname(input_path) or "."
-    base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_file = f"{base_name}"
-    output_path = os.path.join(directory, output_file+".ttf")
-    font.generate(output_path)
+    # Disable cubic curve mode (required for TrueType output)
+    font.layers[1].is_quadratic = True
 
-    # 処理終了
-    print(f"--- 変換完了: {output_path} ---")
-    print("変換には時間がかかるため、以後は変換済TTFファイルの利用を推奨。")
+    print("Outputting truetype fonts...")
+    if output_font_path == "" or not output_font_path:
+        logging.warning("Since the output destination is unspecified, output to the same location as the base font.")
+        directory = os.path.dirname(input_font_path) or "."
+        base_name = os.path.splitext(os.path.basename(input_font_path))[0]
+        output_file_name = f"{base_name}"
+        output_font_path = os.path.join(directory, output_file_name+".ttf")
+    font.generate(output_font_path)
+
     font.close()
 
-    return output_path
+    print("=== End of OTF to TTF Convert ===")
+    return output_font_path
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    main(*args)
+    if len(args) < 1:
+        print("Usage: fontforge -quiet -script convert_otf2ttf.py <input_font_path> [output_font_path]")
+    else:
+        main(*args)

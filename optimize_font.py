@@ -3,95 +3,96 @@ import fontforge
 import psMat
 import sys
 import os
+import logging
 
 import constants
-import convert_otf2ttf
+import preoptimize_font
 
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, ratio_width=100, weight_offset=0, metrics=constants.DEFAULT_METRICS, prefix="", suffix=""):
-    """フォントを最適化されたTTFフォントにする
-           input_path: フォントファイルパス
-           subset_path: サブセットファイルパス
-           ratio_total: サイズ指定(%)
-           ratio_width: 横幅指定(%)
-           weight_offset: ウェイト調整値(em)
-           metrics: Ascent値,Descent値のカンマ区切り文字列もしくはタプルまたはリスト
-           prefix: 最適化済みフォントファイル名の先頭に付与する文字
-           suffix: 最適化済みフォントファイル名の末尾に付与する文字
-           return: 最適化済みフォントファイルパス
+PREFLAG = ".pre"
+
+def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=100, weight_offset=0, metrics=constants.DEFAULT_METRICS, output_font_path=None):
+    """Apply various processing and optimization to the font and output it as a TTF font.
+           
+           Weight adjustment is not recommended due to the high risk of glyph corruption.
+           Width transformation is performed after size transformation.
+           If a font file named font_name.ttf.pre exists for the target font, it will be used preferentially.
+           
+           Args:
+               input_font_path (str): Font file paths subject to pre-optimization.
+               subset_chars_path (str, Optional): Subset character file path. Default: None
+               ratio_total (Union[str, int], optional): Size specification(%). Default: 100
+               ratio_width (Union[str, int], optional): Width specification(%). Default: 100
+               weight_offset (Union[str, int], optional): Weight adjustment value(em). Thick for positive values, thin for negative values. Default: 0
+               metrics (Union[str, tuple, list], Optional): Ascent value, Descent value. For strings, use comma-separated values. Default: ConstantValue
+               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: None
+           
+           Returns:
+               str: Output font file path.
     """
+    print("=== Start of Font Optimization ===")
 
-    # フォントファイルが存在しない場合
-    if not os.path.exists(input_path):
-        print(f"エラー: フォントファイル {input_path} が存在しないため処理を終了。")
-        return
+    if not os.path.exists(input_font_path):
+        msg = f"No such file: {input_font_path}"
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
-    # サブセットファイルが存在しない場合
-    if not os.path.exists(subset_path):
-        print(f"エラー: サブセットファイル {subset_path} が存在しないため処理を終了。")
-        return
+    if subset_chars_path and not os.path.exists(subset_chars_path):
+        msg = f"No such file: {subset_chars_path}"
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
-    # OTFの場合はTTFに変換する
-    ext = os.path.splitext(input_path)[1].lower()
-    if ext == ".otf":
-        input_path = convert_otf2ttf.main(input_path)
-        # フォントファイルが存在しない場合
-        if not os.path.exists(input_path):
-            print(f"エラー: フォントファイル {input_path} が存在しないため処理を終了。")
-            return
+    ratio_total = float(ratio_total) / 100
+    ratio_width = float(ratio_width) / 100
+    weight_offset = float(weight_offset)
+    if metrics is None or metrics == "":
+        print("INFO:Since the metric values (Ascent, Descent) were not provided, the default value are used.")
+        ascent, descent = constants.DEFAULT_METRICS
+    elif isinstance(metrics, str):
+        try:
+            a_str, d_str = metrics.split(',')
+            ascent, descent = int(a_str), int(d_str)
+        except ValueError:
+            msg = f"An unknown error occurred during the metric-type conversion."
+            logging.error(msg)
+            raise RuntimeError(msg)
+    elif isinstance(metrics, (tuple, list)):
+        ascent, descent = metrics
+    else:
+        msg = f"An unknown error occurred during the metric-type conversion."
+        logging.error(msg)
+        raise RuntimeError(msg)
 
-    # パラメータ解析
-    ratio_width_f = float(ratio_width) / 100.0
-    ratio_total_f = float(ratio_total) / 100.0
-    weight_offset_f = float(weight_offset) # 正の値で太く、負の値で細く
+    if not os.path.exists(input_font_path + PREFLAG):
+        input_font_path = preoptimize_font.main(input_font_path, metrics, input_font_path + PREFLAG)
+    else:
+        input_font_path = input_font_path + PREFLAG
 
-    # 処理開始
-    print(f"--- 最適化開始: {input_path} ---")
-    print(f"設定: サブセットファイル{subset_path}, サイズ指定{ratio_total}%, 横幅指定{ratio_width}%, ウェイト調整値{weight_offset}em, メトリクス{metrics}")
-    if metrics is None:
-        print("注: メトリクス値(Ascent,Descent)が渡されていないためフォント設定が使用される。")
-    font = fontforge.open(input_path,("fstypepermitted",))
-    
-    # 3次曲線モードへ移行
+    print("Opening font...")
+    font = fontforge.open(input_font_path,("fstypepermitted",))
+    font.encoding = "UnicodeFull"
+    font.reencode("unicode")
+
+    # Switch to cubic curve mode. (for high-precision machining)
     font.layers[1].is_quadratic = False
 
-    # OpenType機能の削除
-    print("OpenType機能の削除を実施")
-    for lookup in font.gsub_lookups:
-        font.removeLookup(lookup)
-    for lookup in font.gpos_lookups:
-        font.removeLookup(lookup)
+    glyph_count = len(list(font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
 
-    # ヒント命令の削除
-    print("ヒント命令の削除を実施")
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        glyph.manualHints = 0
-        glyph.removePosSub("*")
-        glyph.dhints = ()
-        glyph.hhints = ()
-        glyph.vhints = ()
-
-    # 参照の解除
-    print("参照の解除を実施")
-    font.unlinkReferences()
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        glyph.unlinkRef()
-
-    # サブセット化
-    print(f"{subset_path}に従いサブセット化を開始")
-    with open(subset_path, 'r', encoding='utf-8') as f:
+    print(f"Execute the subset...")
+    with open(subset_chars_path, 'r', encoding='utf-8') as f:
         subset_content = f.read()
     allowed_unichars = set(ord(c) for c in subset_content)
     for glyph in list(font.glyphs()):
         if glyph.unicode not in allowed_unichars:
             font.removeGlyph(glyph)
 
-    # 意図しない空白グリフの削除
-    print(f"意図しない空白グリフを削除")
+    glyph_count = len(list(font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
+
+    print(f"Remove unintended blank glyphs...")
     protected_glyphs = [
         "space", "uni3000", "ideographicspace", ".notdef", 
         "NULL", "nonmarkingreturn", "nbspace", "uni00A0",
@@ -104,7 +105,6 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, rati
     for glyph in font.selection.byGlyphs:
         if glyph.glyphname in protected_glyphs:
             continue
-        # パスが1つも無ければ空白とみなす
         if len(glyph.layers[1]) == 0:
             target_names.add(glyph.glyphname)
     for name in target_names:
@@ -113,134 +113,77 @@ def main(input_path, subset_path=constants.DEFAULT_SUBSET, ratio_total=100, rati
         except:
             continue
 
-    # EM及びメトリクス調整
-    print("EMサイズおよびメトリクス調整を開始")
-    font.em = constants.EMSIZE
-    if metrics is None:
-        ascent, descent = font.ascent, font.descent
-    elif isinstance(metrics, str):
-        try:
-            a_str, d_str = metrics.split(',')
-            ascent, descent = int(a_str), int(d_str)
-        except ValueError:
-            ascent, descent = font.ascent, font.descent
-    elif isinstance(metrics, (tuple, list)):
-        ascent, descent = metrics
-    else:
-        ascent, descent = font.ascent, font.descent
-    font.os2_use_typo_metrics = True
-    font.ascent = ascent
-    font.os2_typoascent = ascent
-    font.os2_winascent = ascent
-    font.hhea_ascent = ascent
-    font.descent = descent
-    font.os2_typodescent = -descent
-    font.os2_windescent = descent
-    font.hhea_descent = -descent
-    font.os2_typolinegap = 0
-    font.os2_subxsize = int(constants.EMSIZE * 0.635)
-    font.os2_subysize = int(constants.EMSIZE * 0.6)
-    font.os2_subxoff = 0
-    font.os2_subyoff = int(constants.EMSIZE * 0.075)
-    font.os2_supxsize = int(constants.EMSIZE * 0.635)
-    font.os2_supysize = int(constants.EMSIZE * 0.6)
-    font.os2_supxoff = 0
-    font.os2_supyoff = int(constants.EMSIZE * 0.34)
-    font.os2_strikeysize = int(constants.EMSIZE * 0.050)
-    font.os2_strikeypos = int(constants.EMSIZE * 0.03)
-    font.hasvmetrics = False
-    font.upos = -100
-    font.uwidth = 50
-    font.round()
+    glyph_count = len(list(font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
 
-    # グリフ内のパスの重なり除去
-    print(f"グリフ内のパスの重なり除去を開始")
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        print(f"グリフ内のパスの重なりを除去中:{glyph.glyphname:<50}",end="\r")
-        glyph.removeOverlap()
-        glyph.round()
-
-    # サイズ変換
-    if ratio_total_f != 1.0:
-        print(f"グリフのサイズ変換({ratio_total}%)を開始")
+    if ratio_total != 1.0:
+        print(f"Resizing ({ratio_total * 100}%) in progress...")
         font.selection.all()
         processed_glyphs = set()
         for glyph in font.selection.byGlyphs:
             if glyph.glyphname in processed_glyphs:
                 continue
-            print(f"グリフのサイズ変換中:{glyph.glyphname:<50}",end="\r")
-            glyph.transform(psMat.scale(ratio_total_f,),)
+            print(f"{glyph.glyphname:<50}",end="\r")
+            glyph.transform(psMat.scale(ratio_total),)
             processed_glyphs.add(glyph.glyphname)
             glyph.round()
 
-    # 横幅変換
-    if ratio_width_f != 1.0:
-        print(f"グリフの横幅変換({ratio_width}%)を開始")
+    if ratio_width != 1.0:
+        print(f"Expand width ({ratio_width * 100}%) in progress...")
         font.selection.all()
         processed_glyphs = set()
         for glyph in font.selection.byGlyphs:
             if glyph.glyphname in processed_glyphs:
                 continue
-            print(f"グリフの横幅変換中:{glyph.glyphname:<50}",end="\r")
-            glyph.transform(psMat.scale(ratio_width_f,1.0),)
+            print(f"{glyph.glyphname:<50}",end="\r")
+            glyph.transform(psMat.scale(ratio_width,1.0),)
             processed_glyphs.add(glyph.glyphname)
             glyph.round()
 
-    # ウェイト調整
-    if weight_offset_f != 0:
-        print(f"グリフのウェイト調整({weight_offset}em)を開始")
+    if weight_offset != 0:
+        print(f"Adjusting font weight ({weight_offset}em)...")
         font.selection.all()
         processed_glyphs = set()
         for glyph in font.selection.byGlyphs:
             if glyph.glyphname in processed_glyphs:
                 continue
-            print(f"グリフのウェイト調整中:{glyph.glyphname:<50}",end="\r")
-            glyph.changeWeight(weight_offset_f,"auto",0,0,"squish")
+            print(f"{glyph.glyphname:<50}",end="\r")
+            glyph.changeWeight(weight_offset,"auto",0,0,"squish")
             processed_glyphs.add(glyph.glyphname)
             glyph.round()
 
-    # 最適化
-    print("グリフの最適化を開始")
+    print("Final optimization in progress...")
     font.selection.all()
     processed_glyphs = set()
     for glyph in font.selection.byGlyphs:
         if glyph.glyphname in processed_glyphs:
                 continue
-        print(f"グリフの最適化処理中:{glyph.glyphname:<50}",end="\r")
+        print(f"{glyph.glyphname:<50}",end="\r")
         glyph.simplify(constants.SIMPLIFY, ("choosehv", "mergelines", "nearlyhvlines", "removesingletonpoints"), 0.02, 0.1, 0)
         processed_glyphs.add(glyph.glyphname)
         glyph.round()
 
-    # 3次曲線モードを解除
+    # Disable cubic curve mode (required for TrueType output)
     font.layers[1].is_quadratic = True
 
-    # フォントの出力
-    print("最適化済フォントを出力中...")
-    directory = os.path.dirname(input_path) or "."
-    base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_file = f"{prefix}{base_name}_s{ratio_total}_w{ratio_width}_b{weight_offset}{suffix}"
-    output_path = os.path.join(directory, output_file+".ttf")
-    # 匿名化処理
-    font.sfnt_names = ()
-    font.gasp = ()
-    font.sfntRevision = constants.FONT_VERSION
-    font.fontname = output_file
-    font.fullname = output_file
-    font.familyname = output_file
-    font.uniqueid = constants.FONT_ID
-    font.version = f"{constants.FONT_VERSION}"
-    font.copyright = constants.FONT_COPYRIGHT
-    font.os2_vendor = constants.FONT_VENDOR
-    font.generate(output_path)
-    
-    # 処理終了
-    print(f"--- 最適化完了: {output_path} ---")
+    print("Outputting optimized fonts...")
+    if output_font_path == "" or not output_font_path:
+        print("INFO:Since the output destination is unspecified, output to the same location as the base font.")
+        directory = os.path.dirname(input_font_path) or "."
+        base_name = os.path.splitext(os.path.basename(input_font_path))[0]
+        output_file_name = f"{base_name}_optimized"
+        output_font_path = os.path.join(directory, output_file_name+".ttf")
+    font.generate(output_font_path)
+
     font.close()
 
-    return output_path
+    print("=== End of Font Optimization ===")
+    return output_font_path
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    main(*args)
+    if len(args) < 1:
+        print("Usage: fontforge -quiet -script optimize_font.py <input_font_path> [subset_chars_path] [ratio_total] [ratio_width] [weight_offset] [metrics] [output_font_path]")
+    else:
+        main(*args)
