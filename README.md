@@ -21,35 +21,111 @@
 任意のフォントを、バニラのフォント類(Everywere,Book,Handwritten)に準拠した形で最適化することができる。
 
 ```
-$ fontforge -quiet -script optimize_skyrim_font.py <フォントファイルパス> [サブセットファイルパス] [モード(every/book/handwrite
-)] [横幅指定(%)] [ウェイト調整値(em)] [サフィックス]
+$ fontforge -quiet -script .\convert_for_skyrim.py --help
+usage: convert_for_skyrim.py [-h] -i INPUT [-o OUTPUT] [--subset SUBSET] [--mode_ui MODE_UI]
+                             [--ratio_width RATIO_WIDTH] [--resize_mode RESIZE_MODE]
 
-例: example.ttfをEverywereフォントに準拠した形で最適化する。
-$ fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt every
+Convert the specified font for Skyrim's UI
 
-例: example.ttfをEverywereフォントに準拠した形で、横幅を70%にして最適化する。
-$ fontforge -quiet -script optimize_skyrim_font.py example.ttf subset_jp_skyrim.txt every 70
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Font file paths subject to converion.
+  -o OUTPUT, --output OUTPUT
+                        Output font file path. The file extension must be ttf.
+  --subset SUBSET       Subset character file path.
+  --mode_ui MODE_UI     UI mode(every,book,hand).
+  --ratio_width RATIO_WIDTH
+                        Width specification(%).
+  --resize_mode RESIZE_MODE
+                        Resize mode(v,vh,he).
 ```
 
 ### フォントを任意に最適化する
 任意のフォントをサブセット化したり、サイズや太さを変形したりしつつ最適化することができる。
 
 ```
-$ fontforge -quiet -script optimize_font.py <フォントファイルパス> [サブセットファイルパス] [サイズ指定(%)] [横幅指定(%)] [ウェイト調整値(em)] [メトリック値(x,y em)] [プレフィクス] [サフィックス]
+$ fontforge -quiet -script .\optimize_font.py --help
+usage: optimize_font.py [-h] -i INPUT [-o OUTPUT] [--subset SUBSET] [--ascent ASCENT] [--descent DESCENT]
+                        [--ratio_total RATIO_TOTAL] [--ratio_width RATIO_WIDTH] [--weight_offset WEIGHT_OFFSET]
+                        [--shift_height SHIFT_HEIGHT]
 
-例: example.ttfをsubset_jp_skyrim.txtに従いサブセット化しつつ横幅を70%にする。
-$ fontforge -quiet -script optimize_font.py example.ttf subset_jp_skyrim.txt 100 70
+Apply various processing and optimization to the font and output it as a TTF font.
+
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Font file paths subject to optimization.
+  -o OUTPUT, --output OUTPUT
+                        Output font file path. The file extension must be ttf.
+  --subset SUBSET       Subset character file path.
+  --ascent ASCENT       Ascent value. Ensure that the total with descent is 1024. If no value is entered, the font
+                        value will be used.
+  --descent DESCENT     Descent value. Ensure that the total with ascent is 1024. If no value is entered, the font
+                        value will be used.
+  --ratio_total RATIO_TOTAL
+                        Size specification(%).
+  --ratio_width RATIO_WIDTH
+                        Width specification(%).
+  --weight_offset WEIGHT_OFFSET
+                        Weight adjustment value(units). Thick for positive values, thin for negative values.
+  --shift_height SHIFT_HEIGHT
+                        Height adjustment value(units). Thick for positive values, thin for negative values.
 ```
 
 ### OTCやTTCといったフォントコレクションからフォントを抽出する
 フォントコレクションの中のフォントを処理する場合、事前にフォントを取り出しておく必要がある。
 
 ```
-$ fontforge -quiet -script extract_font_collection.py <フォントコレクションファイル>
+$ fontforge -quiet -script .\extract_font_collection.py --help
+usage: extract_font_collection.py [-h] -i INPUT [-o OUTPUT]
 
-例: example.ttc内のttfファイルを抽出する。
-$ fontforge -quiet -script extract_font_collection.py example.ttc
+Extract fonts from the font collection.
+
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Path to the font collection file to be extracted.
+  -o OUTPUT, --output OUTPUT
+                        Extraction destination directory.
 ```
+
+### OTFをTTFに変換する
+スクリプト類はTTFが入力されることを想定した処理を行っているため、OTFを使用する場合はまずTTFに変換すること。
+
+```
+$ fontforge -quiet -script .\convert_otf2ttf.py --help
+usage: convert_otf2ttf.py [-h] -i INPUT [-o OUTPUT]
+
+Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).
+
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Font file paths subject to convert.
+  -o OUTPUT, --output OUTPUT
+                        Output font file path. The file extension must be ttf.
+```
+
+### フォント同士を組み合わせる
+ 例えば [しねきゃぷしょん](https://www.vector.co.jp/soft/data/writing/se314690.html) などの、格納されているグリフが少ないフォントをそのまま使用すると一部の文字が豆腐化してしまうことがある。
+ そこで [源柔ゴシック](http://jikasei.me/font/genjyuu/) といった字体が似ていて、なおかつ格納グリフ数が多いフォントで補間してあげることで、違和感を最小限に豆腐化を防ぐことができる。
+なお、組み合わせるフォントは事前にオプションなしで最適化を施しておくこと推奨。
+
+ ```
+$ fontforge -quiet -script .\merge_font.py --help
+usage: merge_font.py [-h] -b BASE -s SUB [-o OUTPUT]
+
+Merge fonts and output them as a new font.
+
+options:
+  -h, --help            show this help message and exit
+  -b BASE, --base BASE  Base font file. The side that is interpolated.
+  -s SUB, --sub SUB     Interpolation font file.
+  -o OUTPUT, --output OUTPUT
+                        Output font file path. The file extension must be ttf.
+```
+
 
 ### フォントSWFファイルに変換する
 TTFのままではスカイリムでは使用できないため、フォントSWFに変換する必要がある。
@@ -80,7 +156,7 @@ SWF名: fonts_noto-sans_bold_every_condensed_jp-skyrim.swf
 シンボルを含めJIS第4水準まで網羅した、おおよそ日本語圏であれば表示できない文字は無いであろうサブセット。非常に大きい。
 
 #### subset_jp_skyrim.txt
-[TESVKanjiChecker v1.4.2](https://www.nexusmods.com/skyrim/mods/66768)を参考に、バニラのSkyrimで表示可能な文字のみに絞ったサブセット。非常に軽量。
+SkyrimSE v1.6.1170 に格納されている日本語フォントを解析し、バニラのSkyrimで表示可能な文字のみに絞ったサブセット。非常に軽量。
 
 
 
