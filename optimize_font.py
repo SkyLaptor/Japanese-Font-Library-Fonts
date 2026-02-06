@@ -147,13 +147,15 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         if glyph.glyphname in PROTECTED_BLANKGLYPHS:
             continue
         if len(glyph.layers[1]) == 0:
+            print(f"{glyph.glyphname:<50}",end="\r")
             font.selection.select(("more",), glyph.glyphname)
     font.clear()
 
+    glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
-    print(f"Execute the subset...")
 
     if subset_chars_path != "":
+        print(f"Subset creation in progress...")
         glyph_count = len(list(font.glyphs()))
         with open(subset_chars_path, 'r', encoding='utf-8') as f:
             subset_content = f.read()
@@ -182,6 +184,7 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         for glyph in font.selection.byGlyphs:
             if glyph.glyphname in PROTECTED_BLANKGLYPHS or glyph.glyphname in processed_glyphs:
                 continue
+            print(f"{glyph.glyphname:<50}",end="\r")
             glyph.transform(mat)
             glyph.round()
             processed_glyphs.add(glyph.glyphname)
@@ -259,15 +262,15 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Apply various processing and optimization to the font and output it as a TTF font.")
     
-    parser.add_argument("-i", "--input", help="Font file paths subject to optimization.")
-    parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
-    parser.add_argument("--subset", help="Subset character file path.", default="")
-    parser.add_argument("--ascent", type=int, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.", default=None)
-    parser.add_argument("--descent", type=int, help=f"Descent value. Ensure that the total with ascent is {EMSIZE}. If no value is entered, the font value will be used.", default=None)
-    parser.add_argument("--ratio_total", type=int, help=f"Size specification(%%).", default=100)
-    parser.add_argument("--ratio_width", type=int, help=f"Width specification(%%).", default=100)
-    parser.add_argument("--weight_offset", type=int, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.", default=0)
-    parser.add_argument("--shift_height", type=int, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.", default=0)
+    parser.add_argument("-i", "--input", required=True, help="Font file paths subject to optimization.")
+    parser.add_argument("-o", "--output", default="", help="Output font file path. The file extension must be ttf.")
+    parser.add_argument("--subset", default="", help="Subset character file path.")
+    parser.add_argument("--ascent", type=int, default=None, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.")
+    parser.add_argument("--descent", type=int, default=None, help=f"Descent value. Ensure that the total with ascent is {EMSIZE}. If no value is entered, the font value will be used.")
+    parser.add_argument("--ratio_total", type=int, default=100, help=f"Size specification(%%).")
+    parser.add_argument("--ratio_width", type=int, default=100, help=f"Width specification(%%).")
+    parser.add_argument("--weight_offset", type=int, default=0, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.")
+    parser.add_argument("--shift_height", type=int, default=0, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.")
     
     if len(sys.argv) == 1:
         parser.print_help()
