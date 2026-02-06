@@ -7,5 +7,8 @@ local/
 release/
 __pycache__/
 !skyrim_jp_every.ttf
+!skyrim_jp_every_optimized.ttf
 !skyrim_jp_book.ttf
+!skyrim_jp_book_optimized.ttf
 !skyrim_jp_handwrite.ttf
+!skyrim_jp_handwrite_optimized.ttf
