@@ -78,7 +78,7 @@ def main(input_font_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate the average values of the glyph's width and height.")
     
-    parser.add_argument("-i", "--input", help="Font file paths subject to calculate.")
+    parser.add_argument("-i", "--input", required=True, help="Font file paths subject to calculate.")
     
     if len(sys.argv) == 1:
         parser.print_help()

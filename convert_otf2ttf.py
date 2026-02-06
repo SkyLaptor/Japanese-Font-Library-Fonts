@@ -94,8 +94,8 @@ def main(input_font_path, output_font_path=""):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).")
     
-    parser.add_argument("-i", "--input", help="Font file paths subject to convert.")
-    parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
+    parser.add_argument("-i", "--input", required=True, help="Font file paths subject to convert.")
+    parser.add_argument("-o", "--output", default="", help="Output font file path. The file extension must be ttf.")
     
     if len(sys.argv) == 1:
         parser.print_help()
