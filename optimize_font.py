@@ -150,19 +150,19 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
             font.selection.select(("more",), glyph.glyphname)
     font.clear()
 
-    glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
-
     print(f"Execute the subset...")
-    with open(subset_chars_path, 'r', encoding='utf-8') as f:
-        subset_content = f.read()
-    allowed_unichars = set(ord(c) for c in subset_content)
-    for glyph in list(font.glyphs()):
-        if glyph.unicode not in allowed_unichars:
-            font.removeGlyph(glyph)
 
-    glyph_count = len(list(font.glyphs()))
-    print(f"Current total number of glyphs: {glyph_count}")
+    if subset_chars_path != "":
+        glyph_count = len(list(font.glyphs()))
+        with open(subset_chars_path, 'r', encoding='utf-8') as f:
+            subset_content = f.read()
+        allowed_unichars = set(ord(c) for c in subset_content)
+        for glyph in list(font.glyphs()):
+            if glyph.unicode not in allowed_unichars:
+                font.removeGlyph(glyph)
+        glyph_count = len(list(font.glyphs()))
+        print(f"Current total number of glyphs: {glyph_count}")
 
     print(f"Removing overlapping paths...")
     font.selection.all()
