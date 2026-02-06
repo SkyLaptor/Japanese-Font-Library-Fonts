@@ -4,30 +4,40 @@ import psMat
 import sys
 import os
 import logging
-
-import constants
-import preoptimize_font
+import argparse
 
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-PREFLAG = ".pre"
+EMSIZE = 1024
+SIMPLIFY = 0.5
+PROTECTED_BLANKGLYPHS = [
+    "space", "uni3000", "ideographicspace", ".notdef", 
+    "NULL", "nonmarkingreturn", "nbspace", "uni00A0",
+    "emspace", "enspace", "thinspace", "hairspace",
+    "uni2003", "uni2002", "uni2009", "uni200A",
+    "zerowidthspace", "uni200B"
+]
+DEFAULT_OUTPUTNAME_SUFFIX = "_optimized"
 
-def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=100, weight_offset=0, metrics=constants.DEFAULT_METRICS, output_font_path=None):
+def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100, ratio_width=100, weight_offset=0, shift_height=0):
     """Apply various processing and optimization to the font and output it as a TTF font.
            
            Weight adjustment is not recommended due to the high risk of glyph corruption.
            Width transformation is performed after size transformation.
+           Height transformation is performed after Width transformation.
            If a font file named font_name.ttf.pre exists for the target font, it will be used preferentially.
            
            Args:
                input_font_path (str): Font file paths subject to pre-optimization.
-               subset_chars_path (str, Optional): Subset character file path. Default: None
-               ratio_total (Union[str, int], optional): Size specification(%). Default: 100
-               ratio_width (Union[str, int], optional): Width specification(%). Default: 100
-               weight_offset (Union[str, int], optional): Weight adjustment value(em). Thick for positive values, thin for negative values. Default: 0
-               metrics (Union[str, tuple, list], Optional): Ascent value, Descent value. For strings, use comma-separated values. Default: ConstantValue
-               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: None
+               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: ''
+               subset_chars_path (str, Optional): Subset character file path. Default: ''
+               ascent (int, Optional): Ascent value. If no value is entered, the font value will be used. Default: None
+               descent (int, Optional): Descent value. If no value is entered, the font value will be used. Default: None
+               ratio_total (int, optional): Size specification(%). Default: 100
+               ratio_width (int, optional): Width specification(%). Default: 100
+               weight_offset (int, optional): Weight adjustment value(units). Thick for positive values, thin for negative values. Default: 0
+               shift_height (int, optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: 0
            
            Returns:
                str: Output font file path.
@@ -39,36 +49,16 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
         logging.error(msg)
         raise FileNotFoundError(msg)
 
-    if subset_chars_path and not os.path.exists(subset_chars_path):
+    if subset_chars_path != "" and not os.path.exists(subset_chars_path):
         msg = f"No such file: {subset_chars_path}"
         logging.error(msg)
         raise FileNotFoundError(msg)
 
-    ratio_total = float(ratio_total) / 100
-    ratio_width = float(ratio_width) / 100
-    weight_offset = float(weight_offset)
-    if metrics is None or metrics == "":
-        print("INFO:Since the metric values (Ascent, Descent) were not provided, the default value are used.")
-        ascent, descent = constants.DEFAULT_METRICS
-    elif isinstance(metrics, str):
-        try:
-            a_str, d_str = metrics.split(',')
-            ascent, descent = int(a_str), int(d_str)
-        except ValueError:
-            msg = f"An unknown error occurred during the metric-type conversion."
+    if ascent is not None and descent is not None:
+        if (ascent + descent) != EMSIZE:
+            msg = f"Metric inconsistency detected: Ascent({ascent}) + Descent({descent}) = {ascent + descent}. Must be equal to EMSIZE({EMSIZE})."
             logging.error(msg)
-            raise RuntimeError(msg)
-    elif isinstance(metrics, (tuple, list)):
-        ascent, descent = metrics
-    else:
-        msg = f"An unknown error occurred during the metric-type conversion."
-        logging.error(msg)
-        raise RuntimeError(msg)
-
-    if not os.path.exists(input_font_path + PREFLAG):
-        input_font_path = preoptimize_font.main(input_font_path, metrics, input_font_path + PREFLAG)
-    else:
-        input_font_path = input_font_path + PREFLAG
+            raise ValueError(msg)
 
     print("Opening font...")
     font = fontforge.open(input_font_path,("fstypepermitted",))
@@ -77,6 +67,88 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
 
     # Switch to cubic curve mode. (for high-precision machining)
     font.layers[1].is_quadratic = False
+
+    print("Removing OpenType features...")
+    for lookup in font.gsub_lookups:
+        font.removeLookup(lookup)
+    for lookup in font.gpos_lookups:
+        font.removeLookup(lookup)
+
+    print("Removing hint commands...")
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.manualHints = 0
+        glyph.removePosSub("*")
+        glyph.dhints = ()
+        glyph.hhints = ()
+        glyph.vhints = ()
+
+    print("Unlink referencies...")
+    font.unlinkReferences()
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.unlinkRef()
+
+    print("Metrics adjustment in progress...")
+    font.em = EMSIZE
+    if ascent == None:
+        ascent = font.ascent
+    if descent == None:
+        descent = font.descent
+    font.os2_use_typo_metrics = True
+    font.ascent = ascent
+    font.os2_typoascent = ascent
+    font.os2_winascent = ascent
+    font.hhea_ascent = ascent
+    font.descent = descent
+    font.os2_typodescent = -descent
+    font.os2_windescent = descent
+    font.hhea_descent = -descent
+    font.os2_typolinegap = 0
+    font.os2_subxsize = int(EMSIZE * 0.635)
+    font.os2_subysize = int(EMSIZE * 0.6)
+    font.os2_subxoff = 0
+    font.os2_subyoff = int(EMSIZE * 0.075)
+    font.os2_supxsize = int(EMSIZE * 0.635)
+    font.os2_supysize = int(EMSIZE * 0.6)
+    font.os2_supxoff = 0
+    font.os2_supyoff = int(EMSIZE * 0.34)
+    font.os2_strikeysize = int(EMSIZE * 0.050)
+    font.os2_strikeypos = int(EMSIZE * 0.03)
+    font.hasvmetrics = False
+    font.upos = -100
+    font.uwidth = 50
+    anonumous_fontname = "PreOptimizedFont"
+    font.gasp = ()
+    font.sfntRevision = 1.000
+    font.fontname = anonumous_fontname
+    font.fullname = anonumous_fontname
+    font.familyname = anonumous_fontname
+    font.uniqueid = 1
+    font.version = "1.000"
+    font.copyright = ""
+    font.os2_vendor = "    "
+    new_names = []
+    for lang in ("English (US)",):
+        new_names.append((lang, "Copyright", font.copyright))
+        new_names.append((lang, "Family", anonumous_fontname))
+        new_names.append((lang, "SubFamily", "Regular"))
+        new_names.append((lang, "Fullname", anonumous_fontname))
+        new_names.append((lang, "Version", f"Version {font.version}"))
+        new_names.append((lang, "PostScriptName", anonumous_fontname))
+    font.sfnt_names = tuple(new_names)
+
+    glyph_count = len(list(font.glyphs()))
+    print(f"Current total number of glyphs: {glyph_count}")
+
+    print(f"Removing unintended blank glyphs...")
+    font.selection.none()
+    for glyph in font.glyphs(): 
+        if glyph.glyphname in PROTECTED_BLANKGLYPHS:
+            continue
+        if len(glyph.layers[1]) == 0:
+            font.selection.select(("more",), glyph.glyphname)
+    font.clear()
 
     glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
@@ -92,42 +164,29 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
     glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
 
-    print(f"Remove unintended blank glyphs...")
-    protected_glyphs = [
-        "space", "uni3000", "ideographicspace", ".notdef", 
-        "NULL", "nonmarkingreturn", "nbspace", "uni00A0",
-        "emspace", "enspace", "thinspace", "hairspace",
-        "uni2003", "uni2002", "uni2009", "uni200A",
-        "zerowidthspace", "uni200B"
-    ]
-    target_names = set()
+    print(f"Removing overlapping paths...")
     font.selection.all()
     for glyph in font.selection.byGlyphs:
-        if glyph.glyphname in protected_glyphs:
-            continue
-        if len(glyph.layers[1]) == 0:
-            target_names.add(glyph.glyphname)
-    for name in target_names:
-        try:
-            font.removeGlyph(name)
-        except:
-            continue
+        print(f"{glyph.glyphname:<50}",end="\r")
+        glyph.removeOverlap()
+        glyph.round()
 
-    glyph_count = len(list(font.glyphs()))
-    print(f"Current total number of glyphs: {glyph_count}")
-
+    ratio_total = ratio_total / 100.0
     if ratio_total != 1.0:
+        offset_y = ((1.0 - ratio_total) * EMSIZE) / 2
         print(f"Resizing ({ratio_total * 100}%) in progress...")
+        mat = psMat.scale(ratio_total)
+        mat = psMat.compose(mat, psMat.translate(0, offset_y))
         font.selection.all()
         processed_glyphs = set()
         for glyph in font.selection.byGlyphs:
-            if glyph.glyphname in processed_glyphs:
+            if glyph.glyphname in PROTECTED_BLANKGLYPHS or glyph.glyphname in processed_glyphs:
                 continue
-            print(f"{glyph.glyphname:<50}",end="\r")
-            glyph.transform(psMat.scale(ratio_total),)
-            processed_glyphs.add(glyph.glyphname)
+            glyph.transform(mat)
             glyph.round()
+            processed_glyphs.add(glyph.glyphname)
 
+    ratio_width = ratio_width / 100.0
     if ratio_width != 1.0:
         print(f"Expand width ({ratio_width * 100}%) in progress...")
         font.selection.all()
@@ -141,7 +200,7 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
             glyph.round()
 
     if weight_offset != 0:
-        print(f"Adjusting font weight ({weight_offset}em)...")
+        print(f"Adjusting font weight by {weight_offset} units ...")
         font.selection.all()
         processed_glyphs = set()
         for glyph in font.selection.byGlyphs:
@@ -152,6 +211,18 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
             processed_glyphs.add(glyph.glyphname)
             glyph.round()
 
+    if shift_height != 0:
+        print(f"Shifting glyphs vertically by {shift_height} units...")
+        mat = psMat.translate(0, shift_height)
+        font.selection.all()
+        processed_glyphs = set()
+        for glyph in font.selection.byGlyphs:
+            if glyph.glyphname in PROTECTED_BLANKGLYPHS or glyph.glyphname in processed_glyphs:
+                continue
+            glyph.transform(mat)
+            glyph.round()
+            processed_glyphs.add(glyph.glyphname)
+
     print("Final optimization in progress...")
     font.selection.all()
     processed_glyphs = set()
@@ -159,19 +230,23 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
         if glyph.glyphname in processed_glyphs:
                 continue
         print(f"{glyph.glyphname:<50}",end="\r")
-        glyph.simplify(constants.SIMPLIFY, ("choosehv", "mergelines", "nearlyhvlines", "removesingletonpoints"), 0.02, 0.1, 0)
+        glyph.simplify(SIMPLIFY, ("choosehv", "mergelines", "nearlyhvlines", "removesingletonpoints"), 0.02, 0.1, 0)
         processed_glyphs.add(glyph.glyphname)
         glyph.round()
 
     # Disable cubic curve mode (required for TrueType output)
     font.layers[1].is_quadratic = True
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.correctDirection()
+        glyph.round()
 
     print("Outputting optimized fonts...")
-    if output_font_path == "" or not output_font_path:
+    if output_font_path == "":
         print("INFO:Since the output destination is unspecified, output to the same location as the base font.")
         directory = os.path.dirname(input_font_path) or "."
         base_name = os.path.splitext(os.path.basename(input_font_path))[0]
-        output_file_name = f"{base_name}_optimized"
+        output_file_name = f"{base_name + DEFAULT_OUTPUTNAME_SUFFIX}"
         output_font_path = os.path.join(directory, output_file_name+".ttf")
     font.generate(output_font_path)
 
@@ -182,8 +257,28 @@ def main(input_font_path, subset_chars_path=None, ratio_total=100, ratio_width=1
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    if len(args) < 1:
-        print("Usage: fontforge -quiet -script optimize_font.py <input_font_path> [subset_chars_path] [ratio_total] [ratio_width] [weight_offset] [metrics] [output_font_path]")
-    else:
-        main(*args)
+    parser = argparse.ArgumentParser(description="Apply various processing and optimization to the font and output it as a TTF font.")
+    
+    parser.add_argument("-i", "--input", help="Font file paths subject to optimization.")
+    parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
+    parser.add_argument("--subset", help="Subset character file path.", default="")
+    parser.add_argument("--ascent", type=int, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.", default=None)
+    parser.add_argument("--descent", type=int, help=f"Descent value. Ensure that the total with ascent is {EMSIZE}. If no value is entered, the font value will be used.", default=None)
+    parser.add_argument("--ratio_total", type=int, help=f"Size specification(%%).", default=100)
+    parser.add_argument("--ratio_width", type=int, help=f"Width specification(%%).", default=100)
+    parser.add_argument("--weight_offset", type=int, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.", default=0)
+    parser.add_argument("--shift_height", type=int, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.", default=0)
+    
+    args = parser.parse_args()
+    
+    main(
+        input_font_path=args.input,
+        output_font_path=args.output,
+        subset_chars_path=args.subset,
+        ascent=args.ascent,
+        descent=args.descent,
+        ratio_total=args.ratio_total,
+        ratio_width=args.ratio_width,
+        weight_offset=args.weight_offset,
+        shift_height=args.shift_height
+    )
