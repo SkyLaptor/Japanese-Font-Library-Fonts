@@ -78,9 +78,9 @@ def main(base_font_path, sub_font_path, output_font_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Merge fonts and output them as a new font.")
     
-    parser.add_argument("-b", "--base", help="Base font file. The side that is interpolated.")
-    parser.add_argument("-s", "--sub", help="Interpolation font file.")
-    parser.add_argument("-o", "--output", help="Output font file path. The file extension must be ttf.", default="")
+    parser.add_argument("-b", "--base", required=True, help="Base font file. The side that is interpolated.")
+    parser.add_argument("-s", "--sub", required=True, help="Interpolation font file.")
+    parser.add_argument("-o", "--output", default="", help="Output font file path. The file extension must be ttf.")
     
     if len(sys.argv) == 1:
         parser.print_help()
