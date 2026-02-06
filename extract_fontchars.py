@@ -19,7 +19,9 @@ DEFAULT_OUTPUTNAME_SUFFIX = "_chars"
 
 def main(input_font_path, output_chars_path=""):
     """Output the characters contained in the font to text.
-           
+
+           Unintended blank glyphs are ignored in the count.
+
            Args:
                input_font_path (str): Font file paths subject to convert.
                output_chars_path (str, optional): Output chars file path. The file extension must be txt. Default: ''
