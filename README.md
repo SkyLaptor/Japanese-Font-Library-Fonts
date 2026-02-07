@@ -22,8 +22,8 @@
 
 ```
 $ fontforge -quiet -script .\convert_for_skyrim.py --help
-usage: convert_for_skyrim.py [-h] -i INPUT [-o OUTPUT] [--subset SUBSET] [--mode_ui MODE_UI]
-                             [--ratio_width RATIO_WIDTH] [--resize_mode RESIZE_MODE]
+usage: convert_for_skyrim.py [-h] -i INPUT [-o OUTPUT] [-s SUBSET] [-m MODE_UI] [-w MODE_WIDTH]
+                             [--shift_height SHIFT_HEIGHT]
 
 Convert the specified font for Skyrim's UI
 
@@ -33,12 +33,14 @@ options:
                         Font file paths subject to converion.
   -o OUTPUT, --output OUTPUT
                         Output font file path. The file extension must be ttf.
-  --subset SUBSET       Subset character file path.
-  --mode_ui MODE_UI     UI mode(every,book,hand).
-  --ratio_width RATIO_WIDTH
-                        Width specification(%).
-  --resize_mode RESIZE_MODE
-                        Resize mode(v,vh,he).
+  -s SUBSET, --subset SUBSET
+                        Subset character file path.
+  -m MODE_UI, --mode_ui MODE_UI
+                        UI mode(every,book,hand).
+  -w MODE_WIDTH, --mode_width MODE_WIDTH
+                        Width mode(auto,cond,skin).
+  --shift_height SHIFT_HEIGHT
+                        Height adjustment value(units). Thick for positive values, thin for negative values.
 ```
 
 ### フォントを任意に最適化する
@@ -46,7 +48,7 @@ options:
 
 ```
 $ fontforge -quiet -script .\optimize_font.py --help
-usage: optimize_font.py [-h] -i INPUT [-o OUTPUT] [--subset SUBSET] [--ascent ASCENT] [--descent DESCENT]
+usage: optimize_font.py [-h] -i INPUT [-o OUTPUT] [-s SUBSET] [--ascent ASCENT] [--descent DESCENT]
                         [--ratio_total RATIO_TOTAL] [--ratio_width RATIO_WIDTH] [--weight_offset WEIGHT_OFFSET]
                         [--shift_height SHIFT_HEIGHT]
 
@@ -58,7 +60,8 @@ options:
                         Font file paths subject to optimization.
   -o OUTPUT, --output OUTPUT
                         Output font file path. The file extension must be ttf.
-  --subset SUBSET       Subset character file path.
+  -s SUBSET, --subset SUBSET
+                        Subset character file path.
   --ascent ASCENT       Ascent value. Ensure that the total with descent is 1024. If no value is entered, the font
                         value will be used.
   --descent DESCENT     Descent value. Ensure that the total with ascent is 1024. If no value is entered, the font
@@ -110,7 +113,7 @@ options:
 ### フォント同士を組み合わせる
  例えば [しねきゃぷしょん](https://www.vector.co.jp/soft/data/writing/se314690.html) などの、格納されているグリフが少ないフォントをそのまま使用すると一部の文字が豆腐化してしまうことがある。
  そこで [源柔ゴシック](http://jikasei.me/font/genjyuu/) といった字体が似ていて、なおかつ格納グリフ数が多いフォントで補間してあげることで、違和感を最小限に豆腐化を防ぐことができる。
-なお、組み合わせるフォントは事前にオプションなしで最適化を施しておくこと推奨。
+なお、組み合わせるフォントは事前にオプションなしで最適化を施しておくこと強く推奨。
 
  ```
 $ fontforge -quiet -script .\merge_font.py --help
@@ -129,7 +132,7 @@ options:
 
 ### フォントSWFファイルに変換する
 TTFのままではスカイリムでは使用できないため、フォントSWFに変換する必要がある。
-ただ、FFDecでは単純に埋め込むだけしかできないため、結局FFDecで開いてフォント名、ExportAssetsの修正が必要。
+ただ、FFDecでは単純に埋め込むだけしかできないため、結局FFDecで開いてフォント名、ExportAssetsの修正が別途必要。
 
 ```:cmd
 $ ffdec-cli.exe -replace fonts_template.swf <出力フォントSWF名> 1 <埋め込むフォントファイル(TTF)>
@@ -140,11 +143,11 @@ $ ffdec-cli.exe -replace fonts_template.swf fonts_example_test.swf 1 example_s97
 
 #### フォントSWFの命名規則
 ```
-fonts_<フォント名>[特殊ウェイト:_light|_bold|_heavy]<調整モード:_every|_book|_handwrite>[長形:_condensed|_skinny][サブセット:_jp-full|_jp-skyrim].swf
+フォントファイル名:
+fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight].swf
 
-例: noto-sansというフォント名で、ウェイトがBoldで、Everywere向け調整で、70%長形になっていて、サブセットがJPSkyrimの場合
-フォント名= noto-sans_bold_every_condensed_jp-skyrim
-SWF名: fonts_noto-sans_bold_every_condensed_jp-skyrim.swf
+フォント名:
+<フォント名>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight]
 ```
 
 ## サブセットファイルについて
@@ -157,6 +160,7 @@ SWF名: fonts_noto-sans_bold_every_condensed_jp-skyrim.swf
 
 #### subset_jp_skyrim.txt
 SkyrimSE v1.6.1170 に格納されている日本語フォントを解析し、バニラのSkyrimで表示可能な文字のみに絞ったサブセット。非常に軽量。
+なお、SkyrimSE v1.6.1170 に格納されている日本語フォントには全角英数字が空白というバグを抱えているため、それらの文字は特別に補間した。
 
 
 
