@@ -60,12 +60,6 @@ def main(input_font_path):
         font.selection.all()
         font.transform(psMat.scale(scale))
     font.em = EMSIZE
-    
-    print("Unlink referencies...")
-    font.unlinkReferences()
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        glyph.unlinkRef()
 
     total_width = 0
     total_height = 0
