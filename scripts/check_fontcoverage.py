@@ -87,12 +87,10 @@ def main(target_font_path, subset_chars_path):
     with open(subset_chars_path, 'r', encoding='utf-8') as f:
         chars = set(f.read().strip())
     for char in chars:
-        print(f"{char:<50}",end="\r")
         codepoint = ord(char)
-        if codepoint not in font:
+        if font.findEncodingSlot(codepoint) == -1:
             print(f"Missing glyph: '{char}' (U+{codepoint:04X})")
             missing_chars.append(char)
-    font.close()
 
     if not missing_chars:
         print("There are no missing glyphs.")

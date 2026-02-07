@@ -143,11 +143,12 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
 
     print(f"Removing unintended blank glyphs...")
     font.selection.none()
-    for glyph in font.glyphs(): 
+    for glyph in font.glyphs():
+        print(f"{glyph.glyphname:<50}",end="\r")
         if glyph.glyphname in PROTECTED_BLANKGLYPHS:
             continue
         if len(glyph.layers[1]) == 0:
-            print(f"{glyph.glyphname:<50}",end="\r")
+            print(f"Remove: {glyph.glyphname:<50}")
             font.selection.select(("more",), glyph.glyphname)
     font.clear()
 
