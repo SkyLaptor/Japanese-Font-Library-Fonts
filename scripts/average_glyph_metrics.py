@@ -33,6 +33,10 @@ def main(input_font_path):
     font = fontforge.open(input_font_path, ("fstypepermitted",))
     
     try:
+        if font.em != EMSIZE:
+            scale = float(EMSIZE) / font.em
+            font.selection.all()
+            font.transform(psMat.scale(scale))
         font.em = EMSIZE
         font.encoding = "UnicodeFull"
         

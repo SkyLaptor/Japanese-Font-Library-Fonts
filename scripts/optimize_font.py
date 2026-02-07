@@ -91,12 +91,16 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         glyph.unlinkRef()
 
     print("Metrics adjustment in progress...")
+    if font.em != EMSIZE:
+        scale = float(EMSIZE) / font.em
+        font.selection.all()
+        font.transform(psMat.scale(scale))
     font.em = EMSIZE
     if ascent == None:
         ascent = font.ascent
     if descent == None:
         descent = font.descent
-    font.os2_use_typo_metrics = True
+    font.os2_use_typo_metrics = False
     font.ascent = ascent
     font.os2_typoascent = ascent
     font.os2_winascent = ascent
@@ -162,10 +166,25 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
             subset_content = f.read()
         allowed_unichars = set(ord(c) for c in subset_content)
         for glyph in list(font.glyphs()):
-            if glyph.unicode not in allowed_unichars:
-                font.removeGlyph(glyph)
+            codes = [glyph.unicode]
+            if glyph.altuni:
+                codes.extend([a[0] for a in glyph.altuni])
+            if any(c in allowed_unichars for c in codes if c != -1):
+                continue
+            font.removeGlyph(glyph)
         glyph_count = len(list(font.glyphs()))
         print(f"Current total number of glyphs: {glyph_count}")
+
+        # Force the radical area (2F00-2FDF) to be relocated to the kanji area (4E00-9FFF).
+        print("Finalizing Unicode mapping for Kanji stability...")
+        for glyph in font.glyphs():
+            if 0x2F00 <= glyph.unicode <= 0x2FDF:
+                if glyph.altuni:
+                    for alt_code, alt_vid, alt_rev in glyph.altuni:
+                        if 0x4E00 <= alt_code <= 0x9FFF:
+                            #print(f"  Switching mapping: {glyph.glyphname} {glyph.unicode:04X} -> {alt_code:04X}")
+                            glyph.unicode = alt_code
+                            break
 
     print(f"Removing overlapping paths...")
     font.selection.all()
@@ -239,9 +258,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         glyph.round()
 
     # Disable cubic curve mode (required for TrueType output)
+    print("Disable cubic curve mode...")
     font.layers[1].is_quadratic = True
     font.selection.all()
     for glyph in font.selection.byGlyphs:
+        print(f"{glyph.glyphname:<50}",end="\r")
         glyph.correctDirection()
         glyph.round()
 
