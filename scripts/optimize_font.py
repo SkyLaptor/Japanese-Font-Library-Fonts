@@ -286,7 +286,7 @@ if __name__ == "__main__":
     
     parser.add_argument("-i", "--input", required=True, help="Font file paths subject to optimization.")
     parser.add_argument("-o", "--output", default="", help="Output font file path. The file extension must be ttf.")
-    parser.add_argument("--subset", default="", help="Subset character file path.")
+    parser.add_argument("-s", "--subset", default="", help="Subset character file path.")
     parser.add_argument("--ascent", type=int, default=None, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.")
     parser.add_argument("--descent", type=int, default=None, help=f"Descent value. Ensure that the total with ascent is {EMSIZE}. If no value is entered, the font value will be used.")
     parser.add_argument("--ratio_total", type=int, default=100, help=f"Size specification(%%).")
