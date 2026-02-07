@@ -1,5 +1,6 @@
 #!/usr/bin/env fontforge
 import fontforge
+import psMat
 import sys
 import os
 import logging
@@ -31,50 +32,71 @@ def main(input_font_path):
 
     print("Opening font...")
     font = fontforge.open(input_font_path, ("fstypepermitted",))
-    
-    try:
-        if font.em != EMSIZE:
-            scale = float(EMSIZE) / font.em
-            font.selection.all()
-            font.transform(psMat.scale(scale))
-        font.em = EMSIZE
-        font.encoding = "UnicodeFull"
-        
-        print("Unlinking references for precise calculation...")
+    font.encoding = "UnicodeFull"
+
+    print("Removing OpenType features...")
+    for lookup in font.gsub_lookups:
+        font.removeLookup(lookup)
+    for lookup in font.gpos_lookups:
+        font.removeLookup(lookup)
+
+    print("Removing hint commands...")
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.manualHints = 0
+        glyph.removePosSub("*")
+        glyph.dhints = ()
+        glyph.hhints = ()
+        glyph.vhints = ()
+
+    print("Unlink referencies...")
+    font.unlinkReferences()
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.unlinkRef()
+
+    if font.em != EMSIZE:
+        scale = float(EMSIZE) / font.em
         font.selection.all()
-        font.unlinkReferences()
+        font.transform(psMat.scale(scale))
+    font.em = EMSIZE
+    
+    print("Unlink referencies...")
+    font.unlinkReferences()
+    font.selection.all()
+    for glyph in font.selection.byGlyphs:
+        glyph.unlinkRef()
 
-        total_width = 0
-        total_height = 0
-        glyph_count = 0
-        
-        print(f"Analyzing CJK range {hex(ANALYZE_RANGE[0])} - {hex(ANALYZE_RANGE[1]-1)}...")
-        
-        for i in range(*ANALYZE_RANGE):
-            if i in font:
-                glyph = font[i]
-                if glyph.isWorthOutputting():
-                    # bbox: (x_min, y_min, x_max, y_max)
-                    bbox = glyph.boundingBox()
-                    width = bbox[2] - bbox[0]
-                    height = bbox[3] - bbox[1]
-                    
-                    if width > 0 and height > 0:
-                        total_width += width
-                        total_height += height
-                        glyph_count += 1
+    total_width = 0
+    total_height = 0
+    glyph_count = 0
+    
+    print(f"Analyzing CJK range {hex(ANALYZE_RANGE[0])} - {hex(ANALYZE_RANGE[1]-1)}...")
+    
+    for i in range(*ANALYZE_RANGE):
+        if i in font:
+            glyph = font[i]
+            if glyph.isWorthOutputting():
+                # bbox: (x_min, y_min, x_max, y_max)
+                bbox = glyph.boundingBox()
+                width = bbox[2] - bbox[0]
+                height = bbox[3] - bbox[1]
+                
+                if width > 0 and height > 0:
+                    total_width += width
+                    total_height += height
+                    glyph_count += 1
 
-        if glyph_count == 0:
-            print("INFO: No target glyphs found in the specified range.")
-            return 0, 0
+    if glyph_count == 0:
+        print("INFO: No target glyphs found in the specified range.")
+        return 0, 0
 
-        avg_width = round(total_width / glyph_count)
-        avg_height = round(total_height / glyph_count)
+    avg_width = round(total_width / glyph_count)
+    avg_height = round(total_height / glyph_count)
 
-        print(f"Result: Average Width = {avg_width}, Average Height = {avg_height} (Total: {glyph_count} glyphs)")
-        
-    finally:
-        font.close()
+    print(f"Result: Average Width = {avg_width}, Average Height = {avg_height} (Total: {glyph_count} glyphs)")
+
+    font.close()
 
     print("=== End of Calculate the Glyphs average ===")
     return avg_width, avg_height
