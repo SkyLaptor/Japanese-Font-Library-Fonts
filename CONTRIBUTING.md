@@ -1,6 +1,22 @@
 # コントリビューションガイド
 開発するに当たっての留意事項、ナレッジなど。
 
+## Git開発フロー
+GitLab-Flowを採用
+
+## フォント開発時に使用するツール
+### BSA Browser
+ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使う。
+https://www.nexusmods.com/skyrimspecialedition/mods/1756
+
+### xTranslator
+プラグインやスクリプトを翻訳するツール。
+https://www.nexusmods.com/starfield/mods/313
+
+### JPEXS Free Flash Decompiler - FFDec
+SWFを作成加工するために使用。
+https://github.com/jindrapetrik/jpexs-decompiler
+
 ## バニラの日本語フォントの取り出し方
 対象バージョン: SkyrimSE 英語版 v1.6.1170
 
@@ -73,3 +89,26 @@
         * Ascent: 17600
         * Descent: 2880
         * Leadline: 0
+
+
+ ## バニラバグフィックスパッチの作り方
+### 本UIの内蔵フォントバグ除去
+Skyrim時代から存在するバグ。
+SE版はv1.6.629以降解消しているが、下位バージョン(特に1.5.97.0)を使用している場合向けにパッチする必要あり。
+英語版の最新の本UI`interface/book.swf`にはなぜかフォントファイルそのものが格納されており、そちらが使用されてしまうことにより発生する。FFDecを使用して余分なフォントを除去する。
+動作確認としては、「エリトリスのノート」や「アーヴェルの日記」を開いてみると良い。
+参考情報: https://obachanskyrim.blogspot.com/2012/07/bookswf.html
+
+### レベルアップメニューUI
+Skyrim時代から存在するバグ。
+SE版はv1.6.629以降解消しているが、下位バージョンを使用している場合向けにパッチする必要あり。  
+日本語版のレベルアップメニューUI`interface/levelupmenu.swf`のフォントマップが正しく指定されておらず、きちんと表示されない。英語版ではバグがないため、英語版の`interface/levelupmenu.swf`を取り出して使用する。  
+ただ、デフォルトUIはバグは解消されていても表示が非常に大きく見切れているため、そこも修正する。yminを増やして文字の位置を変えた上で、HTMLレンダリングに変えてフォントサイズを指定する。
+
+
+## SkyUI向けMCM専用フォントマップ適用パッチの作り方
+コンフィグメニュー(MCM)はデフォルトで`$EverywhereFont`系の汎用フォントを使用するが、日本語のような全角フォントだと文字が多すぎてUIをぶち抜いてしまう。かと言って`$EverywhereFont`系に長形フォントを指定すると他のUIが見づらくなる。その解決策として、MCMには専用のフォントマップを使用するパッチを用意する。
+MCMを実現しているUIは LE/SE共に`Interface/skyui/configpanel.swf` 。FFDecを使用してフォントマップを指定している箇所を検索して書き換える。
+
+## テスト
+
