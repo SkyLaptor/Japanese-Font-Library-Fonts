@@ -175,10 +175,10 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         glyph_count = len(list(font.glyphs()))
         print(f"Current total number of glyphs: {glyph_count}")
 
-        # Force the radical area (2F00-2FDF) to be relocated to the kanji area (4E00-9FFF).
+        # Force the radical area (2E80-2FDF and F900-FAFF) to be relocated to the kanji area (4E00-9FFF).
         print("Finalizing Unicode mapping for Kanji stability...")
         for glyph in font.glyphs():
-            if 0x2F00 <= glyph.unicode <= 0x2FDF:
+            if 0x2E80 <= glyph.unicode <= 0x2FDF or 0xF900 <= glyph.unicode <= 0xFAFF:
                 if glyph.altuni:
                     for alt_code, alt_vid, alt_rev in glyph.altuni:
                         if 0x4E00 <= alt_code <= 0x9FFF:
