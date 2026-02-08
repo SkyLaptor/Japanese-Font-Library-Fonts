@@ -25,20 +25,77 @@
 ## テスト環境
 * 対象のゲーム: Skyrim, SkyrimSE(SkyrimAE), SkyrimVR
 * 対象のModマネージャー: [Vortex](https://www.nexusmods.com/about/vortex), [ModOrganizer2](https://www.nexusmods.com/about/vortex) ※公式そのままの状態でカスタムを加えていないものであること。
-* Mod: [SKSE](https://skse.silverlock.org/), [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) ※フォント周りに影響を及ぼす場合はIssueで提案して下さい。
+* Mod: [SKSE](https://skse.silverlock.org/), [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) ※フォント周りに影響を及ぼす場合はIssueで提案すること。
 
-## フォント開発時に使用するツール
+
+## 開発及びテスト時に使用するツール
 ### BSA Browser
-ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使う。
+ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使います。
 https://www.nexusmods.com/skyrimspecialedition/mods/1756
 
 ### xTranslator
-プラグインやスクリプトを翻訳するツール。
+プラグインやスクリプトを翻訳します。
 https://www.nexusmods.com/starfield/mods/313
 
+### FontForge
+TTFを作成加工するために使用します。`fontforge.exe` にパスを通してください。
+https://fontforge.org/en-US/
+
 ### JPEXS Free Flash Decompiler - FFDec
-SWFを作成加工するために使用。
+SWFを作成加工するために使用します。`ffdec-cli.exe` にパスを通してください。
 https://github.com/jindrapetrik/jpexs-decompiler
+
+
+## 開発手順
+### 新規フォントの場合
+1. 非商用にて無償利用可能なフォントを入手する。その場合は入手元、使用許諾情報も併せて取得すること。
+
+2. フォントにてサブセット検証を行う。
+
+```
+$ cd scripts
+$ fontforge --quiet --script ./check_fontcoverage.py -t <TTF> -s < subset_jp_full.txt | subset_jp_skyrim.txt >
+```
+
+スカイリムサブセット(`subset_jp_skyrim.txt`)による検証にて、不足グリフがあった場合は原則的にプルリクエストは却下となります。似たフォントで補間するものとしてください。
+
+3. サブセット検証が完了したフォントに対し、スカイリム専用変換を行う。
+
+```
+$ cd scripts
+$ fontforge --quiet --script ./convert_for_skyrim.py -i <TTF> -s <subset> -m <ui_mode> -w <width_mode>
+```
+
+4. テンプレートSWFにフォントを埋め込む。
+
+```
+$ cd scripts
+$ ffdec-cli -replace fonts_template.swf <SWF> 1 <TTF>
+```
+
+5. フォントを埋め込んだSWFをFFDecで開き、フォント名、ExportAssetsを次のルールに従って書き換える。
+
+```
+フォントファイル名:
+fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight].swf
+
+フォント名:
+<フォント名>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight]
+```
+
+7. テスト用のfontconfig.txtを用いて、ゲーム内にて表示を確認する。
+
+
+
+
+## テスト項目
+
+* [ ] サブセット検証にてスカイリムサブセットをパスしていること。
+* [ ] ゲーム起動直後にCTDが起きないこと。
+* [ ] メインメニューで豆腐化が起きないこと。
+
+
+
 
 ## バニラの日本語フォントの取り出し方
 対象バージョン: SkyrimSE 英語版 v1.6.1170
@@ -47,6 +104,7 @@ https://github.com/jindrapetrik/jpexs-decompiler
 2. `ゲームインストールディレクトリ\Data\Skyrim - Interface.bsa` を [BSA Browser](https://www.nexusmods.com/skyrimspecialedition/mods/1756) で開く。
 3. `interface\fonts_ja.swf` を取り出し、[JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) で開く。
 4. 左ツリーから`フォント`を選び、任意のフォントを右クリックし'選択中のものをエクスポート'から任意の場所にエクスポートする。
+
 
 ## コアフォントSWFの作り方
 対象バージョン: SkyrimSE 英語版 v1.6.1170
