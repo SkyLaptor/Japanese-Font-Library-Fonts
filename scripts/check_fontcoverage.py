@@ -88,8 +88,8 @@ def main(target_font_path, subset_chars_path, result_file_path=""):
 
     print("Finalizing Unicode mapping for Kanji stability (Extended)...")
     for glyph in font.glyphs():
-        # Force the radical area (2E80-2FDF and F900-FAFF) to be relocated to the kanji area (4E00-9FFF).
-        if 0x2E80 <= glyph.unicode <= 0x2FDF or 0xF900 <= glyph.unicode <= 0xFAFF:
+        # Force the radical area (2E80-2FDF or 3400-4DBF or F900-FAFF) to be relocated to the kanji area (4E00-9FFF).
+        if 0x2E80 <= glyph.unicode <= 0x2FDF or 0x3400 <= glyph.unicode <= 0x4DBF or 0xF900 <= glyph.unicode <= 0xFAFF:
             if glyph.altuni:
                 for alt_code, alt_vid, alt_rev in glyph.altuni:
                     if 0x4E00 <= alt_code <= 0x9FFF:
