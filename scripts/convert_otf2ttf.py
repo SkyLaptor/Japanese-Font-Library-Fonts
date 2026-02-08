@@ -8,8 +8,6 @@ import argparse
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
 
-SIMPLIFY = 0.5
-
 def main(input_font_path, output_font_path=""):
     """Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).
            
@@ -36,12 +34,6 @@ def main(input_font_path, output_font_path=""):
     font.cidFlatten()
     font.encoding = "UnicodeFull"
     font.reencode("unicode")
-    
-    print("Clearing Unicode Variation Sequences to avoid cmap format 14 errors...")
-    for glyph in font.glyphs():
-        glyph.altuni = None
-    font.encoding = "UnicodeFull"
-    font.reencode("unicode")
 
     print("Removing OpenType features...")
     for lookup in font.gsub_lookups:
@@ -52,30 +44,8 @@ def main(input_font_path, output_font_path=""):
     glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
 
-    print("Unmapped glyph deletion in progress...")
-    font.selection.none()
-    for glyph in font.glyphs():
-        if glyph.unicode == -1 and glyph.glyphname != ".notdef":
-            font.selection.select(("more",), glyph.glyphname)
-    font.clear()
-
-    glyph_count = len(list(font.glyphs()))
-    print(f"Current total number of glyphs: {glyph_count}")
-
     # Disable cubic curve mode (required for TrueType output)
     font.layers[1].is_quadratic = True
-
-    print("Cleaning before output...")
-    font.selection.all()
-    processed_glyphs = set()
-    for glyph in font.selection.byGlyphs:
-        if glyph.glyphname in processed_glyphs:
-                continue
-        print(f"{glyph.glyphname:<50}",end="\r")
-        glyph.simplify(SIMPLIFY, ("choosehv", "mergelines", "nearlyhvlines", "removesingletonpoints"), 0.02, 0.1, 0)
-        processed_glyphs.add(glyph.glyphname)
-        glyph.correctDirection()
-        glyph.round()
 
     print("Outputting TrueType fonts...")
     if output_font_path == "" or not output_font_path:
@@ -84,7 +54,7 @@ def main(input_font_path, output_font_path=""):
         base_name = os.path.splitext(os.path.basename(input_font_path))[0]
         output_file_name = f"{base_name}"
         output_font_path = os.path.join(directory, output_file_name+".ttf")
-    font.generate(output_font_path, flags=("opentype",))
+    font.generate(output_font_path, flags=("winkern",))
 
     font.close()
 
