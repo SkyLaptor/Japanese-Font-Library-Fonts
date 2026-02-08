@@ -106,7 +106,7 @@ def main(target_font_path, subset_chars_path, result_file_path=""):
         directory = os.path.dirname(target_font_path) or "."
         font_base_name = os.path.splitext(os.path.basename(target_font_path))[0]
         subset_base_name = os.path.splitext(os.path.basename(subset_chars_path))[0]
-        output_file_name = f"{font_base_name + subset_base_name + DEFAULT_OUTPUTNAME_SUFFIX}"
+        output_file_name = f"{font_base_name + '_' + subset_base_name + DEFAULT_OUTPUTNAME_SUFFIX}"
         result_file_path = os.path.join(directory, output_file_name+".log")
     with open(result_file_path, 'w', encoding='utf-8') as log_file:
         log_file.write(f"Inspection Result for: {os.path.basename(target_font_path)}\n")
