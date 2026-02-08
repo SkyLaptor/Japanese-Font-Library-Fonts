@@ -152,7 +152,7 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         if glyph.glyphname in PROTECTED_BLANKGLYPHS:
             continue
         if len(glyph.layers[1]) == 0:
-            print(f"Remove: {glyph.glyphname:<50}")
+            #print(f"Remove: {glyph.glyphname:<50}")
             font.selection.select(("more",), glyph.glyphname)
     font.clear()
 
