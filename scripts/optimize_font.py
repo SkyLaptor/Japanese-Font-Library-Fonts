@@ -31,14 +31,14 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
            
            Args:
                input_font_path (str): Font file paths subject to pre-optimization.
-               output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: ''
+               output_font_path (str, Optional): Output font file path. The file extension must be ttf. Default: ''
                subset_chars_path (str, Optional): Subset character file path. Default: ''
                ascent (int, Optional): Ascent value. If no value is entered, the font value will be used. Default: None
                descent (int, Optional): Descent value. If no value is entered, the font value will be used. Default: None
-               ratio_total (int, optional): Size specification(%). Default: 100
-               ratio_width (int, optional): Width specification(%). Default: 100
-               weight_offset (int, optional): Weight adjustment value(units). Thick for positive values, thin for negative values. Default: 0
-               shift_height (int, optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: 0
+               ratio_total (int, Optional): Size specification(%). Default: 100
+               ratio_width (int, Optional): Width specification(%). Default: 100
+               weight_offset (int, Optional): Weight adjustment value(units). Thick for positive values, thin for negative values. Default: 0
+               shift_height (int, Optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: 0
            
            Returns:
                str: Output font file path.
