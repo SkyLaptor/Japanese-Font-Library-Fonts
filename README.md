@@ -18,7 +18,7 @@
 
 ## 使い方
 ### スカイリム向けにフォントを最適化する
-任意のフォントを、バニラのフォント類(Everywere,Book,Handwritten)に準拠した形で最適化することができる。
+任意のフォントを、バニラのフォント類(Everywhere,Book,Handwritten)に準拠した形で最適化することができる。
 
 ```
 $ fontforge -quiet -script .\convert_for_skyrim.py --help
