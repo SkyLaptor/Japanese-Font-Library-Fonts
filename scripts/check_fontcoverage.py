@@ -16,7 +16,9 @@ PROTECTED_BLANKGLYPHS = [
     "zerowidthspace", "uni200B"
 ]
 
-def main(target_font_path, subset_chars_path):
+DEFAULT_OUTPUTNAME_SUFFIX = "_result"
+
+def main(target_font_path, subset_chars_path, result_file_path=""):
     """Check whether the font file contains a subset string.
            
            Unintended blank glyphs are ignored during inspection.
@@ -24,9 +26,10 @@ def main(target_font_path, subset_chars_path):
            Args:
                target_font_path (str): Path to the font file you want to inspect.
                subset_chars_path (str): Path to the subset file to be inspected.
+               result_file_path (str, Optional): Path to the logfile.
            
            Returns:
-               str: List of non-existent glyph names.
+               str: List of missing glyph names.
     """
     print("=== Start of Glyph Containment Inspection ===")
 
@@ -76,21 +79,41 @@ def main(target_font_path, subset_chars_path):
         if glyph.glyphname in PROTECTED_BLANKGLYPHS:
             continue
         if len(glyph.layers[1]) == 0:
-            print(f"Remove: {glyph.glyphname:<50}")
+            #print(f"Remove: {glyph.glyphname:<50}")
             font.selection.select(("more",), glyph.glyphname)
     font.clear()
 
     glyph_count = len(list(font.glyphs()))
     print(f"Current total number of glyphs: {glyph_count}")
 
-    missing_chars = []
+    print(f"Comparing fonts and subsets......")
+    present_unicodes = set()
+    for glyph in font.glyphs():
+        if glyph.isWorthOutputting() or glyph.glyphname in PROTECTED_BLANKGLYPHS:
+            if glyph.unicode != -1:
+                present_unicodes.add(glyph.unicode)
     with open(subset_chars_path, 'r', encoding='utf-8') as f:
-        chars = set(f.read().strip())
-    for char in chars:
-        codepoint = ord(char)
-        if font.findEncodingSlot(codepoint) == -1:
-            print(f"Missing glyph: '{char}' (U+{codepoint:04X})")
+        target_chars = set(f.read().replace('\n', '').replace('\r', ''))
+    missing_chars = []
+    for char in sorted(target_chars):
+        if ord(char) not in present_unicodes:
+            #print(f"Missing: {char} (U+{ord(char):04X})")
             missing_chars.append(char)
+
+    print("Outputting result logs...")
+    if result_file_path == "":
+        print("INFO:Since the output destination is unspecified, output to the same location as the base font.")
+        directory = os.path.dirname(target_font_path) or "."
+        font_base_name = os.path.splitext(os.path.basename(target_font_path))[0]
+        subset_base_name = os.path.splitext(os.path.basename(subset_chars_path))[0]
+        output_file_name = f"{font_base_name + subset_base_name + DEFAULT_OUTPUTNAME_SUFFIX}"
+        result_file_path = os.path.join(directory, output_file_name+".log")
+    with open(result_file_path, 'w', encoding='utf-8') as log_file:
+        log_file.write(f"Inspection Result for: {os.path.basename(target_font_path)}\n")
+        log_file.write(f"Subset used: {os.path.basename(subset_chars_path)}\n")
+        log_file.write(f"Missing glyph count: {len(missing_chars)}\n")
+        log_file.write("-" * 30 + "\n")
+        log_file.write("".join(missing_chars))
 
     if not missing_chars:
         print("There are no missing glyphs.")
@@ -106,6 +129,7 @@ if __name__ == "__main__":
     
     parser.add_argument("-t", "--target", required=True, help="Path to the font file you want to inspect.")
     parser.add_argument("-s", "--subset", required=True, help="Path to the subset file to be inspected.")
+    parser.add_argument("-l", "--log", default="", help="Path to the logfile.")
     
     if len(sys.argv) == 1:
         parser.print_help()
@@ -115,5 +139,6 @@ if __name__ == "__main__":
     
     main(
         target_font_path=args.target,
-        subset_chars_path=args.subset
+        subset_chars_path=args.subset,
+        result_file_path=args.log
     )
