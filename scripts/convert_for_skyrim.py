@@ -27,16 +27,17 @@ SHIFT_HEIGHT_EVERY = -96
 SHIFT_HEIGHT_BOOK = 0
 SHIFT_HEIGHT_HAND = 0
 
-def main(input_font_path, output_font_path="", subset_chars_path="", mode_ui=MODE_UI_EVERY, mode_width=MODE_WIDTH_AUTO, shift_height=None):
+def main(input_font_path, output_font_path="", subset_chars_path="", mode_ui=MODE_UI_EVERY, mode_width=MODE_WIDTH_AUTO, mode_mono=False, shift_height=None):
     """Convert the specified font for Skyrim's UI
 
            Args:
                input_font_path (str): Font file paths subject to converion.
                output_font_path (str, optional): Output font file path. The file extension must be ttf. Default: ''
                subset_chars_path (str, Optional): Subset character file path. Default: ''
-               mode_ui (str, optional): UI mode(every,book,hand). Default: 'every'
-               mode_width (str, optional): Width mode(auto,cond,skin). Default: 'auto'
-               shift_height (int, optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: None
+               mode_ui (str, Optional): UI mode(every,book,hand). Default: 'every'
+               mode_width (str, Optional): Width mode(auto,cond,skin). Default: 'auto'
+               mode_mono (int, Optional): Monospace mode. For monospace fonts, changing only the character width is not performed when true(1). Default: 0
+               shift_height (int, Optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: None
 
            Returns:
                str: Output font file path.
@@ -78,15 +79,19 @@ def main(input_font_path, output_font_path="", subset_chars_path="", mode_ui=MOD
     print(f"Horizontal average value of the input font: {input_result[0]}units")
     ratio_h = base_result[1] / input_result[1]
     ratio_w = input_result[0] * ratio_h
-    ratio_total = round(ratio_h * 100)
+    ratio_total = ratio_h * 100.0
     if mode_width == MODE_WIDTH_CONDENSED:
-        ratio_width = round((base_result[0] * TARGET_RATIO_CONDENSED / ratio_w) * 100)
+        ratio_width = base_result[0] * TARGET_RATIO_CONDENSED / ratio_w * 100.0
     elif mode_width == MODE_WIDTH_SKINNY:
-        ratio_width = round((base_result[0] * TARGET_RATIO_SKINNY / ratio_w) * 100)
+        ratio_width = base_result[0] * TARGET_RATIO_SKINNY / ratio_w * 100.0
     else:
-        ratio_width = round((base_result[0] / ratio_w) * 100)
-    if ratio_width > 100:
-        ratio_width = 100
+        ratio_width = base_result[0] / ratio_w * 100.0
+    if ratio_width > 100.0:
+        ratio_width = 100.0
+    
+    if mode_mono > 0:
+        ratio_width = 100.0
+    
     print(f"Resize factor is: {ratio_total}%")
     print(f"Width factor is: {ratio_width}% (WidthMode: {mode_width})")
 
@@ -105,6 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--subset", type=str, default="", help="Subset character file path.")
     parser.add_argument("-m", "--mode_ui", type=str, default=MODE_UI_EVERY, help="UI mode(every,book,hand).")
     parser.add_argument("-w", "--mode_width", type=str, default=MODE_WIDTH_AUTO, help=f"Width mode(auto,cond,skin).")
+    parser.add_argument("--mode_mono", type=int, default=0, help=f"Monospace mode. For monospace fonts, changing only the character width is not performed when true(1).")
     parser.add_argument("--shift_height", type=int, default=None, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.")
     
     if len(sys.argv) == 1:
@@ -119,5 +125,6 @@ if __name__ == "__main__":
         subset_chars_path=args.subset,
         mode_ui=args.mode_ui,
         mode_width=args.mode_width,
+        mode_mono=args.mode_mono,
         shift_height=args.shift_height
     )

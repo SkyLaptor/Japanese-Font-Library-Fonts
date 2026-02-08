@@ -21,7 +21,7 @@ PROTECTED_BLANKGLYPHS = [
 DEFAULT_OUTPUTNAME_SUFFIX = "_optimized"
 FONTNAME = "OptimizedFont"
 
-def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100, ratio_width=100, weight_offset=0, shift_height=0):
+def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100.0, ratio_width=100.0, weight_offset=0, shift_height=0):
     """Apply various processing and optimization to the font and output it as a TTF font.
            
            Weight adjustment is not recommended due to the high risk of glyph corruption.
@@ -35,8 +35,8 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
                subset_chars_path (str, Optional): Subset character file path. Default: ''
                ascent (int, Optional): Ascent value. If no value is entered, the font value will be used. Default: None
                descent (int, Optional): Descent value. If no value is entered, the font value will be used. Default: None
-               ratio_total (int, Optional): Size specification(%). Default: 100
-               ratio_width (int, Optional): Width specification(%). Default: 100
+               ratio_total (float, Optional): Size specification(%). Default: 100.0
+               ratio_width (float, Optional): Width specification(%). Default: 100.0
                weight_offset (int, Optional): Weight adjustment value(units). Thick for positive values, thin for negative values. Default: 0
                shift_height (int, Optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: 0
            
@@ -289,8 +289,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--subset", default="", help="Subset character file path.")
     parser.add_argument("--ascent", type=int, default=None, help=f"Ascent value. Ensure that the total with descent is {EMSIZE}. If no value is entered, the font value will be used.")
     parser.add_argument("--descent", type=int, default=None, help=f"Descent value. Ensure that the total with ascent is {EMSIZE}. If no value is entered, the font value will be used.")
-    parser.add_argument("--ratio_total", type=int, default=100, help=f"Size specification(%%).")
-    parser.add_argument("--ratio_width", type=int, default=100, help=f"Width specification(%%).")
+    parser.add_argument("--ratio_total", type=float, default=100.0, help=f"Size specification(%%).")
+    parser.add_argument("--ratio_width", type=float, default=100.0, help=f"Width specification(%%).")
     parser.add_argument("--weight_offset", type=int, default=0, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.")
     parser.add_argument("--shift_height", type=int, default=0, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.")
     
