@@ -27,7 +27,7 @@ SHIFT_HEIGHT_EVERY = -96
 SHIFT_HEIGHT_BOOK = 0
 SHIFT_HEIGHT_HAND = 0
 
-def main(input_font_path, output_font_path="", subset_chars_path="", mode_ui=MODE_UI_EVERY, mode_width=MODE_WIDTH_AUTO, mode_mono=False, shift_height=None):
+def main(input_font_path, output_font_path="", subset_chars_path="", mode_ui=MODE_UI_EVERY, mode_width=MODE_WIDTH_AUTO, mode_mono=0, shift_height=None):
     """Convert the specified font for Skyrim's UI
 
            Args:

@@ -191,5 +191,6 @@ SE版はv1.6.629以降解消しているが、下位バージョンを使用し�
 コンフィグメニュー(MCM)はデフォルトで`$EverywhereFont`系の汎用フォントを使用するが、日本語のような全角フォントだと文字が多すぎてUIをぶち抜いてしまう。かと言って`$EverywhereFont`系に長形フォントを指定すると他のUIが見づらくなる。その解決策として、MCMには専用のフォントマップを使用するパッチを用意する。
 MCMを実現しているUIは LE/SE共に`Interface/skyui/configpanel.swf` 。FFDecを使用してフォントマップを指定している箇所を検索して書き換える。
 
-## テスト
+## 参考
+FontForge Scripting: https://fontforge.org/docs/scripting/scripting.html
 

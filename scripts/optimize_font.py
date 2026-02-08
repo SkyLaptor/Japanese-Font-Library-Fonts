@@ -21,7 +21,7 @@ PROTECTED_BLANKGLYPHS = [
 DEFAULT_OUTPUTNAME_SUFFIX = "_optimized"
 FONTNAME = "OptimizedFont"
 
-def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100.0, ratio_width=100.0, weight_offset=0, shift_height=0):
+def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None, descent=None, ratio_total=100.0, ratio_width=100.0, weight_offset=0, shift_height=0, proc_overlap=0):
     """Apply various processing and optimization to the font and output it as a TTF font.
            
            Weight adjustment is not recommended due to the high risk of glyph corruption.
@@ -39,6 +39,7 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
                ratio_width (float, Optional): Width specification(%). Default: 100.0
                weight_offset (int, Optional): Weight adjustment value(units). Thick for positive values, thin for negative values. Default: 0
                shift_height (int, Optional): Height adjustment value(units). Thick for positive values, thin for negative values. Default: 0
+               proc_overlap (int, Optional): Overlap removal. Unless there are issues in the overlapping areas, there is no need to enable it. Default: 0
            
            Returns:
                str: Output font file path.
@@ -69,11 +70,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
     # Switch to cubic curve mode. (for high-precision machining)
     font.layers[1].is_quadratic = False
 
-    print("Removing OpenType features...")
-    for lookup in font.gsub_lookups:
-        font.removeLookup(lookup)
-    for lookup in font.gpos_lookups:
-        font.removeLookup(lookup)
+    #print("Removing OpenType features...")
+    #for lookup in font.gsub_lookups:
+    #    font.removeLookup(lookup)
+    #for lookup in font.gpos_lookups:
+    #    font.removeLookup(lookup)
 
     print("Removing hint commands...")
     font.selection.all()
@@ -84,11 +85,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
         glyph.hhints = ()
         glyph.vhints = ()
 
-    print("Unlink referencies...")
-    font.unlinkReferences()
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        glyph.unlinkRef()
+    #print("Unlink referencies...")
+    #font.unlinkReferences()
+    #font.selection.all()
+    #for glyph in font.selection.byGlyphs:
+    #    glyph.unlinkRef()
 
     print("Metrics adjustment in progress...")
     if font.em != EMSIZE:
@@ -186,14 +187,15 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
                             glyph.unicode = alt_code
                             break
 
-    print(f"Removing overlapping paths...")
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        print(f"{glyph.glyphname:<50}",end="\r")
-        glyph.removeOverlap()
-        glyph.round()
+    if proc_overlap > 0:
+        print(f"Removing overlapping paths...")
+        font.selection.all()
+        for glyph in font.selection.byGlyphs:
+            print(f"{glyph.glyphname:<50}",end="\r")
+            glyph.removeOverlap()
+            glyph.round()
 
-    ratio_total = ratio_total / 100.0
+    ratio_total = round(ratio_total) / 100.0
     if ratio_total != 1.0:
         offset_y = ((1.0 - ratio_total) * EMSIZE) / 2
         print(f"Resizing ({ratio_total * 100}%) in progress...")
@@ -209,7 +211,7 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
             glyph.round()
             processed_glyphs.add(glyph.glyphname)
 
-    ratio_width = ratio_width / 100.0
+    ratio_width = round(ratio_width) / 100.0
     if ratio_width != 1.0:
         print(f"Expand width ({ratio_width * 100}%) in progress...")
         font.selection.all()
@@ -260,11 +262,11 @@ def main(input_font_path, output_font_path="", subset_chars_path="", ascent=None
     # Disable cubic curve mode (required for TrueType output)
     print("Disable cubic curve mode...")
     font.layers[1].is_quadratic = True
-    font.selection.all()
-    for glyph in font.selection.byGlyphs:
-        print(f"{glyph.glyphname:<50}",end="\r")
-        glyph.correctDirection()
-        glyph.round()
+    #font.selection.all()
+    #for glyph in font.selection.byGlyphs:
+    #    print(f"{glyph.glyphname:<50}",end="\r")
+    #    glyph.correctDirection()
+    #    glyph.round()
 
     print("Outputting optimized fonts...")
     if output_font_path == "":
@@ -293,6 +295,7 @@ if __name__ == "__main__":
     parser.add_argument("--ratio_width", type=float, default=100.0, help=f"Width specification(%%).")
     parser.add_argument("--weight_offset", type=int, default=0, help=f"Weight adjustment value(units). Thick for positive values, thin for negative values.")
     parser.add_argument("--shift_height", type=int, default=0, help=f"Height adjustment value(units). Thick for positive values, thin for negative values.")
+    parser.add_argument("--proc_overlap", type=int, default=0, help=f"Overlap removal. Unless there are issues in the overlapping areas, there is no need to enable it.")
     
     if len(sys.argv) == 1:
         parser.print_help()
@@ -309,5 +312,6 @@ if __name__ == "__main__":
         ratio_total=args.ratio_total,
         ratio_width=args.ratio_width,
         weight_offset=args.weight_offset,
-        shift_height=args.shift_height
+        shift_height=args.shift_height,
+        proc_overlap=args.proc_overlap
     )
