@@ -122,6 +122,7 @@ def main(target_font_path, subset_chars_path, result_file_path=""):
     with open(result_file_path, 'w', encoding='utf-8') as log_file:
         log_file.write(f"Inspection Result for: {os.path.basename(target_font_path)}\n")
         log_file.write(f"Subset used: {os.path.basename(subset_chars_path)}\n")
+        log_file.write(f"Glyph count: {glyph_count}\n")
         log_file.write(f"Missing glyph count: {len(missing_chars)}\n")
         log_file.write("-" * 30 + "\n")
         log_file.write("".join(missing_chars))
