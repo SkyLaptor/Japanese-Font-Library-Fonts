@@ -35,6 +35,7 @@ def main(
     action: str,
     input_font_path: str,
     output_font_path: str,
+    subset_glyphs_path: str,
     scale_size: float,
     scale_width: float,
     **kwargs,
@@ -49,9 +50,10 @@ def main(
 
     suffix = ""
     if action == "report_font_info":
+        suffix = "_info"
         report = report_font_info(font_obj)
         print(report)
-        report_path = Path("build") / f"{Path(input_font_path).stem}_info.txt"
+        report_path = Path("build") / f"{Path(input_font_path).stem}{suffix}.txt"
         report_path.write_text(report, encoding="utf-8")
         return
 
@@ -107,6 +109,32 @@ def main(
         suffix = "_resized"
         font_obj = resize_glyphs_width_only(font_obj, scale_width)
 
+    elif action == "export_glyph_list":
+        suffix = "_glyph_list"
+        glyph_list = export_glyph_list(font_obj)
+        print(glyph_list)
+        list_path = Path("build") / f"{Path(input_font_path).stem}{suffix}.txt"
+        list_path.write_text(glyph_list, encoding="utf-8")
+        return
+
+    elif action == "create_subset":
+        suffix = "_subset"
+        suffix2 = "_nonexisted_glyphs"
+        result = create_subset(font_obj, load_subset_text(subset_glyphs_path))
+        font_obj = result.font_obj
+        non_existed_glyphs = result.non_existed_glyphs
+        print(
+            f"サブセットテキストから欠落しているグリフの数: {len(non_existed_glyphs)}"
+        )
+        print(non_existed_glyphs)
+        glyphs_path = Path("build") / f"{Path(input_font_path).stem}{suffix2}.txt"
+        glyphs_path.write_text(non_existed_glyphs, encoding="utf-8")
+        return
+
+    elif action == "adjust_font_metrics":
+        suffix = "_metrics_adjusted"
+        font_obj = adjust_font_metrics(font_obj, 880, -144)
+
     else:
         raise ValueError(f"正しくない動作が指定されています。: {action}")
 
@@ -142,8 +170,11 @@ def report_font_info(font_obj: TTFont) -> str:
     hhea = font_obj["hhea"]
     os2 = font_obj["OS/2"]
 
+    cmap = font_obj.getBestCmap()
+
     report_print("--- General ---")
     report_print(f"Glyph count: {len(font_obj.getGlyphOrder())}")
+    report_print(f"Unicode characters count: {len(cmap.keys())}")
     report_print(f"Units Per Em (UPM): {head.unitsPerEm}")
 
     unix_created = head.created - 2082844800
@@ -499,15 +530,161 @@ def resize_glyphs_width_only(font_obj: TTFont, target_scale: float) -> TTFont:
     return font_obj
 
 
+def export_glyph_list(font_obj: TTFont) -> list[str]:
+    """
+    フォント内のUnicode定義がある有効なグリフを抽出し、
+    UTF-8テキストファイルとして出力する。
+    """
+    # 1. cmap（文字コードとグリフ名の対応表）を取得
+    cmap = font_obj.getBestCmap()
+
+    # 2. Unicode値(int)から文字(str)に変換
+    # cmapのキーはUnicode値(整数)
+    valid_chars = []
+    for code in sorted(cmap.keys()):
+        char = chr(code)
+        valid_chars.append(char)
+
+    # 3. テキストファイルとして保存
+    # 改行なしで一列に並べる、あるいは1行ずつ出すなど用途に合わせて調整可能
+    # ここではサブセット定義ファイルとして使いやすいよう、結合した文字列で出力します
+    glyph_text = "".join(valid_chars)
+
+    return glyph_text
+
+
+@dataclass
+class SubsetResult:
+    font_obj: TTFont
+    non_existed_glyphs: str
+
+
+def create_subset(font_obj: TTFont, subset_glyphs: str) -> SubsetResult:
+    """
+    指定した文字列(subset_glyphs)に含まれる文字だけを残した
+    サブセットフォントを作成し、存在しなかった文字（重複排除済み）と共に返す。
+    """
+    # 1. フォントが持っている全Unicode値のセットを取得 (高速照合用)
+    font_unicode_set = set(font_obj.getBestCmap().keys())
+
+    # 2. 入力文字列を集合(set)にして重複を排除し、存在しない文字を抽出
+    input_char_set = set(subset_glyphs)
+    non_existed_chars = [c for c in input_char_set if ord(c) not in font_unicode_set]
+
+    # リストをソートしておくと、レポートが見やすくなります
+    non_existed_glyphs = "".join(sorted(non_existed_chars))
+
+    # 3. サブセッタの設定と実行
+    options = subset.Options()
+    subsetter = subset.Subsetter(options=options)
+    subsetter.populate(text=subset_glyphs)
+
+    # 4. サブセット処理の適用 (インプレース書き換え)
+    subsetter.subset(font_obj)
+
+    return SubsetResult(font_obj=font_obj, non_existed_glyphs=non_existed_glyphs)
+
+
+def load_subset_text(subset_glyphs_path: str) -> str:
+    """
+    指定されたパスからテキストファイルを読み込み、
+    重複を除去した1行の文字列として返す。
+    """
+    path = Path(subset_glyphs_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Subset text file not found: {subset_glyphs_path}")
+
+    # UTF-8で読み込み
+    content = path.read_text(encoding="utf-8")
+
+    # 改行やタブなどの制御文字を除去し、重複を排除（setを使用）
+    # 空白文字(スペース)をサブセットに含めるかは用途によりますが、
+    # 基本的には含めておいたほうが安全です。
+    char_set = set(content.replace("\n", "").replace("\r", "").replace("\t", ""))
+
+    # ソートして文字列に戻す（デバッグ時に中身を確認しやすくするため）
+    return "".join(sorted(list(char_set)))
+
+
+def adjust_font_metrics(font_obj: TTFont, ascent: int, descent: int) -> TTFont:
+    """
+    Ascent/Descentを調整し、その合計値をUPMとして設定する。
+    Descentは負の値である
+    UPMが8の倍数でない場合はエラーを投げる。
+    """
+    # 1. UPMの計算 (Descentは通常負の値なので abs を取る)
+    old_upm = font_obj["head"].unitsPerEm
+    new_upm = ascent + abs(descent)
+
+    # 2. 8の倍数チェック
+    if new_upm % 8 != 0:
+        raise ValueError(
+            f"Invalid metrics: Ascent({ascent}) + |Descent({descent})| = UPM({upm}). "
+            f"UPM must be a multiple of 8."
+        )
+
+    # 2. UPMが異なる場合のみ、グリフ自体のサイズを調整
+    if old_upm != new_upm:
+        scale = new_upm / old_upm
+        print(f"Resizing glyphs: {old_upm} -> {new_upm} (scale: {scale:.4f})")
+        # 以前作成した resize_glyphs を呼び出し (引数は dx=0, dy=0 を想定)
+        # ※resize_glyphs(font_obj, scale_x, scale_y, dx, dy) の形式に合わせてください
+        resize_glyphs(font_obj, scale)
+    else:
+        print(f"UPM already matches {new_upm}. Skipping glyph resize.")
+
+    # 3. head テーブルの UPM 更新
+    font_obj["head"].unitsPerEm = new_upm
+
+    # 4. OS/2 テーブル (Windows 用)
+    if "OS/2" in font_obj:
+        os2 = font_obj["OS/2"]
+
+        # バージョンが古い（4未満）場合は、4に引き上げる
+        if os2.version < 4:
+            # バージョン 2 で追加された項目
+            if not hasattr(os2, "sxHeight"):
+                os2.sxHeight = 0
+            if not hasattr(os2, "sCapHeight"):
+                os2.sCapHeight = 0
+            if not hasattr(os2, "usDefaultChar"):
+                os2.usDefaultChar = 0
+            if not hasattr(os2, "usBreakChar"):
+                os2.usBreakChar = 32  # 半角スペース
+            if not hasattr(os2, "usMaxContext"):
+                os2.usMaxContext = 0
+            os2.version = 4
+
+        os2.sTypoAscender = ascent
+        os2.sTypoDescender = descent
+        os2.usWinAscent = abs(ascent)
+        os2.usWinDescent = abs(descent)
+        os2.sTypoLineGap = 0
+        # OS/2のメトリクス設定を優先させるフラグ
+        os2.fsSelection |= 1 << 7
+
+    # 5. hhea テーブル (Mac 用)
+    if "hhea" in font_obj:
+        hhea = font_obj["hhea"]
+        hhea.ascent = ascent
+        hhea.descender = descent
+        hhea.lineGap = 0
+
+    # 6. post テーブル (下線の位置と太さ)
+    if "post" in font_obj:
+        post = font_obj["post"]
+        # UPM変更に合わせてスケールさせる
+        if old_upm != new_upm:
+            scale = new_upm / old_upm
+            post.underlinePosition = int(round(post.underlinePosition * scale))
+            post.underlineThickness = int(round(post.underlineThickness * scale))
+
+    print(f"Metrics adjusted: UPM={new_upm} (Ascent:{ascent}, Descent:{descent})")
+    return font_obj
+
+
 # TODO: フォントメトリクスの修正
 
-# TODO: 任意のサブセット文字列とフォントを比較して、サブセットにない文字は消す
-
-# TODO: 任意のサブセット文字列とフォントを比較して、サブセットに無い文字（不足している文字）を検査する
-
-# TODO: グリフサイズを比率で変更する
-
-# TODO: グリフの横幅を比率で変更する
 
 # TODO: グリフの太さを変更する
 
@@ -516,6 +693,8 @@ def resize_glyphs_width_only(font_obj: TTFont, target_scale: float) -> TTFont:
 # TODO: 黒ぽちょグリフを消す
 
 # TODO: フォント同士を結合する
+
+# TODO: サブセットを作る
 
 # 直接実行
 if __name__ == "__main__":
@@ -565,6 +744,9 @@ if __name__ == "__main__":
             "get_metrics_average",
             "resize_glyphs",
             "resize_glyphs_width_only",
+            "export_glyph_list",
+            "create_subset",
+            "adjust_font_metrics",
         ],
         default="print_font_info",
         help="実行する操作(デフォルト: print_font_info)",
@@ -579,7 +761,7 @@ if __name__ == "__main__":
     main(
         input_font_path=args.input,
         output_font_path=args.output,
-        subset_chars_path=args.subset,
+        subset_glyphs_path=args.subset,
         ascent=args.ascent,
         descent=args.descent,
         scale_size=args.scale_size,

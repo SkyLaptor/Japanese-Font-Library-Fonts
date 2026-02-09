@@ -13,6 +13,7 @@
     "zenkaku.enabled": true,
     
     "cSpell.words": [
+        "cmap",
         "familyname",
         "fontforge",
         "fontname",
@@ -25,6 +26,7 @@
         "sfnt",
         "Subsetter",
         "Typog",
+        "unicodes",
         "winkern"
     ]
 }
