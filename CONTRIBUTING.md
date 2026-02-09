@@ -30,6 +30,7 @@
 
 ## 開発及びテスト時に使用するツール
 ### Visual Studio Code (VSCode)
+軽量、強力なIDEです。自動で
 https://code.visualstudio.com/
 
 ### BSA Browser

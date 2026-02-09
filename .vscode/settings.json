@@ -18,10 +18,13 @@
         "fontname",
         "fstypepermitted",
         "glyf",
+        "gmtime",
+        "hhea",
         "nbspace",
         "notdef",
         "sfnt",
         "Subsetter",
+        "Typog",
         "winkern"
     ]
 }

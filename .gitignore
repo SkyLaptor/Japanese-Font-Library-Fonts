@@ -1,5 +1,2 @@
-*.tmp
-*.zip
-venv/
-local/
+.venv/
 __pycache__/

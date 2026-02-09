@@ -29,13 +29,13 @@
 ### hackgen-mono
 コンソール向けフォント。
 
-* 基本フォント: [白源](https://github.com/yuru7/HackGen) ※NerdFonts合成版を使用
+* 基本フォント: [白源](https://github.com/yuru7/HackGen) ※通常版を使用
 
 
 ## 明朝体
 ### source-han-serif
 
-* 基本フォント: [源ノ明朝 v2.003](https://github.com/adobe-fonts/source-han-serif/tree/release#downloading-source-han-serif) ※Region-specific Subset OTFs の Japanese を使用。
+* 基本フォント: [源ノ明朝 v2.003](https://github.com/adobe-fonts/source-han-serif/tree/release#downloading-source-han-serif) ※Language-specific OTFs の Japanese を使用。
 * 補間フォント: 
 
 
