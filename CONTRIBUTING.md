@@ -10,7 +10,7 @@
 本リポジトリでは GitLab-Flow を採用しています。
 
 1. mainブランチ: 全ての開発のベースです。
-2. 作業ブランチ: `main` からブランチ( `feature/issue-番号` 等）を切って作業してください。
+2. 作業ブランチ: `main` から作業用のブランチ(`feature/issue-番号`等)を切って作業してください。
 3. マージ: `main` へのマージは、レビュー承認およびCI通過後に行われます。
 4. プレリリース: 仮公開は、`main` から `pre-production` ブランチへのマージによって実行されます。
 5. リリース: 公開は、`pre-production` から `production` ブランチへのマージによって実行されます。
@@ -29,6 +29,9 @@
 
 
 ## 開発及びテスト時に使用するツール
+### Visual Studio Code (VSCode)
+https://code.visualstudio.com/
+
 ### BSA Browser
 ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使います。
 https://www.nexusmods.com/skyrimspecialedition/mods/1756
@@ -36,6 +39,16 @@ https://www.nexusmods.com/skyrimspecialedition/mods/1756
 ### xTranslator
 プラグインやスクリプトを翻訳します。
 https://www.nexusmods.com/starfield/mods/313
+
+### UV
+OSを汚さずにPython実行環境を準備するために使用します。
+https://docs.astral.sh/uv/getting-started/installation/
+
+プロジェクト直下にて環境を設定してください
+```
+$ uv venv
+$ uv sync
+```
 
 ### FontForge
 TTFを作成加工するために使用します。`fontforge.exe` にパスを通してください。
