@@ -1,4 +1,17 @@
 {
+    // PythonのデフォルトフォーマッタをBlackに設定
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            // 保存時にRuffでインポート順の整理と自動修正を実行
+            "source.fixAll.ruff": "always",
+            "source.organizeImports.ruff": "always"
+        }
+    },
+    // 全角スペースを可視化（zenkakuプラグインの設定）
+    "zenkaku.enabled": true,
+    
     "cSpell.words": [
         "familyname",
         "fontforge",
