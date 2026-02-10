@@ -35,8 +35,80 @@ SHIFT_HEIGHT_BOOK = 0
 SHIFT_HEIGHT_HAND = 0
 
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="スカイリムのUI向けに入力されたフォントを最適化します。"
+    )
+
+    parser.add_argument(
+        "input",
+        type=str,
+        help="最適化したいフォントの入力元ファイルパス",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default="",
+        help="最適化したフォントの出力先ファイルパス",
+    )
+    parser.add_argument(
+        "-s", "--subset", type=str, default="", help="サブセットのファイルパス"
+    )
+    parser.add_argument(
+        "--size",
+        choices=[
+            MODE_SIZE_EVERY,
+            MODE_SIZE_BOOK,
+            MODE_SIZE_HAND,
+        ],
+        type=str,
+        default=MODE_SIZE_EVERY,
+        help=f"基準とするUIのサイズ デフォルト:{MODE_SIZE_EVERY}",
+    )
+    parser.add_argument(
+        "--cond",
+        choices=[
+            MODE_COND_NORM,
+            MODE_COND_COND,
+            MODE_COND_SKIN,
+        ],
+        type=str,
+        default=MODE_COND_NORM,
+        help=f"長形プリセット デフォルト: {MODE_COND_NORM}",
+    )
+    parser.add_argument(
+        "--mono",
+        type=int,
+        default=0,
+        help="等幅フォント用モード(1で有効化) デフォルト: 0(無効)",
+    )
+    parser.add_argument(
+        "--shift_height",
+        type=int,
+        default=None,
+        help="上下の位置調整",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    convert(
+        target_font_path=args.input,
+        output_font_path=args.output,
+        subset_file_path=args.subset,
+        mode_size=args.size,
+        mode_cond=args.cond,
+        mode_mono=args.mono,
+        shift_height=args.shift_height,
+    )
+
+
 # shift_heightはNoneにしておかないと定数適用が出来ないので注意
-def main(
+def convert(
     target_font_path: str,
     output_font_path: str,
     subset_file_path: str,
@@ -236,72 +308,4 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="スカイリムのUI向けに入力されたフォントを最適化します。"
-    )
-
-    parser.add_argument(
-        "input",
-        type=str,
-        help="最適化したいフォントの入力元ファイルパス",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        default="",
-        help="最適化したフォントの出力先ファイルパス",
-    )
-    parser.add_argument(
-        "-s", "--subset", type=str, default="", help="サブセットのファイルパス"
-    )
-    parser.add_argument(
-        "--size",
-        choices=[
-            MODE_SIZE_EVERY,
-            MODE_SIZE_BOOK,
-            MODE_SIZE_HAND,
-        ],
-        type=str,
-        default=MODE_SIZE_EVERY,
-        help=f"基準とするUIのサイズ デフォルト:{MODE_SIZE_EVERY}",
-    )
-    parser.add_argument(
-        "--cond",
-        choices=[
-            MODE_COND_NORM,
-            MODE_COND_COND,
-            MODE_COND_SKIN,
-        ],
-        type=str,
-        default=MODE_COND_NORM,
-        help=f"長形プリセット デフォルト: {MODE_COND_NORM}",
-    )
-    parser.add_argument(
-        "--mono",
-        type=int,
-        default=0,
-        help="等幅フォント用モード(1で有効化) デフォルト: 0(無効)",
-    )
-    parser.add_argument(
-        "--shift_height",
-        type=int,
-        default=None,
-        help="上下の位置調整",
-    )
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
-    args = parser.parse_args()
-
-    main(
-        target_font_path=args.input,
-        output_font_path=args.output,
-        subset_file_path=args.subset,
-        mode_size=args.size,
-        mode_cond=args.cond,
-        mode_mono=args.mono,
-        shift_height=args.shift_height,
-    )
+    main()

@@ -1,95 +1,74 @@
 # Japanese Font Library - Fonts
-[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント周りのサブプロジェクトです。  
-好きなフォントを用意してスカイリム用に最適化することが出来ます。
+[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント関連サブプロジェクトです。  
+お好みのフォントを用意するだけで、スカイリムのUI表示に最適化されたフォントファイルを生成できます。  
 
 
 ## 動作環境
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
-フォントファイルをSWFに埋め込むために必要です。   
+フォントファイルをSWFへ埋め込むために必要です。  
 
 * [UV](https://docs.astral.sh/uv/)
-スクリプトを動作させるために必要です。ご利用のOSに応じて以下を参考にセットアップして下さい。  
-https://docs.astral.sh/uv/getting-started/installation/  
+スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。  
+ 
 
+## 使い方
+1. 本リポジトリをクローンまたはダウンロードします。
 
-## 使い方（簡易版）
-1. ローカルにこのリポジトリをクローンするかダウンロードして下さい。
+2. ターミナルでリポジトリのルートディレクトリへ移動し、以下のコマンドを実行して環境を構築します。
 
-2. コマンドラインにてリポジトリを配置した場所に移動し、以下のコマンドを実行してください。
-
-```
-$ uv venv
+```:PowerShell
 $ uv sync
 ```
 
-3. 好きなTTFフォントを用意し、 `assets/fonts/任意のフォント名/フォントファイル.ttf` に配置します。
+3. 使用したいTTFフォントを用意します。
+   * **OTF形式の場合**: 以下のコマンドでTTFに変換してください。
 
-形式がOTFの場合は、以下のコマンドでTTFに変換してください。OTFファイルと同じところにTTFファイルが出来上がります。
-※公式がTTFを配布している場合はなるべくそちらを使用して下さい。不具合が発生する場合があります。
-
-```
-$ uv run otf2xml ./assets/fonts/任意のフォント名/フォントファイル.otf
+```:PowerShell
+$ uv run otf2xml フォントファイル.otf
 ```
 
-4. 次のコマンドを実行します。
+> [!TIP]
+> フォント製作者よりTTF版が提供されている場合は、不具合防止のため可能な限りそちらを使用してください。
+
+4. フォントの最適化
+
+以下のコマンドを実行して、スカイリム用フォントを生成します。
 
 ```
-$ uv run ./src/convert_for_skyrim.py ./assets/fonts/任意のフォント名/フォントファイル.ttf --size every --subset ./data/subsets/subset_jp_skyrim.txt
+$ uv run convert_for_skyrim フォントファイル.ttf --size every --subset ./data/subsets/subset_jp_skyrim.txt
 ```
 
-これで`build` ディレクトリ内に `フォントファイル名_every.ttf` というファイルが出来上がります。 
-このコマンドで何が行われているかというと、スカイリムデフォルトのEverywhere日本語フォントに文字のサイズを合わせ、バニラスカイリムが表示可能な文字だけのサブセットに変換されています。大抵の場合、フォントそのままではバニラスカイリムのフォントより若干大きいです。  
-他にもサイズ基準とするバニラフォントを変更したり、長形(細長い形)にしたり、サブセットを変えたりできます。詳細は `$ uv run ./src/convert_for_skyrim.py -h` を実行してヘルプを確認して下さい。
+* **実行内容**: スカイリム標準の Everywhere 日本語フォントに合わせてサイズを調整し、バニラで表示可能な文字のみに絞り込んだ（サブセット化）TTFファイルを build ディレクトリ内に出力します。
+* **カスタマイズ**: 基準サイズの変更、長体（コンデンス）の適用、サブセットの変更などが可能です。詳細は `$ uv run convert_for_skyrim --help` を参照してください。
 
-5. 出来上がったTTFフォントをSWFに埋め込みます。
-   1. FFDecを起動します。
-   2. `assets/swf/skyrim/fonts_template.swf` をFFDecにドラッグ＆ドロップして開きます。
-   3. 左のツリーから「フォント」を展開し、中にある「DefineFont3」を選択します。
-   4. 右下にある「埋め込む」を押します。
-   5. TTFファイルを選択し、最適化したフォントファイルを選択します。
-   6. 「全ての文字」にチェックを入れ、「OK」を押します。上書き警告が出てきた場合は、「全て上書き」を選択します。
-   7. このままだとテンプレートを変更してしまうため、左上の「名前を付けて保存」から `build` ディレクトリの中に保存します。 `fonts_フォント名_every.swf` とかにすると良いでしょう。保存後はFFDecを閉じて下さい。
+5. SWFへの埋め込み
+   1. **FFDec**を起動し、 `assets/swf/skyrim/fonts_template.swf` を開きます。
+   2. 左ツリーの **[フォント]** > **[DefineFont3]** を選択し、右下の **[埋め込む]** をクリック。
+   3. 手順2で生成したTTFファイルを選択し、 **[全ての文字]** にチェックを入れて [OK]（上書き警告は「全て上書き」）。
+   4. **[名前を付けて保存]** で、 `build` ディレクトリ内へ `fonts_任意の名前.swf` として保存します。
 
-一連の作業は、FFDecをコマンドライン化している場合以下のコマンドで実行可能です。
+> [!NOTE]
+> FFDecをコマンドラインから実行可能な場合は、以下のコマンドで一括処理できます。
 
-```
+```:PowerShell
 $ ffdec-cli.exe -replace fonts_template.swf ./build/fonts_フォント名_every.swf 1 最適化済フォントファイル
 ```
 
-6. フォントを埋め込んだSWFの各種タグ情報を変更します。
-   1. FFDecを起動します。
-   2. `build` 内にあるフォントを埋め込んだSWFをFFDecにドラッグ＆ドロップして開きます。
-   3. 左のツリーから「フォント」を展開し、中にある「DefineFont3」を選択します。
-   4. 右下にある「編集」を押します。
-   5. 編集ボタンのすぐ上にある「タグ内のフォント名」を任意の英数字の名前にします。変更後は「保存」ボタンを押して下さい。
-   6. 左のツリーから「フォント」を展開し、中にある「DefineFont3」をさらに展開し、「DefineFontName」を選択します。
-   7. 右下にある「編集」を押します。
-   8. 編集ボタンの上にある「fontName:String」をタグ内のフォント名と同じものにします。変更後は「保存」ボタンを押して下さい。
-   9. 左のツリーから「その他」を展開し、中にある「ExportAssets」を選択します。
-   10. 右下にある「編集」を押します。
-   11. 編集ボタンの上にある「assets」を展開し、中にある「tag[0]: U16～」のStringの値ををタグ内のフォント名と同じものにします。変更後は「保存」ボタンを押して下さい。
+5. SWFタグ情報の編集
 
-7. `Skyrimインストールディレクトリ\Data\Interface` の中に作成したフォントSWFを移動またはコピーします。
+* 保存したSWFを再度FFDecで開き、以下の3箇所を編集します（右下の [編集] ボタンから値を変更後、 [保存] を押してください）。
+  * **DefineFont3**: [タグ内のフォント名] の `template` を任意の英数字に変更。
+  * **DefineFontName**: `fontName:String="template"` を上記と同じ名前に変更。
+  * **ExportAssets**: assets 内の `tag[0]:U16=1, name[0]:String="template"`を上記と同じ名前に変更。
 
-8. `Skyrimインストールディレクトリ\Data\Interface\fontconfig.txt または fontconfig_ja.txt` を開き、以下の変更をします。
-   1. フォント読み込み設定: 上部に `fontlib "Interface\フォントファイル.swf"` を追記します。
-   2. フォント割り当て設定: 中部にある `map "フォントマップ名" = "フォント名" Normal` を書き換えます。
-      * `フォントマップ名` は変更せずに、 `フォント名` の部分を作成したフォント名変更します。
-        * スタートメニュー、インベントリ、字幕といった大部分に適用したい場合は、以下のマップのフォント名を変更します。
-          * $StartMenuFont
-          * $DialogueFont
-          * $EverywhereFont
-          * $EverywhereBoldFont
-          * $EverywhereMediumFont
-          * $CClub_Font
-          * $CClub_Font_Bold
-          * Times New Roman
-          * $CreditsFont
-        * 主に本に適用したい場合は、以下のマップのフォント名を変更します。
-          * $SkyrimBooks
-        * 主に手紙やメモに適用したい場合は、以下のマップのフォント名を変更します。
-          * $HandwrittenFont
-          * $HandwrittenBold
+6. スカイリムへの適用
+   1. 作成したSWFを `Skyrim/Data/Interface` フォルダへ配置します。
+   2. 同フォルダの `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
+      * **フォント読み込み設定**: 上部に `fontlib "Interface\作成したファイル名.swf"` を追記。
+      * **フォント割り当て設定**: 中段の各 `map` 行の右側を、手順4で設定した「フォント名」に書き換えます。
+        * **一般的なUI（字幕・メニュー等）**: `$StartMenuFont`, `$DialogueFont`, `$EverywhereFont` など。
+        * **本・手紙**: `$SkyrimBooks`, `$HandwrittenFont` など。
 
-9. ゲームを起動し、フォントが適用されたことを確認します。
- 
+7. 完了
+
+ゲームを起動し、フォントが美しく適用されていることを確認してください！

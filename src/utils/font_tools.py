@@ -34,7 +34,92 @@ DESCENT = -144
 BASE_UPM = ASCENT + abs(DESCENT)
 
 
-def main(
+def main():
+    parser = argparse.ArgumentParser(
+        description="fontToolsを用いてフォントに対する様々な操作を行うためのライブラリ"
+    )
+
+    parser.add_argument("-i", "--input", help="入力元のフォントファイルパス")
+    parser.add_argument("--input2", help="入力元のフォントファイルパス2")
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="",
+        help="出力先のフォントファイルパス",
+    )
+    parser.add_argument("--subset", help="サブセットフォントファイルのパス")
+    parser.add_argument(
+        "--ascent",
+        type=int,
+        default=None,
+        help="Ascentの値(units)",
+    )
+    parser.add_argument(
+        "--descent",
+        type=int,
+        default=None,
+        help="Descentの値(units)",
+    )
+    parser.add_argument(
+        "--scale_width", type=float, help="横方向の拡大縮小率(1.0=100.0%%)"
+    )
+    parser.add_argument(
+        "--scale_height", type=float, help="縦方向の拡大縮小率(1.0=100.0%%)"
+    )
+    parser.add_argument(
+        "--weight_offset",
+        type=int,
+        help="文字の太さ調整(units)",
+    )
+    parser.add_argument(
+        "--shift_height",
+        type=int,
+        help="文字の上下調整(units)",
+    )
+
+    parser.add_argument(
+        "--action",
+        choices=[
+            "report_font_info",
+            "clean_empty_glyphs",
+            "anonymize_font_info",
+            "get_metrics_average",
+            "resize_glyphs",
+            "export_glyph_list",
+            "create_subset",
+            "adjust_font_metrics",
+            "expand_glyph_weight",
+            "shift_glyph_height",
+            "fill_missing_glyphs",
+            "remove_specific_placeholder",
+            "remove_hinting",
+        ],
+        default="print_font_info",
+        help="実行する操作(デフォルト: print_font_info)",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    toolbox(
+        input_font_path=args.input,
+        input_font_path2=args.input2,
+        output_font_path=args.output,
+        subset_glyphs_path=args.subset,
+        ascent=args.ascent,
+        descent=args.descent,
+        scale_width=args.scale_width,
+        scale_height=args.scale_height,
+        weight_offset=args.weight_offset,
+        shift_height=args.shift_height,
+        action=args.action,
+    )
+
+
+def toolbox(
     action: str,
     input_font_path: str,
     input_font_path2: str,
@@ -972,87 +1057,5 @@ def remove_hinting(font_obj: TTFont) -> TTFont:
     return font_obj
 
 
-# 直接実行
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="fontToolsを用いてフォントに対する様々な操作を行うためのライブラリ"
-    )
-
-    parser.add_argument("-i", "--input", help="入力元のフォントファイルパス")
-    parser.add_argument("--input2", help="入力元のフォントファイルパス2")
-    parser.add_argument(
-        "-o",
-        "--output",
-        default="",
-        help="出力先のフォントファイルパス",
-    )
-    parser.add_argument("--subset", help="サブセットフォントファイルのパス")
-    parser.add_argument(
-        "--ascent",
-        type=int,
-        default=None,
-        help="Ascentの値(units)",
-    )
-    parser.add_argument(
-        "--descent",
-        type=int,
-        default=None,
-        help="Descentの値(units)",
-    )
-    parser.add_argument(
-        "--scale_width", type=float, help="横方向の拡大縮小率(1.0=100.0%%)"
-    )
-    parser.add_argument(
-        "--scale_height", type=float, help="縦方向の拡大縮小率(1.0=100.0%%)"
-    )
-    parser.add_argument(
-        "--weight_offset",
-        type=int,
-        help="文字の太さ調整(units)",
-    )
-    parser.add_argument(
-        "--shift_height",
-        type=int,
-        help="文字の上下調整(units)",
-    )
-
-    parser.add_argument(
-        "--action",
-        choices=[
-            "report_font_info",
-            "clean_empty_glyphs",
-            "anonymize_font_info",
-            "get_metrics_average",
-            "resize_glyphs",
-            "export_glyph_list",
-            "create_subset",
-            "adjust_font_metrics",
-            "expand_glyph_weight",
-            "shift_glyph_height",
-            "fill_missing_glyphs",
-            "remove_specific_placeholder",
-            "remove_hinting",
-        ],
-        default="print_font_info",
-        help="実行する操作(デフォルト: print_font_info)",
-    )
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
-    args = parser.parse_args()
-
-    main(
-        input_font_path=args.input,
-        input_font_path2=args.input2,
-        output_font_path=args.output,
-        subset_glyphs_path=args.subset,
-        ascent=args.ascent,
-        descent=args.descent,
-        scale_width=args.scale_width,
-        scale_height=args.scale_height,
-        weight_offset=args.weight_offset,
-        shift_height=args.shift_height,
-        action=args.action,
-    )
+    main()

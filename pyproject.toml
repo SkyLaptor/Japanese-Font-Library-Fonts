@@ -9,6 +9,12 @@ dependencies = [
     "otf2ttf>=0.2",
 ]
 
+[tool.uv]
+package = true
+
+[project.scripts]
+convert_for_skyrim = "convert_for_skyrim:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
