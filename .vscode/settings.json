@@ -27,6 +27,7 @@
         "nonexisted",
         "notdef",
         "pathops",
+        "pytest",
         "recalc",
         "sfnt",
         "skia",
