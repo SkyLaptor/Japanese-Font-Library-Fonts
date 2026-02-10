@@ -1,167 +1,95 @@
 # Japanese Font Library - Fonts
-[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント部分分離プロジェクト。
-フォントファイルをスカイリム向けに最適化するためのスクリプト類及び最適化済フォントファイルを保管する。
+[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント周りのサブプロジェクトです。  
+好きなフォントを用意してスカイリム用に最適化することが出来ます。
 
-## 動作確認環境
-* OS: Windows11 Pro build26200.7628
-* [FontForge](https://fontforge.org/en-US/) v2025-10-09
-* [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) v24.1.2
 
-## 動作環境のセットアップ
-### FontForgeインストール
-フォントファイルを編集するため、[FontForge](https://fontforge.org/en-US/) をインストールする。
-本READMEにおいては、`fontforge`へのパスが通っているものとする。
+## 動作環境
+* [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
+フォントファイルをSWFに埋め込むために必要です。   
 
-### JPEXS Free Flash Decompilerのインストール
-フォントファイルをSWFに変換するため、[JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) をインストールする。
-本READMEにおいては、`ffdec-cli`及び`ffdec`へのパスが通っているものとする。
+* [UV](https://docs.astral.sh/uv/)
+スクリプトを動作させるために必要です。ご利用のOSに応じて以下を参考にセットアップして下さい。  
+https://docs.astral.sh/uv/getting-started/installation/  
 
-## 使い方
-### スカイリム向けにフォントを最適化する
-任意のフォントを、バニラのフォント類(Everywhere,Book,Handwritten)に準拠した形で最適化することができる。
+
+## 使い方（簡易版）
+1. ローカルにこのリポジトリをクローンするかダウンロードして下さい。
+
+2. コマンドラインにてリポジトリを配置した場所に移動し、以下のコマンドを実行してください。
 
 ```
-$ fontforge -quiet -script .\convert_for_skyrim.py --help
-usage: convert_for_skyrim.py [-h] -i INPUT [-o OUTPUT] [-s SUBSET] [-m MODE_UI] [-w MODE_WIDTH]
-                             [--shift_height SHIFT_HEIGHT]
-
-Convert the specified font for Skyrim's UI
-
-options:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Font file paths subject to converion.
-  -o OUTPUT, --output OUTPUT
-                        Output font file path. The file extension must be ttf.
-  -s SUBSET, --subset SUBSET
-                        Subset character file path.
-  -m MODE_UI, --mode_ui MODE_UI
-                        UI mode(every,book,hand).
-  -w MODE_WIDTH, --mode_width MODE_WIDTH
-                        Width mode(auto,cond,skin).
-  --shift_height SHIFT_HEIGHT
-                        Height adjustment value(units). Thick for positive values, thin for negative values.
+$ uv venv
+$ uv sync
 ```
 
-### フォントを任意に最適化する
-任意のフォントをサブセット化したり、サイズや太さを変形したりしつつ最適化することができる。
+3. 好きなTTFフォントを用意し、 `assets/fonts/任意のフォント名/フォントファイル.ttf` に配置します。
+
+形式がOTFの場合は、以下のコマンドでTTFに変換してください。OTFファイルと同じところにTTFファイルが出来上がります。
+※公式がTTFを配布している場合はなるべくそちらを使用して下さい。不具合が発生する場合があります。
 
 ```
-$ fontforge -quiet -script .\optimize_font.py --help
-usage: optimize_font.py [-h] -i INPUT [-o OUTPUT] [-s SUBSET] [--ascent ASCENT] [--descent DESCENT]
-                        [--ratio_total RATIO_TOTAL] [--ratio_width RATIO_WIDTH] [--weight_offset WEIGHT_OFFSET]
-                        [--shift_height SHIFT_HEIGHT]
-
-Apply various processing and optimization to the font and output it as a TTF font.
-
-options:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Font file paths subject to optimization.
-  -o OUTPUT, --output OUTPUT
-                        Output font file path. The file extension must be ttf.
-  -s SUBSET, --subset SUBSET
-                        Subset character file path.
-  --ascent ASCENT       Ascent value. Ensure that the total with descent is 1024. If no value is entered, the font
-                        value will be used.
-  --descent DESCENT     Descent value. Ensure that the total with ascent is 1024. If no value is entered, the font
-                        value will be used.
-  --ratio_total RATIO_TOTAL
-                        Size specification(%).
-  --ratio_width RATIO_WIDTH
-                        Width specification(%).
-  --weight_offset WEIGHT_OFFSET
-                        Weight adjustment value(units). Thick for positive values, thin for negative values.
-  --shift_height SHIFT_HEIGHT
-                        Height adjustment value(units). Thick for positive values, thin for negative values.
+$ uv run otf2xml ./assets/fonts/任意のフォント名/フォントファイル.otf
 ```
 
-### OTCやTTCといったフォントコレクションからフォントを抽出する
-フォントコレクションの中のフォントを処理する場合、事前にフォントを取り出しておく必要がある。
+4. 次のコマンドを実行します。
 
 ```
-$ fontforge -quiet -script .\extract_font_collection.py --help
-usage: extract_font_collection.py [-h] -i INPUT [-o OUTPUT]
-
-Extract fonts from the font collection.
-
-options:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Path to the font collection file to be extracted.
-  -o OUTPUT, --output OUTPUT
-                        Extraction destination directory.
+$ uv run ./src/convert_for_skyrim.py ./assets/fonts/任意のフォント名/フォントファイル.ttf --size every --subset ./data/subsets/subset_jp_skyrim.txt
 ```
 
-### OTFをTTFに変換する
-スクリプト類はTTFが入力されることを想定した処理を行っているため、OTFを使用する場合はまずTTFに変換すること。
+これで`build` ディレクトリ内に `フォントファイル名_every.ttf` というファイルが出来上がります。 
+このコマンドで何が行われているかというと、スカイリムデフォルトのEverywhere日本語フォントに文字のサイズを合わせ、バニラスカイリムが表示可能な文字だけのサブセットに変換されています。大抵の場合、フォントそのままではバニラスカイリムのフォントより若干大きいです。  
+他にもサイズ基準とするバニラフォントを変更したり、長形(細長い形)にしたり、サブセットを変えたりできます。詳細は `$ uv run ./src/convert_for_skyrim.py -h` を実行してヘルプを確認して下さい。
+
+5. 出来上がったTTFフォントをSWFに埋め込みます。
+   1. FFDecを起動します。
+   2. `assets/swf/skyrim/fonts_template.swf` をFFDecにドラッグ＆ドロップして開きます。
+   3. 左のツリーから「フォント」を展開し、中にある「DefineFont3」を選択します。
+   4. 右下にある「埋め込む」を押します。
+   5. TTFファイルを選択し、最適化したフォントファイルを選択します。
+   6. 「全ての文字」にチェックを入れ、「OK」を押します。上書き警告が出てきた場合は、「全て上書き」を選択します。
+   7. このままだとテンプレートを変更してしまうため、左上の「名前を付けて保存」から `build` ディレクトリの中に保存します。 `fonts_フォント名_every.swf` とかにすると良いでしょう。保存後はFFDecを閉じて下さい。
+
+一連の作業は、FFDecをコマンドライン化している場合以下のコマンドで実行可能です。
 
 ```
-$ fontforge -quiet -script .\convert_otf2ttf.py --help
-usage: convert_otf2ttf.py [-h] -i INPUT [-o OUTPUT]
-
-Convert OpenTypeFont(OTF) to TrueTypeFont(TTF).
-
-options:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Font file paths subject to convert.
-  -o OUTPUT, --output OUTPUT
-                        Output font file path. The file extension must be ttf.
+$ ffdec-cli.exe -replace fonts_template.swf ./build/fonts_フォント名_every.swf 1 最適化済フォントファイル
 ```
 
-### フォント同士を組み合わせる
- 例えば [しねきゃぷしょん](https://www.vector.co.jp/soft/data/writing/se314690.html) などの、格納されているグリフが少ないフォントをそのまま使用すると一部の文字が豆腐化してしまうことがある。
- そこで [源柔ゴシック](http://jikasei.me/font/genjyuu/) といった字体が似ていて、なおかつ格納グリフ数が多いフォントで補間してあげることで、違和感を最小限に豆腐化を防ぐことができる。
-なお、組み合わせるフォントは事前にオプションなしで最適化を施しておくこと強く推奨。
+6. フォントを埋め込んだSWFの各種タグ情報を変更します。
+   1. FFDecを起動します。
+   2. `build` 内にあるフォントを埋め込んだSWFをFFDecにドラッグ＆ドロップして開きます。
+   3. 左のツリーから「フォント」を展開し、中にある「DefineFont3」を選択します。
+   4. 右下にある「編集」を押します。
+   5. 編集ボタンのすぐ上にある「タグ内のフォント名」を任意の英数字の名前にします。変更後は「保存」ボタンを押して下さい。
+   6. 左のツリーから「フォント」を展開し、中にある「DefineFont3」をさらに展開し、「DefineFontName」を選択します。
+   7. 右下にある「編集」を押します。
+   8. 編集ボタンの上にある「fontName:String」をタグ内のフォント名と同じものにします。変更後は「保存」ボタンを押して下さい。
+   9. 左のツリーから「その他」を展開し、中にある「ExportAssets」を選択します。
+   10. 右下にある「編集」を押します。
+   11. 編集ボタンの上にある「assets」を展開し、中にある「tag[0]: U16～」のStringの値ををタグ内のフォント名と同じものにします。変更後は「保存」ボタンを押して下さい。
 
- ```
-$ fontforge -quiet -script .\merge_font.py --help
-usage: merge_font.py [-h] -b BASE -s SUB [-o OUTPUT]
+7. `Skyrimインストールディレクトリ\Data\Interface` の中に作成したフォントSWFを移動またはコピーします。
 
-Merge fonts and output them as a new font.
+8. `Skyrimインストールディレクトリ\Data\Interface\fontconfig.txt または fontconfig_ja.txt` を開き、以下の変更をします。
+   1. フォント読み込み設定: 上部に `fontlib "Interface\フォントファイル.swf"` を追記します。
+   2. フォント割り当て設定: 中部にある `map "フォントマップ名" = "フォント名" Normal` を書き換えます。
+      * `フォントマップ名` は変更せずに、 `フォント名` の部分を作成したフォント名変更します。
+        * スタートメニュー、インベントリ、字幕といった大部分に適用したい場合は、以下のマップのフォント名を変更します。
+          * $StartMenuFont
+          * $DialogueFont
+          * $EverywhereFont
+          * $EverywhereBoldFont
+          * $EverywhereMediumFont
+          * $CClub_Font
+          * $CClub_Font_Bold
+          * Times New Roman
+          * $CreditsFont
+        * 主に本に適用したい場合は、以下のマップのフォント名を変更します。
+          * $SkyrimBooks
+        * 主に手紙やメモに適用したい場合は、以下のマップのフォント名を変更します。
+          * $HandwrittenFont
+          * $HandwrittenBold
 
-options:
-  -h, --help            show this help message and exit
-  -b BASE, --base BASE  Base font file. The side that is interpolated.
-  -s SUB, --sub SUB     Interpolation font file.
-  -o OUTPUT, --output OUTPUT
-                        Output font file path. The file extension must be ttf.
-```
-
-
-### フォントSWFファイルに変換する
-TTFのままではスカイリムでは使用できないため、フォントSWFに変換する必要がある。
-ただ、FFDecでは単純に埋め込むだけしかできないため、結局FFDecで開いてフォント名、ExportAssetsの修正が別途必要。
-
-```:cmd
-$ ffdec-cli.exe -replace fonts_template.swf <出力フォントSWF名> 1 <埋め込むフォントファイル(TTF)>
-
-例: example_s97_w100_b0_every.ttfを埋め込んだfonts_test.swfというSWFを作成する。
-$ ffdec-cli.exe -replace fonts_template.swf fonts_example_test.swf 1 example_s97_w100_b0_every.ttf
-```
-
-#### フォントSWFの命名規則
-```
-フォントファイル名:
-fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight].swf
-
-フォント名:
-<フォント名>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight]
-```
-
-## サブセットファイルについて
-フォントファイルの中に含めたい文字を記述したテキストファイル（UTF-8エンコードされていること）を用意する。
-フォント最適化時に読み込むことで、フォントを軽量化することができる。
-
-### プリセット
-#### subset_jp_full.txt
-シンボルを含めJIS第4水準まで網羅した、おおよそ日本語圏であれば表示できない文字は無いであろうサブセット。非常に大きい。
-
-#### subset_jp_skyrim.txt
-SkyrimSE v1.6.1170 に格納されている日本語フォントを解析し、バニラのSkyrimで表示可能な文字のみに絞ったサブセット。非常に軽量。
-なお、SkyrimSE v1.6.1170 に格納されている日本語フォントには全角英数字が空白というバグを抱えているため、それらの文字は特別に補間した。
-
-
-
-
+9. ゲームを起動し、フォントが適用されたことを確認します。
+ 
