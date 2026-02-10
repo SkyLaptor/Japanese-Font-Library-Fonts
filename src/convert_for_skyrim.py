@@ -19,15 +19,15 @@ from utils.font_tools import (
     resize_glyphs,
 )
 
-MODE_SIZE_EVERY = "every"
-MODE_SIZE_BOOK = "book"
-MODE_SIZE_HAND = "hand"
+BASE_FONT_EVERY = "every"
+BASE_FONT_BOOK = "book"
+BASE_FONT_HAND = "hand"
 MODE_COND_NORM = "norm"
 MODE_COND_COND = "cond"
 MODE_COND_SKIN = "skin"
-BASE_FONT_EVERY = "./assets/fonts/skyrim/skyrim_jp_every.ttf"
-BASE_FONT_BOOK = "./assets/fonts/skyrim/skyrim_jp_book.ttf"
-BASE_FONT_HAND = "./assets/fonts/skyrim/skyrim_jp_hand.ttf"
+BASE_FONT_FILE_EVERY = "./assets/fonts/skyrim/skyrim_jp_every.ttf"
+BASE_FONT_FILE_BOOK = "./assets/fonts/skyrim/skyrim_jp_book.ttf"
+BASE_FONT_FILE_HAND = "./assets/fonts/skyrim/skyrim_jp_hand.ttf"
 TARGET_RATIO_COND = 0.64  # バニラの英字フォント(Futura Condensed)と比較検討し決定
 TARGET_RATIO_SKIN = 0.42  # 視認性の限界まで詰めた値
 SHIFT_HEIGHT_EVERY = -96
@@ -37,34 +37,37 @@ SHIFT_HEIGHT_HAND = 0
 
 def main():
     parser = argparse.ArgumentParser(
-        description="スカイリムのUI向けに入力されたフォントを最適化します。"
+        description="渡されたフォントをスカイリムのUI向けに最適化します。"
     )
 
     parser.add_argument(
         "input",
         type=str,
-        help="最適化したいフォントの入力元ファイルパス",
+        help="最適化したいフォントの入力元ファイルパス指定です。",
     )
     parser.add_argument(
         "-o",
         "--output",
         type=str,
         default="",
-        help="最適化したフォントの出力先ファイルパス",
+        help="最適化したフォントの出力先ファイルパス指定です。渡さなかった場合はbuildディレクトリに出力します。",
     )
     parser.add_argument(
-        "-s", "--subset", type=str, default="", help="サブセットのファイルパス"
-    )
-    parser.add_argument(
-        "--size",
+        "--base",
         choices=[
-            MODE_SIZE_EVERY,
-            MODE_SIZE_BOOK,
-            MODE_SIZE_HAND,
+            BASE_FONT_EVERY,
+            BASE_FONT_BOOK,
+            BASE_FONT_HAND,
         ],
         type=str,
-        default=MODE_SIZE_EVERY,
-        help=f"基準とするUIのサイズ デフォルト:{MODE_SIZE_EVERY}",
+        default=BASE_FONT_EVERY,
+        help=f"基準とするフォントの種類です。{BASE_FONT_EVERY}で一般的なUI（字幕・メニュー等）、{BASE_FONT_BOOK}で本UI、{BASE_FONT_HAND}で手書きUI（メモ・手紙等）を基準とします。 デフォルト:{BASE_FONT_EVERY}",
+    )
+    parser.add_argument(
+        "--subset",
+        type=str,
+        default="",
+        help="サブセット文字ファイルへのファイルパスです。渡さなかった場合はサブセットを行いません。文字コードはUTF-8にして下さい。",
     )
     parser.add_argument(
         "--cond",
@@ -75,19 +78,23 @@ def main():
         ],
         type=str,
         default=MODE_COND_NORM,
-        help=f"長形プリセット デフォルト: {MODE_COND_NORM}",
+        help=f"長体タイプ設定です。{MODE_COND_NORM}で変更なし、{MODE_COND_COND}で少し細長く、{MODE_COND_SKIN}でかなり細長くなります。 デフォルト: {MODE_COND_NORM}",
     )
     parser.add_argument(
         "--mono",
-        type=int,
-        default=0,
-        help="等幅フォント用モード(1で有効化) デフォルト: 0(無効)",
+        action="store_true",
+        help="等幅フォントなど、幅を変えたくない場合に有効化して下さい。有効の場合、長体タイプ設定は無視されます。",
     )
     parser.add_argument(
         "--shift_height",
         type=int,
         default=None,
-        help="上下の位置調整",
+        help="上下の位置調整の値です。正の値で上方向へ、負の値で下方向へ移動します。設定しない場合は推奨値が自動適用されます。",
+    )
+    parser.add_argument(
+        "--anonymize",
+        action="store_true",
+        help="匿名化を行いたい場合に有効化して下さい。",
     )
 
     if len(sys.argv) == 1:
@@ -99,11 +106,12 @@ def main():
     convert(
         target_font_path=args.input,
         output_font_path=args.output,
+        base_type=args.base,
         subset_file_path=args.subset,
-        mode_size=args.size,
-        mode_cond=args.cond,
+        cond_type=args.cond,
         mode_mono=args.mono,
         shift_height=args.shift_height,
+        anonymize=args.anonymize,
     )
 
 
@@ -112,10 +120,11 @@ def convert(
     target_font_path: str,
     output_font_path: str,
     subset_file_path: str,
-    mode_size: str = MODE_SIZE_EVERY,
-    mode_cond: str = MODE_COND_NORM,
-    mode_mono: int = 0,
+    base_type: str = BASE_FONT_EVERY,
+    cond_type: str = MODE_COND_NORM,
+    mode_mono: bool = False,
     shift_height: int = None,
+    anonymize: bool = False,
 ):
 
     if not target_font_path or not os.path.exists(target_font_path):
@@ -125,19 +134,19 @@ def convert(
 
     # TODO: doc
     vanilla_font_path = None
-    if mode_size == MODE_SIZE_EVERY:
+    if base_type == BASE_FONT_EVERY:
         # バニラのEverywhereフォントを基準にします
-        vanilla_font_path = BASE_FONT_EVERY
+        vanilla_font_path = BASE_FONT_FILE_EVERY
         if shift_height is None:
             shift_height = SHIFT_HEIGHT_EVERY
-    elif mode_size == MODE_SIZE_BOOK:
+    elif base_type == BASE_FONT_BOOK:
         # バニラのBookフォントを基準にします
-        vanilla_font_path = BASE_FONT_BOOK
+        vanilla_font_path = BASE_FONT_FILE_BOOK
         if shift_height is None:
             shift_height = SHIFT_HEIGHT_BOOK
-    elif mode_size == MODE_SIZE_HAND:
+    elif base_type == BASE_FONT_HAND:
         # バニラのHandwriteフォントを基準にします
-        vanilla_font_path = BASE_FONT_HAND
+        vanilla_font_path = BASE_FONT_FILE_HAND
         if shift_height is None:
             shift_height = SHIFT_HEIGHT_HAND
 
@@ -170,11 +179,11 @@ def convert(
     )
     scale_width = target_result.avg_bbox_size_norm_w * scale_height
     # 長形モードの場合はそれらも考慮します。
-    if mode_cond == MODE_COND_COND:
+    if cond_type == MODE_COND_COND:
         scale_width = (
             vanilla_result.avg_bbox_size_norm_w * TARGET_RATIO_COND / scale_width
         )
-    elif mode_cond == MODE_COND_SKIN:
+    elif cond_type == MODE_COND_SKIN:
         scale_width = (
             vanilla_result.avg_bbox_size_norm_w * TARGET_RATIO_SKIN / scale_width
         )
@@ -189,17 +198,17 @@ def convert(
         scale_width = 1.0
 
     # 等幅モードが有効の時には幅変更は強制的にオフにします。
-    if mode_mono > 0:
+    if mode_mono:
         scale_width = 1.0
 
     print("=== 処理実行前の各種パラメーター表示")
-    print(f"* 基準とするバニラの対象UI: {mode_size}")
+    print(f"* 基準とするバニラの対象UI: {base_type}")
     print(f"* 使用するバニラフォントのパス: {vanilla_font_path}")
     if subset_file_path != "":
         print(f"* 使用するサブセットファイル: {subset_file_path}")
     else:
         print("* サブセットは行いません")
-    print(f"* 横方向の拡大縮小率: x{scale_width:.3f} (長形モード: {mode_cond})")
+    print(f"* 横方向の拡大縮小率: x{scale_width:.3f} (長形モード: {cond_type})")
     print(f"* 縦方向の拡大縮小率: x{scale_height:.3f}")
     print(f"* 縦方向の移動量: {shift_height}")
 
@@ -241,10 +250,11 @@ def convert(
                 subset_result.non_existed_glyphs, encoding="utf-8"
             )
             print(
-                f"警告: サブセットと比較したところ、欠落している文字を発見したため {non_existed_glyphs_path} に対象の文字を出力しました。"
+                f"警告: サブセット文字列と比較したところ、欠落している文字を {len(subset_result.non_existed_glyphs)}個 発見しました。"
             )
+            print(f"対象の文字は {non_existed_glyphs_path} に出力しています。")
         else:
-            print("サブセットと比較したところ、文字の欠落はありませんでした。")
+            print("サブセット文字列と比較したところ、文字の欠落はありませんでした。")
         target_font_obj = subset_result.font_obj
         # print("DEBUG:現時点でのフォント情報")
         # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
@@ -276,14 +286,15 @@ def convert(
     # print(report_font_info(target_font_obj))
 
     # 匿名化
-    print("=== 匿名化の実施")
-    target_font_obj = anonymize_font_info(target_font_obj)
-    # print("DEBUG:現時点でのフォント情報")
-    # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-    # print(
-    #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(report_font_info(target_font_obj))
+    if anonymize:
+        print("=== 匿名化の実施")
+        target_font_obj = anonymize_font_info(target_font_obj)
+        # print("DEBUG:現時点でのフォント情報")
+        # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
+        # print(
+        #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
+        # )
+        # print(report_font_info(target_font_obj))
 
     # 最適化が完了したTTFを出力
     print("=== 最適化済みフォントの出力")
