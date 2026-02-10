@@ -29,7 +29,9 @@ PROTECTED_BLANK_GLYPH_LIST = {
 }
 
 # 基準となるUnitsPerEM
-BASE_UPM = 1024
+ASCENT = 880
+DESCENT = -144
+BASE_UPM = ASCENT + abs(DESCENT)
 
 
 def main(
@@ -38,10 +40,12 @@ def main(
     input_font_path2: str,
     output_font_path: str,
     subset_glyphs_path: str,
-    scale_size: float,
     scale_width: float,
+    scale_height: float,
     weight_offset: int,
     shift_height: int,
+    ascent: int,
+    descent: int,
     **kwargs,
 ) -> None:
     # TODO: あとでちゃんとしたPyDoc
@@ -49,6 +53,26 @@ def main(
         raise FileNotFoundError(
             f"入力されたファイルが正しくありません。: {input_font_path}"
         )
+
+    if ascent is not None and descent is None:
+        raise ValueError(
+            f"AscentとDescentは対で入力して下さい。: Ascent: {ascent}, Descent: {descent}"
+        )
+
+    if ascent is None and descent is not None:
+        raise ValueError(
+            f"AscentとDescentは対で入力して下さい。: Ascent: {ascent}, Descent: {descent}"
+        )
+
+    # 8の倍数チェック
+    upm = BASE_UPM
+    if ascent is not None and descent is not None:
+        upm = ascent + abs(descent)
+        if upm % 8 != 0:
+            raise ValueError(
+                f"Invalid metrics: Ascent({ascent}) + |Descent({descent})| = UPM({upm}). "
+                f"UPM must be a multiple of 8."
+            )
 
     font_obj = TTFont(input_font_path)
 
@@ -86,14 +110,14 @@ def main(
             raise TypeError(
                 "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
             )
-        result = get_metrics_average(font_obj)
+        result = get_metrics_average(font_obj, upm)
         print("--- Glyph Metrics (BBox) ---")
         print(f"Sample Kanji Count:      {result.count}")
         print(
-            f"Avg BBox Size (Raw):     {result.avg_bbox_size_raw_w:.1f} x {result.avg_bbox_size_raw_h:.1f} (font is {result.upm} UPM)"
+            f"Avg BBox Size (Raw):     W{result.avg_bbox_size_raw_w:.1f} x H{result.avg_bbox_size_raw_h:.1f} (font is {result.upm} UPM)"
         )
         print(
-            f"Avg BBox Size (Norm):    {result.avg_bbox_size_norm_w:.1f} x {result.avg_bbox_size_norm_h:.1f} (per {BASE_UPM} UPM)"
+            f"Avg BBox Size (Norm):    W{result.avg_bbox_size_norm_w:.1f} x H{result.avg_bbox_size_norm_h:.1f} (per {upm} UPM)"
         )
         return
 
@@ -103,15 +127,7 @@ def main(
                 "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
             )
         suffix = "_resized"
-        font_obj = resize_glyphs(font_obj, scale_size)
-
-    elif action == "resize_glyphs_width_only":
-        if is_otf(font_obj):
-            raise TypeError(
-                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
-            )
-        suffix = "_resized"
-        font_obj = resize_glyphs_width_only(font_obj, scale_width)
+        font_obj = resize_glyphs(font_obj, scale_width, scale_height)
 
     elif action == "export_glyph_list":
         suffix = "_glyph_list"
@@ -133,7 +149,6 @@ def main(
         print(non_existed_glyphs)
         glyphs_path = Path("build") / f"{Path(input_font_path).stem}{suffix2}.txt"
         glyphs_path.write_text(non_existed_glyphs, encoding="utf-8")
-        return
 
     elif action == "adjust_font_metrics":
         suffix = "_metrics_adjusted"
@@ -377,102 +392,20 @@ class MetricsStats:
     avg_bbox_size_norm_h: float
 
 
-# def get_metrics_average(font_obj: TTFont) -> MetricsStats:
-#     """漢字の範囲に絞ってBBoxの平均値と対象文字数を取得する"""
-#     # TODO: doc
-#     glyf_table = font_obj["glyf"]
-#     # Unicode -> GlyphName のマッピングを取得
-#     cmap = font_obj.getBestCmap()
-
-#     # デバッグ用に、cmapの中身を少しだけ見てみる
-#     # all_codes = list(cmap.keys())
-#     glyph_set = font_obj.getGlyphSet()
-#     # print(f"DEBUG: First 10 codes in cmap: {all_codes[:10]}")  # 念のため
-
-#     total_width = 0
-#     total_height = 0
-#     count = 0
-#     upm = font_obj["head"].unitsPerEm
-
-#     # デバッグ：漢字の範囲（0x4E00以降）に何文字あるか強制カウント
-#     # kanji_in_cmap = [c for c in cmap.keys() if c >= 0x4E00]
-#     # print(f"DEBUG: Characters >= 0x4E00 count: {len(kanji_in_cmap)}")
-#     # if len(kanji_in_cmap) > 0:
-#     #    print(f"DEBUG: Sample Kanji codes: {kanji_in_cmap[:5]}")
-
-#     for code, name in cmap.items():
-#         if 0x4E00 <= code <= 0x9FFF:
-#             # glyph_set[name] ではなく、直接 glyf テーブルを参照する
-#             if name in glyf_table:
-#                 g = glyf_table[name]
-
-#                 # TTFのグリフオブジェクト(g)は xMin などの属性を直接持っている
-#                 if hasattr(g, "xMin"):
-#                     xMin, yMin, xMax, yMax = g.xMin, g.yMin, g.xMax, g.yMax
-#                     width = xMax - xMin
-#                     height = yMax - yMin
-
-#                     # じゆちょうフォント等は空白グリフがある可能性があるため、
-#                     # 少なくともどちらかが0より大きい場合にカウント
-#                     if width > 0 or height > 0:
-#                         total_width += width
-#                         total_height += height
-#                         count += 1
-#                 else:
-#                     # 複合グリフなどの場合、座標が即座に取得できないことがある
-#                     # その場合は glyph_set の getBounds を使う
-#                     try:
-#                         bounds = glyph_set[name].getBounds(glyph_set)
-#                         if bounds:
-#                             xMin, yMin, xMax, yMax = bounds
-#                             total_width += xMax - xMin
-#                             total_height += yMax - yMin
-#                             count += 1
-#                     except:
-#                         continue
-
-#     if count == 0:
-#         print("対象範囲に漢字が見つかりませんでした。")
-#         return MetricsStats(
-#             upm=upm,
-#             count=count,
-#             avg_bbox_size_raw_w=0.0,
-#             avg_bbox_size_raw_h=0.0,
-#             avg_bbox_size_norm_w=0.0,
-#             avg_bbox_size_norm_h=0.0,
-#         )
-
-#     avg_w = total_width / count
-#     avg_h = total_height / count
-
-#     # 正規化（基準UPM換算）
-#     norm_w = (avg_w / upm) * BASE_UPM
-#     norm_h = (avg_h / upm) * BASE_UPM
-
-#     return MetricsStats(
-#         upm=upm,
-#         count=count,
-#         avg_bbox_size_raw_w=avg_w,
-#         avg_bbox_size_raw_h=avg_h,
-#         avg_bbox_size_norm_w=norm_w,
-#         avg_bbox_size_norm_h=norm_h,
-#     )
-
-
-def get_metrics_average(font_obj: TTFont) -> MetricsStats:
+def get_metrics_average(font_obj: TTFont, norm_upm: int) -> MetricsStats:
     """メソッドを介さず、glyfテーブルの生データから直接座標を抽出する"""
-    upm = font_obj["head"].unitsPerEm
+    raw_upm = font_obj["head"].unitsPerEm
     total_width, total_height, count = 0, 0, 0
 
     # glyfテーブルを直接取得
     if "glyf" not in font_obj:
         print("CRITICAL: No 'glyf' table found. This font might be corrupted.")
-        return MetricsStats(upm, 0, 0.0, 0.0, 0.0, 0.0)
+        return MetricsStats(raw_upm, 0, 0.0, 0.0, 0.0, 0.0)
 
     glyf_table = font_obj["glyf"]
     glyph_names = font_obj.getGlyphOrder()
 
-    print(f"DEBUG: Force-scanning {len(glyph_names)} glyphs via raw table...")
+    # print(f"DEBUG: Force-scanning {len(glyph_names)} glyphs via raw table...")
 
     for name in glyph_names:
         # getGlyphSet()を通さず、テーブルから直接グリフオブジェクトを取り出す
@@ -487,28 +420,29 @@ def get_metrics_average(font_obj: TTFont) -> MetricsStats:
                 w, h = xMax - xMin, yMax - yMin
 
                 # 判定（少し緩めに設定）
-                if (h > upm * 0.4) and (0.5 < w / h < 1.5):
+                if (h > raw_upm * 0.4) and (0.5 < w / h < 1.5):
                     total_width += w
                     total_height += h
                     count += 1
 
-                    if count <= 3:
-                        print(f"DEBUG: Successfully extracted '{name}': {w}x{h}")
-        except Exception as e:
+                    # if count <= 3:
+                    #     print(f"DEBUG: Successfully extracted '{name}': {w}x{h}")
+        except Exception:
             # ここで何が起きたか1回だけ表示
             if count == 0 and name == glyph_names[100]:
-                print(f"DEBUG: Error accessing glyph '{name}': {e}")
+                # print(f"DEBUG: Error accessing glyph '{name}': {e}")
+                pass
             continue
 
     if count == 0:
-        return MetricsStats(upm, 0, 0.0, 0.0, 0.0, 0.0)
+        return MetricsStats(raw_upm, 0, 0.0, 0.0, 0.0, 0.0)
 
     avg_w, avg_h = total_width / count, total_height / count
-    norm_w = (avg_w / upm) * 1024
-    norm_h = (avg_h / upm) * 1024
+    norm_w = (avg_w / raw_upm) * norm_upm
+    norm_h = (avg_h / raw_upm) * norm_upm
 
     return MetricsStats(
-        upm=upm,
+        upm=raw_upm,
         count=count,
         avg_bbox_size_raw_w=avg_w,
         avg_bbox_size_raw_h=avg_h,
@@ -517,122 +451,54 @@ def get_metrics_average(font_obj: TTFont) -> MetricsStats:
     )
 
 
-def resize_glyphs(font_obj: TTFont, target_scale: float) -> TTFont:
+def resize_glyphs(
+    font_obj: TTFont, scale_width: float, scale_height: float, shift_height: float = 0
+) -> TTFont:
     """
-    全グリフを指定した倍率でスケーリングし、
-    あわせて横送りの幅（hmtx）も調整する
+    全グリフを指定した倍率で各方向にスケーリングし、
+    あわせて横送りの幅（hmtx）も調整する。
+    なお、1つのフォントオブジェクトに対し2回呼ぶと不具合が起きるので注意
+    shift_y: スカイリム用の上下位置調整（既存のdyとは別に加算される移動量）
     """
+    if hasattr(font_obj, "_glyphSet"):
+        del font_obj._glyphSet
+
     glyph_set = font_obj.getGlyphSet()
     glyf_table = font_obj["glyf"]
     hmtx_table = font_obj["hmtx"]
     upm = font_obj["head"].unitsPerEm
 
-    # --- 横方向の移動量 (dx) の計算 ---
-    # UPMの半分（中心）を基準に、縮小して空いたスペースの半分だけ上に持ち上げる
-    # 例: UPM 1000 で target_scale 0.5 なら、(1000 * 0.5) / 2 = 250 だけ右ににずらす
-    dx = (upm * (1.0 - target_scale)) / 2
-    # --- 縦方向の移動量 (dy) の計算 ---
-    # UPMの半分（中心）を基準に、縮小して空いたスペースの半分だけ上に持ち上げる
-    # 例: UPM 1000 で target_scale 0.5 なら、(1000 * 0.5) / 2 = 250 だけ上にずらす
-    dy = (upm * (1.0 - target_scale)) / 2
+    # --- 中央寄せの計算 ---
+    # 横方向 (dx): 横幅を scale_w にしたときの中央寄せ
+    dx = (upm * (1.0 - scale_width)) / 2
+
+    # 縦方向 (dy):
+    # 基本の中央寄せに加え、スカイリム特有の上下位置調整 (shift_y) を加算する
+    dy = ((upm * (1.0 - scale_height)) / 2) + shift_height
 
     for glyph_name in font_obj.getGlyphOrder():
-
-        # 1. 元のグリフを読み込む
         old_glyph = glyph_set[glyph_name]
 
-        # 2. 変形行列の作成
-        transformation = (target_scale, 0, 0, target_scale, dx, dy)
+        # 【修正ポイント】 scale_w と scale_h を正しく使い分ける
+        # 行列: (scale_x, 0, 0, scale_y, dx, dy)
+        transformation = (scale_width, 0, 0, scale_height, dx, dy)
 
-        # 3. 新しいグリフデータの作成
-        # TTGlyphPen を使い、既存の glyph_set を参照させてコンポーネントを維持する
         tt_pen = TTGlyphPen(glyph_set)
         trans_pen = TransformPen(tt_pen, transformation)
-
-        # 描画（座標変換）を実行
         old_glyph.draw(trans_pen)
 
-        # 4. glyfテーブルの書き換え
-        # glyph() メソッドで新しいグリフオブジェクトを生成
-        glyf_table[glyph_name] = tt_pen.glyph()
+        new_glyph = tt_pen.glyph()
+        new_glyph.recalcBounds(glyf_table)
+        glyf_table[glyph_name] = new_glyph
 
-        # # 5. 横送り（アドバンス幅）の調整
-        # width, lsb = hmtx_table[glyph_name]
-        # hmtx_table[glyph_name] = (
-        #     int(round(width * target_scale)),
-        #     int(round(lsb * target_scale)),
-        # )
-
-        # 5. 横送り（アドバンス幅）の調整
+        # --- 横送り（アドバンス幅）の調整 ---
         width, lsb = hmtx_table[glyph_name]
 
-        # 幅そのものもスケールして、隙間を詰める
-        new_width = int(round(width * target_scale))
-
-        # LSBは「元々の左余白をスケールしたもの」に「中央寄せの移動量dx」を加える
-        new_lsb = int(round(lsb * target_scale + dx))
+        # 幅とLSBは「横方向のスケール(scale_w)」のみに依存する
+        new_width = int(round(width * scale_width))
+        new_lsb = int(round(lsb * scale_width + dx))
 
         hmtx_table[glyph_name] = (new_width, new_lsb)
-
-    # UPMを更新する場合はここで行う
-    # font_obj["head"].unitsPerEm = 1024
-
-    return font_obj
-
-
-def resize_glyphs_width_only(font_obj: TTFont, target_scale: float) -> TTFont:
-    """
-    全グリフの幅（横方向）だけを指定した倍率でスケーリングする。
-    """
-    glyph_set = font_obj.getGlyphSet()
-    glyf_table = font_obj["glyf"]
-    hmtx_table = font_obj["hmtx"]
-    upm = font_obj["head"].unitsPerEm
-
-    # --- 横方向の移動量 (dx) の計算 ---
-    # UPMの半分（中心）を基準に、縮小して空いたスペースの半分だけ上に持ち上げる
-    # 例: UPM 1000 で target_scale 0.5 なら、(1000 * 0.5) / 2 = 250 だけ右ににずらす
-    dx = (upm * (1.0 - target_scale)) / 2
-
-    for glyph_name in font_obj.getGlyphOrder():
-        # 1. 元のグリフを読み込む
-        old_glyph = glyph_set[glyph_name]
-
-        # 2. 変形行列の作成
-        transformation = (target_scale, 0, 0, 1.0, dx, 0)  # 高さは変えない
-
-        # 3. 新しいグリフデータの作成
-        # TTGlyphPen を使い、既存の glyph_set を参照させてコンポーネントを維持する
-        tt_pen = TTGlyphPen(glyph_set)
-        trans_pen = TransformPen(tt_pen, transformation)
-
-        # 描画（座標変換）を実行
-        old_glyph.draw(trans_pen)
-
-        # 4. glyfテーブルの書き換え
-        # glyph() メソッドで新しいグリフオブジェクトを生成
-        glyf_table[glyph_name] = tt_pen.glyph()
-
-        # # 5. 横送り（アドバンス幅）の調整
-        # width, lsb = hmtx_table[glyph_name]
-        # hmtx_table[glyph_name] = (
-        #     int(round(width * target_scale)),
-        #     int(round(lsb * target_scale)),
-        # )
-
-        # 5. 横送り（アドバンス幅）の調整
-        width, lsb = hmtx_table[glyph_name]
-
-        # 幅そのものもスケールして、隙間を詰める
-        new_width = int(round(width * target_scale))
-
-        # LSBは「元々の左余白をスケールしたもの」に「中央寄せの移動量dx」を加える
-        new_lsb = int(round(lsb * target_scale + dx))
-
-        hmtx_table[glyph_name] = (new_width, new_lsb)
-
-    # UPMを更新する場合はここで行う
-    # font_obj["head"].unitsPerEm = 1024
 
     return font_obj
 
@@ -733,12 +599,13 @@ def adjust_font_metrics(font_obj: TTFont, ascent: int, descent: int) -> TTFont:
     # 2. UPMが異なる場合のみ、グリフ自体のサイズを調整
     if old_upm != new_upm:
         scale = new_upm / old_upm
-        print(f"Resizing glyphs: {old_upm} -> {new_upm} (scale: {scale:.4f})")
+        # print(f"Resizing glyphs: {old_upm} -> {new_upm} (scale: {scale:.4f})")
         # 以前作成した resize_glyphs を呼び出し (引数は dx=0, dy=0 を想定)
         # ※resize_glyphs(font_obj, scale_x, scale_y, dx, dy) の形式に合わせてください
-        resize_glyphs(font_obj, scale)
+        resize_glyphs(font_obj, scale, scale)
     else:
-        print(f"UPM already matches {new_upm}. Skipping glyph resize.")
+        # print(f"UPM already matches {new_upm}. Skipping glyph resize.")
+        pass
 
     # 3. head テーブルの UPM 更新
     font_obj["head"].unitsPerEm = new_upm
@@ -786,7 +653,7 @@ def adjust_font_metrics(font_obj: TTFont, ascent: int, descent: int) -> TTFont:
             post.underlinePosition = int(round(post.underlinePosition * scale))
             post.underlineThickness = int(round(post.underlineThickness * scale))
 
-    print(f"Metrics adjusted: UPM={new_upm} (Ascent:{ascent}, Descent:{descent})")
+    # print(f"Metrics adjusted: UPM={new_upm} (Ascent:{ascent}, Descent:{descent})")
     return font_obj
 
 
@@ -852,7 +719,7 @@ def expand_glyph_weight(font_obj: TTFont, weight_offset: int) -> TTFont:
         glyph.coordinates = type(glyph.coordinates)(new_coords)
         glyph.recalcBounds(glyf_table)
 
-    print(f"Bold expansion finished: +{weight_offset}")
+    # print(f"Bold expansion finished: +{weight_offset}")
     return font_obj
 
 
@@ -862,13 +729,13 @@ def shift_glyph_height(font_obj: TTFont, shift_height: int) -> TTFont:
     shift_height: 正の値で上へ、負の値で下へ移動。
     """
     if "glyf" not in font_obj:
-        print("glyf table not found.")
+        # print("glyf table not found.")
         return font_obj
 
     glyf_table = font_obj["glyf"]
     glyph_order = font_obj.getGlyphOrder()
 
-    print(f"Shifting glyph heights by {shift_height} units...")
+    # print(f"Shifting glyph heights by {shift_height} units...")
 
     for glyph_name in glyph_order:
         glyph = glyf_table[glyph_name]
@@ -887,7 +754,7 @@ def shift_glyph_height(font_obj: TTFont, shift_height: int) -> TTFont:
         # 2. 境界線情報を再計算（これをしないと表示位置がおかしくなる）
         glyph.recalcBounds(glyf_table)
 
-    print(f"Shift completed: {'+' if shift_height >= 0 else ''}{shift_height}")
+    # print(f"Shift completed: {'+' if shift_height >= 0 else ''}{shift_height}")
     return font_obj
 
 
@@ -902,21 +769,21 @@ def fill_missing_glyphs(
     """
 
     # --- Phase 1: 各フォントのコンディションを整える ---
-    print("Standardizing Font A...")
+    # print("Standardizing Font A...")
     a_result = get_metrics_average(font_obj_a)  # いろいろする前に測定しておくこと
     font_obj_a = adjust_font_metrics(font_obj_a, ascent, descent)
     font_obj_a = clean_empty_glyphs(font_obj_a).font_obj
 
-    print("Standardizing Font B...")
+    # print("Standardizing Font B...")
     b_result = get_metrics_average(font_obj_b)  # いろいろする前に測定しておくこと
     font_obj_b = adjust_font_metrics(font_obj_b, ascent, descent)
     font_obj_b = clean_empty_glyphs(font_obj_b).font_obj
 
     # --- Phase 1 内の B 調整セクション ---
-    print("Calculating scale ratio based on average glyph size...")
+    # print("Calculating scale ratio based on average glyph size...")
 
-    print(f"Font A Average Height: {a_result.avg_bbox_size_raw_h:.2f} units")
-    print(f"Font B Average Height: {b_result.avg_bbox_size_raw_h:.2f} units")
+    # print(f"Font A Average Height: {a_result.avg_bbox_size_raw_h:.2f} units")
+    # print(f"Font B Average Height: {b_result.avg_bbox_size_raw_h:.2f} units")
 
     # 高さを基準に比率を算出 (例: 850 / 950 = 0.894)
     target_ratio = a_result.avg_bbox_size_raw_h / b_result.avg_bbox_size_raw_h
@@ -924,7 +791,7 @@ def fill_missing_glyphs(
     # 安全策: 異常な倍率にならないようリミッターをかける (任意)
     # target_ratio = max(0.5, min(target_ratio, 1.2))
 
-    print(f"Automated Scaling: Resizing Font B by x{target_ratio:.4f} to match Font A")
+    # print(f"Automated Scaling: Resizing Font B by x{target_ratio:.4f} to match Font A")
 
     # スケーリング実行
     font_obj_b = resize_glyphs(font_obj_b, target_ratio)
@@ -995,7 +862,7 @@ def fill_missing_glyphs(
             existing_glyph_names.add(dest_name)
 
     # --- Phase 4: 最終同期 (物理的抹殺版) ---
-    print("--- Final Phase: Enforcing Table Consistency ---")
+    # print("--- Final Phase: Enforcing Table Consistency ---")
 
     # 1. グリフ順序を一旦確定させる
     font_obj_a.setGlyphOrder(new_glyph_order)
@@ -1025,7 +892,7 @@ def fill_missing_glyphs(
         v_metrics.clear()
         v_metrics.update(temp_v_metrics)
 
-    print(f"Successfully merged! Total glyphs: {len(final_order)}")
+    # print(f"Successfully merged! Total glyphs: {len(final_order)}")
     return font_obj_a
 
 
@@ -1063,7 +930,9 @@ def remove_specific_placeholder(font_obj: TTFont, target_w=350, target_h=350) ->
                     removed_count += 1
 
     if removed_count > 0:
-        print(f"Removed {removed_count} placeholder glyphs ({target_w}x{target_h}).")
+        # print(f"Removed {removed_count} placeholder glyphs ({target_w}x{target_h}).")
+        pass
+
     return font_obj
 
 
@@ -1095,8 +964,10 @@ def remove_hinting(font_obj: TTFont) -> TTFont:
                 glyph.program = None
 
     if removed:
-        print(f"Removed hinting tables: {', '.join(removed)}")
-    print("Glyph instructions cleared.")
+        # print(f"Removed hinting tables: {', '.join(removed)}")
+        pass
+
+    # print("Glyph instructions cleared.")
 
     return font_obj
 
@@ -1119,16 +990,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ascent",
         type=int,
+        default=None,
         help="Ascentの値(units)",
     )
     parser.add_argument(
         "--descent",
         type=int,
+        default=None,
         help="Descentの値(units)",
     )
-    parser.add_argument("--scale_size", type=float, help="拡大縮小率(1.0=100.0%%)")
     parser.add_argument(
-        "--scale_width", type=float, help="横幅の拡大縮小率(1.0=100.0%%)"
+        "--scale_width", type=float, help="横方向の拡大縮小率(1.0=100.0%%)"
+    )
+    parser.add_argument(
+        "--scale_height", type=float, help="縦方向の拡大縮小率(1.0=100.0%%)"
     )
     parser.add_argument(
         "--weight_offset",
@@ -1149,7 +1024,6 @@ if __name__ == "__main__":
             "anonymize_font_info",
             "get_metrics_average",
             "resize_glyphs",
-            "resize_glyphs_width_only",
             "export_glyph_list",
             "create_subset",
             "adjust_font_metrics",
@@ -1176,8 +1050,8 @@ if __name__ == "__main__":
         subset_glyphs_path=args.subset,
         ascent=args.ascent,
         descent=args.descent,
-        scale_size=args.scale_size,
         scale_width=args.scale_width,
+        scale_height=args.scale_height,
         weight_offset=args.weight_offset,
         shift_height=args.shift_height,
         action=args.action,
