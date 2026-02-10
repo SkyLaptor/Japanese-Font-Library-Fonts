@@ -20,7 +20,7 @@
 * assets: 生のフォントTTFやSWFといった開発に必要なリソース類を配置します。
 * build: 一時ビルド時などに使用します。コミット対象外。
 * data: サブセットデータなどを配置します。
-* dist: 最終的な配布物を保管します。
+* dist: 最終的な配布物を保管します。コミット対象外。
 * docs: ドキュメント類を配置します。
 * src: プログラムソースコードを配置します。
 * tests: pytestなどのテスト用コードを配置します。
@@ -40,7 +40,7 @@
 
 ## 開発及びテスト時に使用するツール
 ### Visual Studio Code (VSCode)
-軽量、強力なIDEです。自動で
+軽量、強力なIDEです。
 https://code.visualstudio.com/
 
 ### BSA Browser
@@ -55,14 +55,13 @@ https://www.nexusmods.com/starfield/mods/313
 OSを汚さずにPython実行環境を準備するために使用します。
 https://docs.astral.sh/uv/getting-started/installation/
 
-プロジェクト直下にて環境を設定してください
+初回や更新があった場合は以下のコマンドを実行して下さい。
 ```
-$ uv venv
 $ uv sync
 ```
 
 ### FontForge
-TTFを作成加工するために使用します。`fontforge.exe` にパスを通してください。
+作成したフォントを確認するとき等に使用します。
 https://fontforge.org/en-US/
 
 ### JPEXS Free Flash Decompiler - FFDec
