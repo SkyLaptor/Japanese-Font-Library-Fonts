@@ -1,6 +1,11 @@
-.venv/
+# Python中間生成物
 __pycache__/
-.pytest_cache/
+*.py[cod]
+*$py.class
 *.egg-info/
-build/
+.pytest_cache/
+.venv/
+
+# 成果物
 dist/
+build/
