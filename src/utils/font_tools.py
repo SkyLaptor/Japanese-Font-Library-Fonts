@@ -1,5 +1,6 @@
 import argparse
 import io
+import math
 import os
 import sys
 import time
@@ -34,10 +35,13 @@ BASE_UPM = 1024
 def main(
     action: str,
     input_font_path: str,
+    input_font_path2: str,
     output_font_path: str,
     subset_glyphs_path: str,
     scale_size: float,
     scale_width: float,
+    weight_offset: int,
+    shift_height: int,
     **kwargs,
 ) -> None:
     # TODO: あとでちゃんとしたPyDoc
@@ -135,6 +139,47 @@ def main(
         suffix = "_metrics_adjusted"
         font_obj = adjust_font_metrics(font_obj, 880, -144)
 
+    elif action == "expand_glyph_weight":
+        if is_otf(font_obj):
+            raise TypeError(
+                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
+            )
+        suffix = "_weight_expanded"
+        font_obj = expand_glyph_weight(font_obj, weight_offset)
+
+    elif action == "shift_glyph_height":
+        if is_otf(font_obj):
+            raise TypeError(
+                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
+            )
+        suffix = "_height_shifted"
+        font_obj = shift_glyph_height(font_obj, shift_height)
+
+    elif action == "fill_missing_glyphs":
+        font_obj_b = TTFont(input_font_path2)
+        if is_otf(font_obj):
+            raise TypeError(
+                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
+            )
+        suffix = "_merged"
+        font_obj = fill_missing_glyphs(font_obj, font_obj_b, 880, -144)
+
+    elif action == "remove_specific_placeholder":
+        if is_otf(font_obj):
+            raise TypeError(
+                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
+            )
+        suffix = "_specific_placeholder_removed"
+        font_obj = remove_specific_placeholder(font_obj)
+
+    elif action == "remove_hinting":
+        if is_otf(font_obj):
+            raise TypeError(
+                "本機能はOTFに対応していません。otf2ttfを使用してTTFに変換したものをご利用下さい。"
+            )
+        suffix = "_hint_removed"
+        font_obj = remove_hinting(font_obj)
+
     else:
         raise ValueError(f"正しくない動作が指定されています。: {action}")
 
@@ -152,7 +197,7 @@ def main(
 
 def is_otf(font_obj: TTFont) -> bool:
     # TODO: doc
-    if "CFF " in font_obj:
+    if "CFF " in font_obj or "CFF2" in font_obj:
         return True
     return False
 
@@ -276,42 +321,46 @@ def clean_empty_glyphs(font_obj: TTFont) -> CleanupResult:
 
 
 def anonymize_font_info(font_obj: TTFont) -> TTFont:
-    """フォントの名称情報を徹底的に匿名化またはダミーに置き換える"""
+    family_name = "Anonymized"
+    ps_name = "Anonymized-Regular"
+    subfamily = "Regular"
 
-    # 1. nameテーブルの処理
+    # 1. nameテーブルの再構築
     name_table = font_obj["name"]
     new_names = []
 
-    # 保持したい、あるいは安全なダミー値の定義
-    dummy_str = "Anonymized Font"
-    family_name = "Anonymized"
-
+    # 必須のIDだけを絞り込んで再定義する
     for record in name_table.names:
-        # IDごとの処理
-        if record.nameID in [1, 4, 16]:  # Family, Full Name
-            record.string = family_name.encode(record.getEncoding())
-        elif record.nameID == 2:  # Subfamily (Regularなどは残さないと壊れる場合がある)
-            pass
+        encoding = record.getEncoding()
+
+        if record.nameID in [1, 16, 17]:  # Family Name
+            record.string = family_name.encode(encoding)
+        elif record.nameID in [2, 18]:  # Subfamily Name
+            record.string = subfamily.encode(encoding)
         elif record.nameID == 3:  # Unique ID
-            record.string = f"0.000;NONE;{family_name}".encode(record.getEncoding())
+            record.string = f"0.000;NONE;{ps_name}".encode(encoding)
+        elif record.nameID == 4:  # Full Name
+            record.string = f"{family_name} {subfamily}".encode(encoding)
         elif record.nameID == 5:  # Version
-            record.string = "Version 0.000".encode(record.getEncoding())
-        elif record.nameID == 6:  # PostScript Name (重要: スペース不可)
-            record.string = "Anonymized-Regular".encode(record.getEncoding())
+            record.string = "Version 0.000".encode(encoding)
+        elif record.nameID == 6:  # PostScript Name
+            record.string = ps_name.encode(encoding)
         else:
-            # それ以外（著作権、デザイナー、URL、ライセンス等）はすべて空にする
-            record.string = "".encode(record.getEncoding())
+            # 著作権やURLなどは、空文字を入れるのではなく「リストに入れない」ことで削除
+            continue
 
-    # headテーブルのタイムスタンプを「現在時刻」に更新
+        new_names.append(record)
+
+    name_table.names = new_names
+
+    # 2. headテーブルの更新
     if "head" in font_obj:
-        # fontToolsの内部では1904年からの経過秒数(Macエポック)を期待していますが、
-        # fontTools自体が time.time() の値を適切に扱ってくれるため
-        # int(time.time()) を入れるのが最も確実です。
-        now = int(time.time())
-        # Appleの基準(1904年)に合わせるためのオフセット加算
-        font_obj["head"].created = now + 2082844800
-        font_obj["head"].modified = now + 2082844800
+        # Mac epoch (1904) と Unix epoch (1970) の差分: 2,082,844,800秒
+        now = int(time.time()) + 2082844800
+        font_obj["head"].created = now
+        font_obj["head"].modified = now
 
+    # 3. OS/2テーブルの更新
     if "OS/2" in font_obj:
         font_obj["OS/2"].achVendID = "NONE"
 
@@ -328,77 +377,135 @@ class MetricsStats:
     avg_bbox_size_norm_h: float
 
 
+# def get_metrics_average(font_obj: TTFont) -> MetricsStats:
+#     """漢字の範囲に絞ってBBoxの平均値と対象文字数を取得する"""
+#     # TODO: doc
+#     glyf_table = font_obj["glyf"]
+#     # Unicode -> GlyphName のマッピングを取得
+#     cmap = font_obj.getBestCmap()
+
+#     # デバッグ用に、cmapの中身を少しだけ見てみる
+#     # all_codes = list(cmap.keys())
+#     glyph_set = font_obj.getGlyphSet()
+#     # print(f"DEBUG: First 10 codes in cmap: {all_codes[:10]}")  # 念のため
+
+#     total_width = 0
+#     total_height = 0
+#     count = 0
+#     upm = font_obj["head"].unitsPerEm
+
+#     # デバッグ：漢字の範囲（0x4E00以降）に何文字あるか強制カウント
+#     # kanji_in_cmap = [c for c in cmap.keys() if c >= 0x4E00]
+#     # print(f"DEBUG: Characters >= 0x4E00 count: {len(kanji_in_cmap)}")
+#     # if len(kanji_in_cmap) > 0:
+#     #    print(f"DEBUG: Sample Kanji codes: {kanji_in_cmap[:5]}")
+
+#     for code, name in cmap.items():
+#         if 0x4E00 <= code <= 0x9FFF:
+#             # glyph_set[name] ではなく、直接 glyf テーブルを参照する
+#             if name in glyf_table:
+#                 g = glyf_table[name]
+
+#                 # TTFのグリフオブジェクト(g)は xMin などの属性を直接持っている
+#                 if hasattr(g, "xMin"):
+#                     xMin, yMin, xMax, yMax = g.xMin, g.yMin, g.xMax, g.yMax
+#                     width = xMax - xMin
+#                     height = yMax - yMin
+
+#                     # じゆちょうフォント等は空白グリフがある可能性があるため、
+#                     # 少なくともどちらかが0より大きい場合にカウント
+#                     if width > 0 or height > 0:
+#                         total_width += width
+#                         total_height += height
+#                         count += 1
+#                 else:
+#                     # 複合グリフなどの場合、座標が即座に取得できないことがある
+#                     # その場合は glyph_set の getBounds を使う
+#                     try:
+#                         bounds = glyph_set[name].getBounds(glyph_set)
+#                         if bounds:
+#                             xMin, yMin, xMax, yMax = bounds
+#                             total_width += xMax - xMin
+#                             total_height += yMax - yMin
+#                             count += 1
+#                     except:
+#                         continue
+
+#     if count == 0:
+#         print("対象範囲に漢字が見つかりませんでした。")
+#         return MetricsStats(
+#             upm=upm,
+#             count=count,
+#             avg_bbox_size_raw_w=0.0,
+#             avg_bbox_size_raw_h=0.0,
+#             avg_bbox_size_norm_w=0.0,
+#             avg_bbox_size_norm_h=0.0,
+#         )
+
+#     avg_w = total_width / count
+#     avg_h = total_height / count
+
+#     # 正規化（基準UPM換算）
+#     norm_w = (avg_w / upm) * BASE_UPM
+#     norm_h = (avg_h / upm) * BASE_UPM
+
+#     return MetricsStats(
+#         upm=upm,
+#         count=count,
+#         avg_bbox_size_raw_w=avg_w,
+#         avg_bbox_size_raw_h=avg_h,
+#         avg_bbox_size_norm_w=norm_w,
+#         avg_bbox_size_norm_h=norm_h,
+#     )
+
+
 def get_metrics_average(font_obj: TTFont) -> MetricsStats:
-    """漢字の範囲に絞ってBBoxの平均値と対象文字数を取得する"""
-    # TODO: doc
-    glyf_table = font_obj["glyf"]
-    # Unicode -> GlyphName のマッピングを取得
-    cmap = font_obj.getBestCmap()
-
-    # デバッグ用に、cmapの中身を少しだけ見てみる
-    # all_codes = list(cmap.keys())
-    glyph_set = font_obj.getGlyphSet()
-    # print(f"DEBUG: First 10 codes in cmap: {all_codes[:10]}")  # 念のため
-
-    total_width = 0
-    total_height = 0
-    count = 0
+    """メソッドを介さず、glyfテーブルの生データから直接座標を抽出する"""
     upm = font_obj["head"].unitsPerEm
+    total_width, total_height, count = 0, 0, 0
 
-    # デバッグ：漢字の範囲（0x4E00以降）に何文字あるか強制カウント
-    # kanji_in_cmap = [c for c in cmap.keys() if c >= 0x4E00]
-    # print(f"DEBUG: Characters >= 0x4E00 count: {len(kanji_in_cmap)}")
-    # if len(kanji_in_cmap) > 0:
-    #    print(f"DEBUG: Sample Kanji codes: {kanji_in_cmap[:5]}")
+    # glyfテーブルを直接取得
+    if "glyf" not in font_obj:
+        print("CRITICAL: No 'glyf' table found. This font might be corrupted.")
+        return MetricsStats(upm, 0, 0.0, 0.0, 0.0, 0.0)
 
-    for code, name in cmap.items():
-        if 0x4E00 <= code <= 0x9FFF:
-            # glyph_set[name] ではなく、直接 glyf テーブルを参照する
-            if name in glyf_table:
-                g = glyf_table[name]
+    glyf_table = font_obj["glyf"]
+    glyph_names = font_obj.getGlyphOrder()
 
-                # TTFのグリフオブジェクト(g)は xMin などの属性を直接持っている
-                if hasattr(g, "xMin"):
-                    xMin, yMin, xMax, yMax = g.xMin, g.yMin, g.xMax, g.yMax
-                    width = xMax - xMin
-                    height = yMax - yMin
+    print(f"DEBUG: Force-scanning {len(glyph_names)} glyphs via raw table...")
 
-                    # じゆちょうフォント等は空白グリフがある可能性があるため、
-                    # 少なくともどちらかが0より大きい場合にカウント
-                    if width > 0 or height > 0:
-                        total_width += width
-                        total_height += height
-                        count += 1
-                else:
-                    # 複合グリフなどの場合、座標が即座に取得できないことがある
-                    # その場合は glyph_set の getBounds を使う
-                    try:
-                        bounds = glyph_set[name].getBounds(glyph_set)
-                        if bounds:
-                            xMin, yMin, xMax, yMax = bounds
-                            total_width += xMax - xMin
-                            total_height += yMax - yMin
-                            count += 1
-                    except:
-                        continue
+    for name in glyph_names:
+        # getGlyphSet()を通さず、テーブルから直接グリフオブジェクトを取り出す
+        # これなら、中身が複雑な複合グリフでも、ヘッダーの座標情報だけは取れる
+        try:
+            glyph = glyf_table[name]
+
+            # TTFのグリフオブジェクトは、中身を解析(draw)しなくても
+            # ヘッダーに xMin, yMin, xMax, yMax を持っている
+            if hasattr(glyph, "xMax"):
+                xMin, yMin, xMax, yMax = glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax
+                w, h = xMax - xMin, yMax - yMin
+
+                # 判定（少し緩めに設定）
+                if (h > upm * 0.4) and (0.5 < w / h < 1.5):
+                    total_width += w
+                    total_height += h
+                    count += 1
+
+                    if count <= 3:
+                        print(f"DEBUG: Successfully extracted '{name}': {w}x{h}")
+        except Exception as e:
+            # ここで何が起きたか1回だけ表示
+            if count == 0 and name == glyph_names[100]:
+                print(f"DEBUG: Error accessing glyph '{name}': {e}")
+            continue
 
     if count == 0:
-        print("対象範囲に漢字が見つかりませんでした。")
-        return MetricsStats(
-            upm=upm,
-            count=count,
-            avg_bbox_size_raw_w=0.0,
-            avg_bbox_size_raw_h=0.0,
-            avg_bbox_size_norm_w=0.0,
-            avg_bbox_size_norm_h=0.0,
-        )
+        return MetricsStats(upm, 0, 0.0, 0.0, 0.0, 0.0)
 
-    avg_w = total_width / count
-    avg_h = total_height / count
-
-    # 正規化（基準UPM換算）
-    norm_w = (avg_w / upm) * BASE_UPM
-    norm_h = (avg_h / upm) * BASE_UPM
+    avg_w, avg_h = total_width / count, total_height / count
+    norm_w = (avg_w / upm) * 1024
+    norm_h = (avg_h / upm) * 1024
 
     return MetricsStats(
         upm=upm,
@@ -619,7 +726,7 @@ def adjust_font_metrics(font_obj: TTFont, ascent: int, descent: int) -> TTFont:
     # 2. 8の倍数チェック
     if new_upm % 8 != 0:
         raise ValueError(
-            f"Invalid metrics: Ascent({ascent}) + |Descent({descent})| = UPM({upm}). "
+            f"Invalid metrics: Ascent({ascent}) + |Descent({descent})| = UPM({new_upm}). "
             f"UPM must be a multiple of 8."
         )
 
@@ -683,18 +790,316 @@ def adjust_font_metrics(font_obj: TTFont, ascent: int, descent: int) -> TTFont:
     return font_obj
 
 
-# TODO: フォントメトリクスの修正
+def expand_glyph_weight(font_obj: TTFont, weight_offset: int) -> TTFont:
+    if "glyf" not in font_obj:
+        return font_obj
+
+    glyf_table = font_obj["glyf"]
+
+    # 向きを反転させる（細くなったなら逆へ飛ばす）
+    # TrueTypeの一般的な向きに合わせるため、オフセットを反転
+    actual_offset = -weight_offset
+
+    for glyph_name in font_obj.getGlyphOrder():
+        glyph = glyf_table[glyph_name]
+        if glyph.numberOfContours <= 0:
+            continue
+
+        coords = list(glyph.coordinates)
+        new_coords = list(coords)
+        start_idx = 0
+
+        for end_idx in glyph.endPtsOfContours:
+            contour_indices = list(range(start_idx, end_idx + 1))
+            n = len(contour_indices)
+            if n < 2:
+                continue
+
+            for i in range(n):
+                curr_idx = contour_indices[i]
+                prev_idx = contour_indices[(i - 1) % n]
+                next_idx = contour_indices[(i + 1) % n]
+
+                x0, y0 = coords[prev_idx]
+                x1, y1 = coords[curr_idx]
+                x2, y2 = coords[next_idx]
+
+                v1x, v1y = x1 - x0, y1 - y0
+                v2x, v2y = x2 - x1, y2 - y1
+
+                def get_normal(dx, dy):
+                    length = math.sqrt(dx * dx + dy * dy)
+                    if length == 0:
+                        return 0, 0
+                    # ここで押し出し方向を制御（dy, -dx）
+                    return dy / length, -dx / length
+
+                n1x, n1y = get_normal(v1x, v1y)
+                n2x, n2y = get_normal(v2x, v2y)
+
+                nx, ny = n1x + n2x, n1y + n2y
+                n_len = math.sqrt(nx * nx + ny * ny)
+
+                if n_len != 0:
+                    # actual_offset を使うことで外側へ！
+                    new_coords[curr_idx] = (
+                        x1 + (nx / n_len) * actual_offset,
+                        y1 + (ny / n_len) * actual_offset,
+                    )
+
+            start_idx = end_idx + 1
+
+        glyph.coordinates = type(glyph.coordinates)(new_coords)
+        glyph.recalcBounds(glyf_table)
+
+    print(f"Bold expansion finished: +{weight_offset}")
+    return font_obj
 
 
-# TODO: グリフの太さを変更する
+def shift_glyph_height(font_obj: TTFont, shift_height: int) -> TTFont:
+    """
+    全グリフの上下位置を指定したユニット分シフトする。
+    shift_height: 正の値で上へ、負の値で下へ移動。
+    """
+    if "glyf" not in font_obj:
+        print("glyf table not found.")
+        return font_obj
 
-# TODO: グリフの上下位置を変更する
+    glyf_table = font_obj["glyf"]
+    glyph_order = font_obj.getGlyphOrder()
 
-# TODO: 黒ぽちょグリフを消す
+    print(f"Shifting glyph heights by {shift_height} units...")
 
-# TODO: フォント同士を結合する
+    for glyph_name in glyph_order:
+        glyph = glyf_table[glyph_name]
 
-# TODO: サブセットを作る
+        # 輪郭がないグリフ（スペースなど）も、
+        # 境界線データ（yMin, yMax）を持っている場合があるので一応処理
+        if glyph.numberOfContours != 0:
+            # 1. 座標をすべて一律にずらす
+            coords = glyph.coordinates
+            new_coords = []
+            for x, y in coords:
+                new_coords.append((x, y + shift_height))
+
+            glyph.coordinates = type(glyph.coordinates)(new_coords)
+
+        # 2. 境界線情報を再計算（これをしないと表示位置がおかしくなる）
+        glyph.recalcBounds(glyf_table)
+
+    print(f"Shift completed: {'+' if shift_height >= 0 else ''}{shift_height}")
+    return font_obj
+
+
+def fill_missing_glyphs(
+    font_obj_a: TTFont, font_obj_b: TTFont, ascent: int, descent: int
+) -> TTFont:
+    """
+    1. A, B 個別にメトリクスを調整
+    2. A, B 個別に不要な空白グリフを掃除
+    3. A に無い文字を B からインデックス参照で確実にコピー
+    4. 保存時の不整合を物理的に排除
+    """
+
+    # --- Phase 1: 各フォントのコンディションを整える ---
+    print("Standardizing Font A...")
+    a_result = get_metrics_average(font_obj_a)  # いろいろする前に測定しておくこと
+    font_obj_a = adjust_font_metrics(font_obj_a, ascent, descent)
+    font_obj_a = clean_empty_glyphs(font_obj_a).font_obj
+
+    print("Standardizing Font B...")
+    b_result = get_metrics_average(font_obj_b)  # いろいろする前に測定しておくこと
+    font_obj_b = adjust_font_metrics(font_obj_b, ascent, descent)
+    font_obj_b = clean_empty_glyphs(font_obj_b).font_obj
+
+    # --- Phase 1 内の B 調整セクション ---
+    print("Calculating scale ratio based on average glyph size...")
+
+    print(f"Font A Average Height: {a_result.avg_bbox_size_raw_h:.2f} units")
+    print(f"Font B Average Height: {b_result.avg_bbox_size_raw_h:.2f} units")
+
+    # 高さを基準に比率を算出 (例: 850 / 950 = 0.894)
+    target_ratio = a_result.avg_bbox_size_raw_h / b_result.avg_bbox_size_raw_h
+
+    # 安全策: 異常な倍率にならないようリミッターをかける (任意)
+    # target_ratio = max(0.5, min(target_ratio, 1.2))
+
+    print(f"Automated Scaling: Resizing Font B by x{target_ratio:.4f} to match Font A")
+
+    # スケーリング実行
+    font_obj_b = resize_glyphs(font_obj_b, target_ratio)
+
+    # --- Phase 2: マージ準備 ---
+    print("--- Phase 2: Merging Glyphs ---")
+    cmap_a = font_obj_a.getBestCmap()
+    cmap_b = font_obj_b.getBestCmap()
+    glyf_a = font_obj_a["glyf"]
+    glyf_b = font_obj_b["glyf"]
+    hmtx_a = font_obj_a["hmtx"]
+    hmtx_b = font_obj_b["hmtx"]
+
+    # BにあってAにないUnicodeを特定
+    missing_codes = sorted(set(cmap_b.keys()) - set(cmap_a.keys()))
+
+    if not missing_codes:
+        print("No missing glyphs to fill.")
+        return font_obj_a
+
+    print(f"Transferring {len(missing_codes)} characters from Font B to Font A...")
+
+    existing_glyph_names = set(font_obj_a.getGlyphOrder())
+    new_glyph_order = list(font_obj_a.getGlyphOrder())
+
+    # --- Phase 3: グリフ・メトリクス・cmap のコピー ---
+    for code in missing_codes:
+        original_name = cmap_b[code]
+
+        if original_name is None:
+            continue
+
+        # グリフ名が glyf テーブルにあるか確認
+        if original_name not in glyf_b:
+            continue
+
+        # 名前衝突回避（同じ名前があれば .fallback を付与）
+        dest_name = original_name
+        if dest_name in existing_glyph_names:
+            dest_name = f"{original_name}.fallback"
+
+        # 1. グリフ形状のコピー
+        glyf_a[dest_name] = glyf_b[original_name]
+
+        # 2. 横幅(hmtx)のコピー：名前ではなくID(Index)経由で確実に引く
+        try:
+            # Source Han Serif のように内部名と外部名が違う場合への対策
+            gid = font_obj_b.getGlyphID(original_name)
+            real_name_in_b = font_obj_b.getGlyphOrder()[gid]
+            hmtx_a.metrics[dest_name] = hmtx_b.metrics[real_name_in_b]
+        except (KeyError, IndexError):
+            # 万が一取得失敗した場合はデフォルト（UPM幅）
+            hmtx_a.metrics[dest_name] = (font_obj_a["head"].unitsPerEm, 0)
+
+        # 3. cmap の更新：16bit Overflow (U+FFFF超え) 対策
+        for table in font_obj_a["cmap"].tables:
+            # Format 4 (16bit) の場合は U+FFFF 以下のみ書き込む
+            if table.format == 4:
+                if code <= 0xFFFF:
+                    table.cmap[code] = dest_name
+            else:
+                # Format 12 (32bit) などは全て書き込む
+                table.cmap[code] = dest_name
+
+        # 4. オーダーリストへの追加
+        if dest_name not in existing_glyph_names:
+            new_glyph_order.append(dest_name)
+            existing_glyph_names.add(dest_name)
+
+    # --- Phase 4: 最終同期 (物理的抹殺版) ---
+    print("--- Final Phase: Enforcing Table Consistency ---")
+
+    # 1. グリフ順序を一旦確定させる
+    font_obj_a.setGlyphOrder(new_glyph_order)
+    final_order = font_obj_a.getGlyphOrder()
+
+    # 2. hmtxテーブルを直接操作
+    hmtx_table = font_obj_a["hmtx"]
+    current_metrics = hmtx_table.metrics
+
+    # 新しいデータセットを準備
+    temp_metrics = {}
+    default_val = (font_obj_a["head"].unitsPerEm, 0)
+    for name in final_order:
+        temp_metrics[name] = current_metrics.get(name, default_val)
+
+    # 【ここが重要】辞書オブジェクトを差し替えるのではなく、中身を直接入れ替える
+    current_metrics.clear()
+    current_metrics.update(temp_metrics)
+
+    # 3. ついでに vmtx (縦書き用メトリクス) がある場合も同様に処理（エラー防止）
+    if "vmtx" in font_obj_a:
+        vmtx_table = font_obj_a["vmtx"]
+        v_metrics = vmtx_table.metrics
+        temp_v_metrics = {}
+        for name in final_order:
+            temp_v_metrics[name] = v_metrics.get(name, (default_val[0], 0))
+        v_metrics.clear()
+        v_metrics.update(temp_v_metrics)
+
+    print(f"Successfully merged! Total glyphs: {len(final_order)}")
+    return font_obj_a
+
+
+def remove_specific_placeholder(font_obj: TTFont, target_w=350, target_h=350) -> TTFont:
+    """
+    特定のサイズ(350x350)を持つ『●』っぽいゴミデータを削除する。
+    ただし、句読点などの重要な文字は保護する。
+    """
+    glyf_table = font_obj["glyf"]
+    cmap = font_obj.getBestCmap()
+    # 保護リスト: 句読点、中黒、読点など（Unicodeで指定）
+    protected_codes = {0x3001, 0x3002, 0x30FB, 0x002E, 0x00B7}
+
+    # 逆引きマップ（名前からコードを特定するため）
+    name_to_code = {name: code for code, name in cmap.items()}
+
+    removed_count = 0
+    for name in font_obj.getGlyphOrder():
+        if name not in glyf_table:
+            continue
+
+        g = glyf_table[name]
+        if hasattr(g, "xMax"):
+            w = g.xMax - g.xMin
+            h = g.yMax - g.yMin
+
+            # 条件: サイズが350x350で、かつ保護リストに入っていない
+            if w == target_w and h == target_h:
+                code = name_to_code.get(name)
+                if code not in protected_codes:
+                    # グリフの中身を空にする（輪郭データを消去）
+                    g.numberOfContours = 0
+                    if hasattr(g, "data"):
+                        del g.data
+                    removed_count += 1
+
+    if removed_count > 0:
+        print(f"Removed {removed_count} placeholder glyphs ({target_w}x{target_h}).")
+    return font_obj
+
+
+def remove_hinting(font_obj: TTFont) -> TTFont:
+    """
+    フォントからヒンティング関連のテーブルを削除し、
+    スケーリングによる表示の乱れを防止する。
+    """
+    # 削除対象のテーブル（ヒンティング、プログラム、ガスプ等）
+    hinting_tables = [
+        "gasp",  # Grid-fitting and Scan-conversion Procedure
+        "prep",  # Control Value Program
+        "fpgm",  # Font Program
+        "cvt ",  # Control Value Table
+        "hdmx",  # Horizontal Device Metrics (ピクセル単位の幅データ)
+        "LTSH",  # Linear Threshold table
+    ]
+
+    removed = []
+    for tag in hinting_tables:
+        if tag in font_obj:
+            del font_obj[tag]
+            removed.append(tag)
+
+    # glyfテーブル内の各グリフの命令データ(instructions)も空にする
+    if "glyf" in font_obj:
+        for glyph in font_obj["glyf"].glyphs.values():
+            if hasattr(glyph, "program"):
+                glyph.program = None
+
+    if removed:
+        print(f"Removed hinting tables: {', '.join(removed)}")
+    print("Glyph instructions cleared.")
+
+    return font_obj
+
 
 # 直接実行
 if __name__ == "__main__":
@@ -703,6 +1108,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-i", "--input", help="入力元のフォントファイルパス")
+    parser.add_argument("--input2", help="入力元のフォントファイルパス2")
     parser.add_argument(
         "-o",
         "--output",
@@ -747,6 +1153,11 @@ if __name__ == "__main__":
             "export_glyph_list",
             "create_subset",
             "adjust_font_metrics",
+            "expand_glyph_weight",
+            "shift_glyph_height",
+            "fill_missing_glyphs",
+            "remove_specific_placeholder",
+            "remove_hinting",
         ],
         default="print_font_info",
         help="実行する操作(デフォルト: print_font_info)",
@@ -760,6 +1171,7 @@ if __name__ == "__main__":
 
     main(
         input_font_path=args.input,
+        input_font_path2=args.input2,
         output_font_path=args.output,
         subset_glyphs_path=args.subset,
         ascent=args.ascent,
