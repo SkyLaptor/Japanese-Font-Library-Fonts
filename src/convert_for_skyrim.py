@@ -5,19 +5,16 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
+from optimizer import remove_empty_glyphs
+from utils import load_text
 from utils.font_tools import (
     ASCENT,
-    BASE＿UPM,
     DESCENT,
-    adjust_font_metrics,
-    anonymize_font_info,
-    clean_empty_glyphs,
-    create_subset,
-    get_metrics_average,
-    load_subset_text,
-    report_font_info,
-    resize_glyphs,
+    UPM,
 )
+from utils.inspector import get_average_size, get_info
+from utils.modifier import set_metrics, transform_glyphs
+from utils.reconstructor import create_subset
 
 BASE_FONT_EVERY = "every"
 BASE_FONT_BOOK = "book"
@@ -166,8 +163,8 @@ def convert(
 
     # バニラのフォントの大きさとカスタムフォントの大きさを比較し、拡大縮小率を算出します。
     # この際にUPMはBASE_UPMを基準としますので、あとから忘れずにスケーリングすること。
-    vanilla_result = get_metrics_average(vanilla_font_obj, BASE_UPM)
-    target_result = get_metrics_average(target_font_obj, BASE_UPM)
+    vanilla_result = get_average_size(vanilla_font_obj, UPM)
+    target_result = get_average_size(target_font_obj, UPM)
     # print(
     #     f"DEBUG: バニラフォントのサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{vanilla_result.avg_bbox_size_norm_w:.1f} 縦幅:{vanilla_result.avg_bbox_size_norm_h:.1f}"
     # )
@@ -221,7 +218,7 @@ def convert(
 
     # 意図しない空白グリフを削除
     print("=== 意図しない空白グリフのクリーンアップ実施")
-    cleanup_result = clean_empty_glyphs(target_font_obj)
+    cleanup_result = remove_empty_glyphs(target_font_obj)
     target_font_obj = cleanup_result.font_obj
     if len(cleanup_result.removed_glyphs) > 0:
         print(
@@ -239,9 +236,7 @@ def convert(
     # サブセット化
     if subset_file_path != "":
         print("=== サブセット実施")
-        subset_result = create_subset(
-            target_font_obj, load_subset_text(subset_file_path)
-        )
+        subset_result = create_subset(target_font_obj, load_text(subset_file_path))
         if len(subset_result.non_existed_glyphs) > 0:
             non_existed_glyphs_path = (
                 Path("build") / f"{Path(target_font_path).stem}_nonexisted_glyphs.txt"
@@ -265,7 +260,7 @@ def convert(
 
     # メトリクス調整
     print("=== メトリクス調整の実施")
-    target_font_obj = adjust_font_metrics(target_font_obj, ASCENT, DESCENT)
+    target_font_obj = set_metrics(target_font_obj, ASCENT, DESCENT)
     # print("DEBUG:現時点でのフォント情報")
     # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
     # print(
@@ -275,7 +270,7 @@ def convert(
 
     # サイズ調整・縦方向調整
     print("=== サイズおよび縦方向調整の実施")
-    target_font_obj = resize_glyphs(
+    target_font_obj = transform_glyphs(
         target_font_obj, scale_width, scale_height, shift_height
     )
     # print("DEBUG:現時点でのフォント情報")
@@ -288,13 +283,15 @@ def convert(
     # 匿名化
     if anonymize:
         print("=== 匿名化の実施")
-        target_font_obj = anonymize_font_info(target_font_obj)
+        target_font_obj = anonymize(target_font_obj)
         # print("DEBUG:現時点でのフォント情報")
         # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
         # print(
         #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
         # )
         # print(report_font_info(target_font_obj))
+
+    # TODO: ヒンティング情報消さなくていいの？
 
     # 最適化が完了したTTFを出力
     print("=== 最適化済みフォントの出力")
@@ -308,7 +305,7 @@ def convert(
 
     # 最終のフォント情報レポートを出力
     print("=== フォント情報レポートを出力")
-    report = report_font_info(target_font_obj)
+    report = get_info(target_font_obj)
     report_path = Path("build") / f"{Path(target_font_path).stem}_report.txt"
     report_path.write_text(report, encoding="utf-8")
 

@@ -1,7 +1,9 @@
 import pytest
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables._g_l_y_f import Glyph
-from src.utils.font_tools import clean_empty_glyphs, CleanupResult
+
+from optimizer import remove_empty_glyphs
+from src.utils.font_tools import CleanupResult
 
 
 @pytest.fixture
@@ -63,7 +65,7 @@ def mock_font():
 def test_glyph_retention(mock_font, glyph_name, should_remain):
     """特定のグリフが期待通りに残るか、あるいは消えるかをテスト"""
     # 実行
-    result = clean_empty_glyphs(mock_font)
+    result = remove_empty_glyphs(mock_font)
 
     # 1. 戻り値が正しいデータクラスか
     assert isinstance(result, CleanupResult)
@@ -81,7 +83,7 @@ def test_glyph_retention(mock_font, glyph_name, should_remain):
 
 def test_result_contains_all_info(mock_font):
     """戻り値のデータクラスに必要な情報が揃っているか"""
-    result = clean_empty_glyphs(mock_font)
+    result = remove_empty_glyphs(mock_font)
 
     # 削除前の全リストが保持されているか
     assert "uni3042" in result.all_glyphs
