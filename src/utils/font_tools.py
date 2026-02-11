@@ -3,7 +3,6 @@ import os
 import sys
 from pathlib import Path
 
-from fontTools.merge import Merger
 from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
 
@@ -294,16 +293,101 @@ def action_create_subset(input, output, output2, subset, no_otf2ttf, **_):
         print("サブセット元フォントから欠落しているグリフはありませんでした。")
 
 
-def action_merge_fonts(input, input2, output, ascent, descent, no_otf2ttf, **_):
-    print("フォント同士を結合し新しいフォントを作成します。")
-    merger = Merger()
-    merged_font = merger.merge([input, input2])
-    print(get_info(merged_font))
+# TODO: 結合うまくいってない
+def action_merge_fonts(
+    input, input2, output, output2, ascent, descent, weight_offset, no_otf2ttf, **_
+):
+    print(
+        "フォント同士を結合し新しいフォントを作成します。フォントA（input側）がベースとなります。"
+    )
+    print(
+        "注: 現在結合が正常に動作していないため、fontforgeでの統合向けに出力するようにしています。"
+    )
+    font_obj_a = TTFont(input)
+    font_obj_b = TTFont(input2)
+    print(f"結合前の事前処理を行います: {input}, {input2}")
+    print("フォントBは、事前にフォントAの太さにそろえておいて下さい。")
+    # フォントAの太さにフォントBの太さをそろえる
+    #  自動化が難しいため、事前にウェイト変更機能でいろいろ試して値を決定すること。
+    # print("フォントB側のウェイトをフォントAに合わせて調整します。")
+    # if weight_offset != 0:
+    #     weight_offset_font_b = change_weight(
+    #         font_obj=font_obj_b, weight_offset=weight_offset
+    #     )
+    # transform_glyphsに組み込むのが難しいため、事前に太さ調整しておいたものを使用すること。
+    print("空白グリフの削除")
+    result_a = remove_empty_glyphs(font_obj=font_obj_a)
+    result_b = remove_empty_glyphs(font_obj=font_obj_b)
+    print("メトリクスの調整")
+    setmet_a = set_metrics(font_obj=result_a.font_obj, ascent=ascent, descent=descent)
+    setmet_b = set_metrics(font_obj=result_b.font_obj, ascent=ascent, descent=descent)
+    print(
+        f"メトリクス調整により、フォントAは元フォントから x{setmet_a.need_scale_size:.3f} に変更する必要があります。"
+    )
+    print(
+        f"メトリクス調整により、フォントBは元フォントから x{setmet_b.need_scale_size:.3f} に変更する必要があります。"
+    )
+    print("メトリクス変更、フォントAにフォントBのサイズを合わせるように実サイズ調整")
+    font_obj_b_trans = setmet_b.font_obj
+    # サイズ変更はtransform_glyphsの仕様により、一括で行う必要があるため、事前に計算する。
+    # ひとまずUPM変更による拡大縮小率を取得
+    scale_size_a = setmet_a.need_scale_size
+    scale_size_b = setmet_b.need_scale_size
+    # グリフサイズを取得し、フォントAにフォントBを合わせるための倍率を計算する。
+    #  setmet_X.font_obj の中身はメトリクスの調整を通したあとなので、**ノーマライズ**された値が入っている。
+    #  もしメトリクス調整をとおしていなければ生の平均値が出てズレが生じるので注意
+    #  結果のUPMの値がそろっていればOK（＝ノーマライズされているということ）
+    avg_result_a = get_average_size(font_obj=setmet_a.font_obj)
+    print("フォントA")
+    print(avg_result_a)
+    avg_result_b = get_average_size(font_obj=setmet_b.font_obj)
+    print("フォントB")
+    print(avg_result_b)
+    # フォントA: メトリクス調整分のみでOK
+    scale_h_a = setmet_a.need_scale_size
+    # フォントB: メトリクスノーマライズ＋サイズ調整はフォントAの縦方向の値を基準とする方式でいく。
+    # フォントBをフォントAの平均サイズに一致させるためのベース倍率
+    # (純粋なフォント間の体格差を埋める)
+    base_ratio_b_to_a = avg_result_a.avg_h / avg_result_b.avg_h
+    print(
+        f"メトリクスノーマライズしたフォントBはメトリクスノーマライズしたフォントAと比較して x{base_ratio_b_to_a:.3f} に変更する必要があります。"
+    )
+    # フォントBをAのサイズに合わせた後、フォントAに適用するのと同じ「枠への収まり調整」をかける
+    scale_h_b = base_ratio_b_to_a * scale_h_a
+
+    print(f"最終的にフォントAは元フォントから x{scale_h_a:.3f} に変更します。")
+    print(f"最終的にフォントBは元フォントから x{scale_h_b:.3f} に変更します。")
+
+    font_obj_a_trans = setmet_a.font_obj
+    if scale_h_a != 1.0:
+        font_obj_a_trans = transform_glyphs(
+            font_obj=setmet_a.font_obj,
+            scale_width=scale_h_a,
+            scale_height=scale_h_a,
+        )
+    font_obj_b_trans = setmet_b.font_obj
+    if scale_h_b != 1.0:
+        font_obj_b_trans = transform_glyphs(
+            font_obj=setmet_b.font_obj,
+            scale_width=scale_h_b,
+            scale_height=scale_h_b,
+        )
+    print(get_info(font_obj_a_trans))
+    print(get_info(font_obj_b_trans))
+    # フォントA
     save_font(
-        font_obj=merged_font,
+        font_obj=font_obj_a_trans,
         input=input,
         output=output,
-        suffix="_merged",
+        suffix="_pre_merge",
+        otf2ttf=not no_otf2ttf,
+    )
+    # フォントB
+    save_font(
+        font_obj=font_obj_b_trans,
+        input=input2,
+        output=output2,
+        suffix="_pre_merge",
         otf2ttf=not no_otf2ttf,
     )
 
