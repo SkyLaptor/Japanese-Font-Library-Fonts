@@ -3,9 +3,9 @@ from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import Glyph
 from otf2ttf.cli import otf_to_ttf
 
-from models import SubsetResult
 from utils import is_otf
 from utils.inspector import get_average_size, get_empty_glyphs
+from utils.models import SubsetResult
 from utils.modifier import set_metrics, transform_glyphs
 
 

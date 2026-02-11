@@ -5,7 +5,6 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-from optimizer import remove_empty_glyphs
 from utils import load_text
 from utils.font_tools import (
     ASCENT,
@@ -14,6 +13,7 @@ from utils.font_tools import (
 )
 from utils.inspector import get_average_size, get_info
 from utils.modifier import set_metrics, transform_glyphs
+from utils.optimizer import remove_empty_glyphs
 from utils.reconstructor import create_subset
 
 BASE_FONT_EVERY = "every"

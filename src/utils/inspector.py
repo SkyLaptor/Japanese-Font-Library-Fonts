@@ -1,8 +1,8 @@
 from fontTools.pens.boundsPen import ControlBoundsPen
 from fontTools.ttLib import TTFont
 
-from models import AverageSizeResult, FontInfo, NameRecord
 from utils import BLANK_GLYPHS, MSG_FONTTYPE_UNIDENT, convert_timestamp, is_otf, is_ttf
+from utils.models import AverageSizeResult, FontInfo, NameRecord
 
 
 def get_info(font_obj: TTFont) -> FontInfo:

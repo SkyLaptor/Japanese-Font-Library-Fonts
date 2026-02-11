@@ -6,7 +6,6 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
 
-from optimizer import remove_empty_glyphs
 from utils import BUILD_DIR, ENCODE, is_otf, is_ttf, load_text
 from utils.inspector import get_average_size, get_glyphs, get_info
 from utils.modifier import (
@@ -15,6 +14,7 @@ from utils.modifier import (
     set_metrics,
     transform_glyphs,
 )
+from utils.optimizer import remove_empty_glyphs
 from utils.reconstructor import create_subset
 
 

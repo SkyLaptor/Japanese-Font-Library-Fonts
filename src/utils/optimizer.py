@@ -1,8 +1,8 @@
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
-from models import RemoveEmptyResult
 from utils import BLANK_GLYPHS, is_otf, is_ttf
+from utils.models import RemoveEmptyResult
 
 
 def remove_empty_glyphs(font_obj: TTFont) -> RemoveEmptyResult:

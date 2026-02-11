@@ -9,8 +9,8 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from models import MetricsSetResult
 from utils import MSG_FONTTYPE_UNIDENT, is_otf, is_ttf
+from utils.models import MetricsSetResult
 
 
 def transform_glyphs(
