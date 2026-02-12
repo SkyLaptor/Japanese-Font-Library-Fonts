@@ -205,3 +205,41 @@ def merge_text_files(input_dir: str, output_file: str):
     output_path.write_text("".join(unique_chars), encoding="utf-8")
 
     print(f"完了！: {output_path} (総文字数: {len(unique_chars)}文字)")
+
+
+def generate_jisx0208(output: str):
+    """
+    # JIS X 0208(非漢字+第1・第2水準漢字)を抽出し、指定したファイルに保存する。
+    """
+    all_chars = []
+
+    # 1. 一般的な半角英数記号 (ASCII: 0x21 - 0x7E) を追加
+    for i in range(0x21, 0x7F):
+        all_chars.append(chr(i))
+
+    # 半角スペースも一応追加
+    all_chars.append(" ")
+
+    # 2. JIS X 0208 (全角・漢字) を追加
+    for ku in range(1, 85):
+        if 9 <= ku <= 15:
+            continue
+        for ten in range(1, 95):
+            if ku == 47 and ten > 51:
+                continue
+            if ku == 84 and ten > 6:
+                continue
+            try:
+                b1 = ku + 0xA0
+                b2 = ten + 0xA0
+                char = bytes([b1, b2]).decode("euc-jp")
+                if char.isprintable():
+                    all_chars.append(char)
+            except UnicodeDecodeError:
+                continue
+
+    # 書き出し
+    from pathlib import Path
+
+    Path(output).write_text("".join(all_chars), encoding="utf-8")
+    print(f"Done: {output} (ASCII + JIS X 0208)")

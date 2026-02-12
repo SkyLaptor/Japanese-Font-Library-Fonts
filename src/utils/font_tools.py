@@ -4,7 +4,15 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-from utils import is_otf, is_ttf, load_text, merge_text_files, save_font, save_text
+from utils import (
+    generate_jisx0208,
+    is_otf,
+    is_ttf,
+    load_text,
+    merge_text_files,
+    save_font,
+    save_text,
+)
 from utils.inspector import get_average_size, get_glyphs, get_info
 from utils.modifier import (
     anonymize_info,
@@ -12,7 +20,7 @@ from utils.modifier import (
     set_metrics,
     transform_glyphs,
 )
-from utils.optimizer import remove_empty_glyphs
+from utils.optimizer import remove_black_circles, remove_empty_glyphs
 from utils.reconstructor import create_subset
 
 
@@ -248,7 +256,10 @@ def action_remove_empty_glyphs(input, output, no_otf2ttf, **_):
     font_obj = TTFont(input)
     print(f"消去前のグリフ数は {get_info(font_obj=font_obj).glyph_count_uni} です。")
     result = remove_empty_glyphs(font_obj=font_obj)
-    print(f"消去後のグリフ数は {get_info(font_obj=font_obj).glyph_count_uni} です。")
+    print(
+        f"消去後のグリフ数は {get_info(font_obj=result.font_obj).glyph_count_uni} です。"
+    )
+    print(result)
     save_font(
         font_obj=result.font_obj,
         input=input,
@@ -394,6 +405,19 @@ def action_merge_text_files(input, output, **_):
     merge_text_files(input_dir=input, output_file=output)
 
 
+def action_generate_jisx0208(input, output="", **_):
+    generate_jisx0208(output=output)
+
+
+def action_remove_black_circles(input, output, **_):
+    save_font(
+        font_obj=remove_black_circles(TTFont(input)),
+        input=input,
+        output=output,
+        suffix="_blackcircles_removed",
+    )
+
+
 ACTION_MAP = {
     "check_fonttype": action_check_fonttype,
     "get_info": action_get_info,
@@ -407,6 +431,8 @@ ACTION_MAP = {
     "create_subset": action_create_subset,
     "merge_fonts": action_merge_fonts,
     "merge_text_files": action_merge_text_files,
+    "generate_jisx0208": action_generate_jisx0208,
+    "remove_black_circles": action_remove_black_circles,
 }
 
 

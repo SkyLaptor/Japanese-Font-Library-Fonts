@@ -13,7 +13,7 @@ from utils.reconstructor import create_subset
 BASE_FONT_CONFIGS = {
     "everywhere": {
         "file": "./data/skyrim/1_Skyrim_JP_EveryFont_0805_empty_removed.ttf",
-        "height_offset": -72,  # フォントにもよるが、バニラは微妙に上にずれている
+        "height_offset": 0,  # フォントにもよるが、バニラは微妙に上にずれている。
     },
     "book": {
         "file": "./data/skyrim/22_Skyrim_JP_BookFont_0805_empty_removed.ttf",
@@ -243,7 +243,7 @@ def convert(
     save_text(
         text=str(get_info(target_font_obj)),
         input=target_font_path,
-        suffix=f"__{base_type}_{condense_type}",
+        suffix=f"_{base_type}_{condense_type}",
     )
 
     print("処理が完了しました！")
