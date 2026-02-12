@@ -1,5 +1,5 @@
 [project]
-name = "Japanese Font Library - Fonts"
+name = "japanese-font-library-fonts"
 version = "2.4.0"
 description = "Project for developing Japanese fonts for Skyrim font mods."
 readme = "README.md"
