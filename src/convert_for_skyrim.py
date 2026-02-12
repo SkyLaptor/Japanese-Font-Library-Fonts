@@ -12,15 +12,15 @@ from utils.reconstructor import create_subset
 
 BASE_FONT_CONFIGS = {
     "everywhere": {
-        "file": "./assets/fonts/skyrim/skyrim_jp_every.ttf",
-        "height_offset": -96,  # バニラは微妙に上にずれている
+        "file": "./data/skyrim/1_Skyrim_JP_EveryFont_0805_empty_removed.ttf",
+        "height_offset": -72,  # フォントにもよるが、バニラは微妙に上にずれている
     },
     "book": {
-        "file": "./assets/fonts/skyrim/skyrim_jp_book.ttf",
+        "file": "./data/skyrim/22_Skyrim_JP_BookFont_0805_empty_removed.ttf",
         "height_offset": 0,  # 変更非推奨
     },
     "handwritten": {
-        "file": "./assets/fonts/skyrim/skyrim_jp_hand.ttf",
+        "file": "./data/skyrim/5_Skyrim_JP_HandWriteFont_0805_empty_removed.ttf",
         "height_offset": 0,  # 変更非推奨
     },
 }
@@ -190,12 +190,14 @@ def convert(
             )
 
     # 基準フォントとサイズを合わせる
-    print("基準フォントとサイズを合わせています...: タイプ: {base_type}")
+
     base_avg_result = get_average_size(base_font_obj)
     target_avg_result = get_average_size(target_font_obj)
     # いろいろな判定方式がありますが、一番UIへの影響が大きいと考えられる縦方向の大きさを基準とします。
     scale_ratio = base_avg_result.avg_h / target_avg_result.avg_h
-    # print(f"DEBUG: 基準フォントとの比較倍率: x{scale_ratio:.3f}")
+    print(
+        f"基準フォントとサイズを合わせています...: タイプ: {base_type} 倍率: x{scale_ratio:.3f}"
+    )
     target_font_obj = transform_glyphs(
         font_obj=target_font_obj,
         scale_width=scale_ratio,
@@ -207,7 +209,7 @@ def convert(
         condense_ratio = CONDENSE_RATIO_CONFIGS.get(condense_type)
         if condense_ratio != 1.0:
             print(
-                f"指定された長体モードで変形しています...: モード: {condense_type} 倍率: x{condense_ratio}"
+                f"指定された長体モードで変形しています...: モード: {condense_type} 横倍率: x{condense_ratio}"
             )
             target_font_obj = transform_glyphs(
                 target_font_obj, scale_width=condense_ratio
@@ -235,11 +237,13 @@ def convert(
         font_obj=target_font_obj,
         input=target_font_path,
         output=output_font_path,
-        suffix="_optimized",
+        suffix=f"_{base_type}_{condense_type}",
     )
     print("フォント情報を出力しています...")
     save_text(
-        text=str(get_info(target_font_obj)), input=target_font_path, suffix="_info"
+        text=str(get_info(target_font_obj)),
+        input=target_font_path,
+        suffix=f"__{base_type}_{condense_type}",
     )
 
     print("処理が完了しました！")

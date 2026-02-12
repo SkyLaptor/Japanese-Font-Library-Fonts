@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-from utils import is_otf, is_ttf, load_text, save_font, save_text
+from utils import is_otf, is_ttf, load_text, merge_text_files, save_font, save_text
 from utils.inspector import get_average_size, get_glyphs, get_info
 from utils.modifier import (
     anonymize_info,
@@ -390,6 +390,10 @@ def action_merge_fonts(
     )
 
 
+def action_merge_text_files(input, output, **_):
+    merge_text_files(input_dir=input, output_file=output)
+
+
 ACTION_MAP = {
     "check_fonttype": action_check_fonttype,
     "get_info": action_get_info,
@@ -402,6 +406,7 @@ ACTION_MAP = {
     "remove_empty_glyphs": action_remove_empty_glyphs,
     "create_subset": action_create_subset,
     "merge_fonts": action_merge_fonts,
+    "merge_text_files": action_merge_text_files,
 }
 
 

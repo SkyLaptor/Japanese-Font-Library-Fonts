@@ -165,3 +165,43 @@ def save_font(
         otf_to_ttf(font_obj)
     font_obj.save(output)
     print(f"フォントファイルを保存しました。: {output}")
+
+
+def merge_text_files(input_dir: str, output_file: str):
+    """
+    指定したディレクトリ内の全.txtファイルを読み込み、
+    重複を除去して1つのファイルに保存する。
+    """
+    input_path = Path(input_dir)
+    all_chars = set()
+
+    # ディレクトリ内の全ての .txt ファイルを対象にする
+    txt_files = list(input_path.glob("*.txt"))
+
+    if not txt_files:
+        print(f"警告: {input_dir} 内に .txt ファイルが見つかりませんでした。")
+        return
+
+    print(f"{len(txt_files)} 個のファイルを読み込み中...")
+
+    for file_path in txt_files:
+        try:
+            # UTF-8で読み込み、改行や空白も一旦含めてセットに放り込む
+            content = file_path.read_text(encoding="utf-8")
+            all_chars.update(content)
+        except Exception as e:
+            print(f"エラー: {file_path.name} の読み込みに失敗しました: {e}")
+
+    # 改行文字やスペースなどは除外したい場合が多いのでフィルタリング
+    # 必要に応じて '\n', '\r', ' ' などを残すか決めてください
+    ignored_chars = {'\n', '\r', '\t'}
+    unique_chars = [c for c in all_chars if c not in ignored_chars]
+
+    # 文字コード順に並び替えておくと、後で差分が見やすくなります
+    unique_chars.sort()
+
+    # 結果を保存
+    output_path = Path(output_file)
+    output_path.write_text("".join(unique_chars), encoding="utf-8")
+
+    print(f"完了！: {output_path} (総文字数: {len(unique_chars)}文字)")
