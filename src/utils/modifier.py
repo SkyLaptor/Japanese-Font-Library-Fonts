@@ -59,7 +59,8 @@ def transform_glyphs(
 
         # 新しい幅とLSBを計算（OTF/TTF共通で使用する）
         new_width = int(round(old_width * scale_width))
-        new_lsb = int(round(old_lsb * scale_width + dx))
+        # new_lsb = int(round(old_lsb * scale_width + dx))
+        new_lsb = int(round(old_lsb * scale_width))
 
         # 輪郭(Outline)の変形
         if is_ttf(font_obj):
