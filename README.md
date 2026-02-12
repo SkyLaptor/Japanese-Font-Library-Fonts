@@ -5,9 +5,11 @@
 
 ## 動作環境
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
+
 フォントファイルをSWFへ埋め込むために必要です。  
 
 * [UV](https://docs.astral.sh/uv/)
+
 スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。  
  
 
