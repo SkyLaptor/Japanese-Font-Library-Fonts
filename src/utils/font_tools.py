@@ -1,12 +1,10 @@
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-from otf2ttf.cli import otf_to_ttf
 
-from utils import BUILD_DIR, ENCODE, is_otf, is_ttf, load_text
+from utils import is_otf, is_ttf, load_text, save_font, save_text
 from utils.inspector import get_average_size, get_glyphs, get_info
 from utils.modifier import (
     anonymize_info,
@@ -405,51 +403,6 @@ ACTION_MAP = {
     "create_subset": action_create_subset,
     "merge_fonts": action_merge_fonts,
 }
-
-
-def save_text(text: str, input: str = "", output: str = "", suffix: str = ""):
-    if not input and not output:
-        raise ValueError(
-            "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
-        )
-    if not output:
-        os.makedirs(BUILD_DIR, exist_ok=True)
-        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}.txt"
-    else:
-        output = Path(output)
-    output.write_text(text, encoding=ENCODE)
-    print(f"テキストファイルを保存しました。: {output}")
-
-
-def save_font(
-    font_obj: TTFont,
-    input: str = "",
-    output: str = "",
-    suffix: str = "",
-    otf2ttf: bool = True,
-):
-    if not input and not output:
-        raise ValueError(
-            "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
-        )
-    if not output:
-        os.makedirs(BUILD_DIR, exist_ok=True)
-        ext = Path(input).suffix
-        if is_otf(font_obj) and otf2ttf:
-            ext = ".ttf"
-        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}{ext}"
-    else:
-        output = Path(output)
-    # 特に指定が無い場合はOTFであればTTFに変換する。
-    if is_otf(font_obj) and otf2ttf:
-        # 破壊的変更のため、font_objectには代入しないこと。
-        print("OTFからTTFへの変換を行います。")
-        print(
-            "注: 出力ファイルパスで.otfを指定したとしても中身はTTFとなります。変換したくない場合は --no_otf2ttf フラグを有効にして下さい。"
-        )
-        otf_to_ttf(font_obj)
-    font_obj.save(output)
-    print(f"フォントファイルを保存しました。: {output}")
 
 
 if __name__ == "__main__":

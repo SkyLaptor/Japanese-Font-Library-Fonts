@@ -3,7 +3,7 @@ from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import Glyph
 from otf2ttf.cli import otf_to_ttf
 
-from utils import is_otf
+from utils import is_otf, reload_font
 from utils.inspector import get_average_size, get_empty_glyphs
 from utils.models import SubsetResult
 from utils.modifier import set_metrics, transform_glyphs
@@ -59,7 +59,9 @@ def create_subset(font_obj: TTFont, subset_chars: str) -> SubsetResult:
     # リストをソートしてレポートの可読性向上
     non_existed_glyphs = "".join(sorted(missing_chars))
 
-    return SubsetResult(font_obj=font_obj, non_existed_glyphs=non_existed_glyphs)
+    return SubsetResult(
+        font_obj=reload_font(font_obj), non_existed_glyphs=non_existed_glyphs
+    )
 
 
 def merge_fonts(
@@ -140,6 +142,7 @@ def merge_fonts(
     return font_obj_a
 
 
+# 前動いてたコード
 # def merge_fonts(
 #     font_obj_a: TTFont, font_obj_b: TTFont, ascent: int, descent: int
 # ) -> TTFont:

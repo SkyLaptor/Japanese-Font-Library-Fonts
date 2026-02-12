@@ -178,6 +178,17 @@ fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every 
 9. 保存して完了。
 
 
+## 比較対象バニラフォントの作り方
+1. FFDecを使い、最新Skyrimの日本語フォント(interface\fonts_jp.swf)からTTFで日本語フォントを抜く。以下のような名前が付いている
+   * Everywhere_JP
+   * Book_JP
+   * JP_Handwritten
+
+2. 取り出したフォントに対し、以下の処理を掛ける
+   1. 空白グリフ消去 `$ uv run font_tools --action remove_empty_glyphs 対象のフォント`
+   2. 空白グリフを消去したフォントから文字列を抜き出してサブセットテキスト作成。`$ uv run font_tools --action get_glyphs 対象のフォント（空白除去済）`
+   3. 空白グリフを消去したフォントをメトリクス調整 `$ uv run font_tools --action set_metrics 対象のフォント（空白除去済） --ascent 880 --descent -144`
+
 ## フォントテンプレートSWFの作り方
 対象バージョン: SkyrimSE 英語版 v1.6.1170
 

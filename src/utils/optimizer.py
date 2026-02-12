@@ -1,7 +1,7 @@
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
-from utils import BLANK_GLYPHS, is_otf, is_ttf
+from utils import BLANK_GLYPHS, is_otf, is_ttf, reload_font
 from utils.models import RemoveEmptyResult
 
 
@@ -59,7 +59,7 @@ def remove_empty_glyphs(font_obj: TTFont) -> RemoveEmptyResult:
     subsetter.populate(glyphs=keep_glyphs)
     subsetter.subset(font_obj)
 
-    return RemoveEmptyResult(font_obj, all_glyphs, removed_glyphs)
+    return RemoveEmptyResult(reload_font(font_obj), all_glyphs, removed_glyphs)
 
 
 # TODO: 必要にかられたらちゃんと作る
@@ -100,7 +100,7 @@ def clean_weird_glyphs(font_obj: TTFont, target_w=350, target_h=350) -> TTFont:
         # print(f"Removed {removed_count} placeholder glyphs ({target_w}x{target_h}).")
         pass
 
-    return font_obj
+    return reload_font(font_obj)
 
 
 # TODO: これいる？
@@ -137,4 +137,4 @@ def remove_hinting(font_obj: TTFont) -> TTFont:
 
     # print("Glyph instructions cleared.")
 
-    return font_obj
+    return reload_font(font_obj)

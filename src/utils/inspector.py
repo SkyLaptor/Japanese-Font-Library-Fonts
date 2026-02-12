@@ -179,16 +179,24 @@ def get_average_size(font_obj: TTFont) -> AverageSizeResult:
             raise ValueError(MSG_FONTTYPE_UNIDENT)
 
         # ドットやカンマなどの小さいグリフ、横棒などのアスペクトが極端なものは無視します。
-        if (h > upm * 0.4) and (0.5 < w / h < 1.5):
+        # if (h > upm * 0.4) and (0.5 < w / h < 1.5): # ひらがなとか比較的小さいグリフも含まれる可能性あり
+        if (h > upm * 0.5) and (0.8 < w / h < 1.2):  # ほぼ正方形の漢字型のグリフが対象
             total_width += w
             total_height += h
             count += 1
 
+    if count == 0:
+        avg_w = 0
+        avg_h = 0
+    else:
+        avg_w = total_width / count
+        avg_h = total_height / count
+
     return AverageSizeResult(
         upm=upm,
         count=count,
-        avg_w=total_width / count,
-        avg_h=total_height / count,
+        avg_w=avg_w,
+        avg_h=avg_h,
     )
 
 

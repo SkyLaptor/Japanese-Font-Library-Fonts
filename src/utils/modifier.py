@@ -9,7 +9,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from utils import MSG_FONTTYPE_UNIDENT, is_otf, is_ttf
+from utils import MSG_FONTTYPE_UNIDENT, is_otf, is_ttf, reload_font
 from utils.models import MetricsSetResult
 
 
@@ -94,7 +94,7 @@ def transform_glyphs(
         cff = font_obj['CFF '].cff if "CFF " in font_obj else font_obj['CFF2'].cff
         cff.topDictIndex[0].recalcFontBBox()
 
-    return font_obj
+    return reload_font(font_obj)
 
 
 def set_metrics(font_obj: TTFont, ascent: int, descent: int) -> MetricsSetResult:
@@ -188,7 +188,7 @@ def set_metrics(font_obj: TTFont, ascent: int, descent: int) -> MetricsSetResult
             )
 
     return MetricsSetResult(
-        font_obj=font_obj,
+        font_obj=reload_font(font_obj),
         old_upm=old_upm,
         new_upm=new_upm,
         need_scale_size=need_scale_size,
@@ -389,4 +389,4 @@ def change_weight(font_obj: TTFont, weight_offset: int) -> TTFont:
     if is_otf(font_obj):
         cff.topDictIndex[0].recalcFontBBox()
 
-    return font_obj
+    return reload_font(font_obj)

@@ -1,7 +1,10 @@
+import os
 from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
+from otf2ttf.cli import otf_to_ttf
 
 # ビルド物の配置場所(コミット対象外)
 BUILD_DIR = "build"
@@ -34,6 +37,26 @@ BLANK_GLYPHS = {
     "uni000D",  # CR
     "uni000A",  # LF
 }
+
+
+def reload_font(font_obj: TTFont) -> TTFont:
+    """
+    # フォントの再読み込みを行う
+
+    フォントオブジェクトのまま加工を続けていくとフォントが破損する場合があります。
+    そこで、一度メモリ上に書き出してすぐに読み直しさせることで回避します。
+    再読み込みしたデータは全く別物扱いのため、必ず戻り値で受け取る必要があります。
+
+    :param font_obj: 再読み込みさせるフォントオブジェクト
+    :type font_obj: TTFont
+    :return: 再読み込みを行ったフォントオブジェクト
+    :rtype: TTFont
+    """
+    buffer = BytesIO()
+    font_obj.save(buffer)
+    buffer.seek(0)
+    font_obj = TTFont(buffer)
+    return font_obj
 
 
 def is_otf(font_obj: TTFont) -> bool:
@@ -97,3 +120,48 @@ def convert_timestamp(timestamp: int) -> str:
     return (datetime(1904, 1, 1) + timedelta(seconds=timestamp)).strftime(
         "%Y/%m/%d %H:%M:%S (UTC)"
     )
+
+
+def save_text(text: str, input: str = "", output: str = "", suffix: str = ""):
+    if not input and not output:
+        raise ValueError(
+            "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
+        )
+    if not output:
+        os.makedirs(BUILD_DIR, exist_ok=True)
+        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}.txt"
+    else:
+        output = Path(output)
+    output.write_text(text, encoding=ENCODE)
+    print(f"テキストファイルを保存しました。: {output}")
+
+
+def save_font(
+    font_obj: TTFont,
+    input: str = "",
+    output: str = "",
+    suffix: str = "",
+    otf2ttf: bool = True,
+):
+    if not input and not output:
+        raise ValueError(
+            "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
+        )
+    if not output:
+        os.makedirs(BUILD_DIR, exist_ok=True)
+        ext = Path(input).suffix
+        if is_otf(font_obj) and otf2ttf:
+            ext = ".ttf"
+        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}{ext}"
+    else:
+        output = Path(output)
+    # 特に指定が無い場合はOTFであればTTFに変換する。
+    if is_otf(font_obj) and otf2ttf:
+        # 破壊的変更のため、font_objectには代入しないこと。
+        print("OTFからTTFへの変換を行います。")
+        print(
+            "注: 出力ファイルパスで.otfを指定したとしても中身はTTFとなります。変換したくない場合は --no_otf2ttf フラグを有効にして下さい。"
+        )
+        otf_to_ttf(font_obj)
+    font_obj.save(output)
+    print(f"フォントファイルを保存しました。: {output}")

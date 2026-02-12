@@ -1,35 +1,35 @@
 import argparse
 import os
 import sys
-from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-from utils import load_text
-from utils.font_tools import (
-    ASCENT,
-    DESCENT,
-    UPM,
-)
+from utils import ASCENT, DESCENT, UPM, load_text, save_font, save_text
 from utils.inspector import get_average_size, get_info
-from utils.modifier import set_metrics, transform_glyphs
+from utils.modifier import anonymize_info, set_metrics, transform_glyphs
 from utils.optimizer import remove_empty_glyphs
 from utils.reconstructor import create_subset
 
-BASE_FONT_EVERY = "every"
-BASE_FONT_BOOK = "book"
-BASE_FONT_HAND = "hand"
-MODE_COND_NORM = "norm"
-MODE_COND_COND = "cond"
-MODE_COND_SKIN = "skin"
-BASE_FONT_FILE_EVERY = "./assets/fonts/skyrim/skyrim_jp_every.ttf"
-BASE_FONT_FILE_BOOK = "./assets/fonts/skyrim/skyrim_jp_book.ttf"
-BASE_FONT_FILE_HAND = "./assets/fonts/skyrim/skyrim_jp_hand.ttf"
-TARGET_RATIO_COND = 0.64  # バニラの英字フォント(Futura Condensed)と比較検討し決定
-TARGET_RATIO_SKIN = 0.42  # 視認性の限界まで詰めた値
-SHIFT_HEIGHT_EVERY = -96
-SHIFT_HEIGHT_BOOK = 0
-SHIFT_HEIGHT_HAND = 0
+BASE_FONT_CONFIGS = {
+    "everywhere": {
+        "file": "./assets/fonts/skyrim/skyrim_jp_every.ttf",
+        "height_offset": -96,  # バニラは微妙に上にずれている
+    },
+    "book": {
+        "file": "./assets/fonts/skyrim/skyrim_jp_book.ttf",
+        "height_offset": 0,  # 変更非推奨
+    },
+    "handwritten": {
+        "file": "./assets/fonts/skyrim/skyrim_jp_hand.ttf",
+        "height_offset": 0,  # 変更非推奨
+    },
+}
+
+CONDENSE_RATIO_CONFIGS = {
+    "normal": 1.0,  # 標準
+    "condense": 0.64,  # バニラのFutura Condensed相当
+    "skinny": 0.48,  # 視認性の限界
+}
 
 
 def main():
@@ -51,14 +51,11 @@ def main():
     )
     parser.add_argument(
         "--base",
-        choices=[
-            BASE_FONT_EVERY,
-            BASE_FONT_BOOK,
-            BASE_FONT_HAND,
-        ],
+        choices=list(BASE_FONT_CONFIGS.keys()),
         type=str,
-        default=BASE_FONT_EVERY,
-        help=f"基準とするフォントの種類です。{BASE_FONT_EVERY}で一般的なUI（字幕・メニュー等）、{BASE_FONT_BOOK}で本UI、{BASE_FONT_HAND}で手書きUI（メモ・手紙等）を基準とします。 デフォルト:{BASE_FONT_EVERY}",
+        default="everywhere",
+        help="基準とするバニラフォントを選択します。対応モード: "
+        + ", ".join(BASE_FONT_CONFIGS.keys()),
     )
     parser.add_argument(
         "--subset",
@@ -67,23 +64,20 @@ def main():
         help="サブセット文字ファイルへのファイルパスです。渡さなかった場合はサブセットを行いません。文字コードはUTF-8にして下さい。",
     )
     parser.add_argument(
-        "--cond",
-        choices=[
-            MODE_COND_NORM,
-            MODE_COND_COND,
-            MODE_COND_SKIN,
-        ],
+        "--condense",
+        choices=list(CONDENSE_RATIO_CONFIGS.keys()),
         type=str,
-        default=MODE_COND_NORM,
-        help=f"長体タイプ設定です。{MODE_COND_NORM}で変更なし、{MODE_COND_COND}で少し細長く、{MODE_COND_SKIN}でかなり細長くなります。 デフォルト: {MODE_COND_NORM}",
+        default="normal",
+        help="長体タイプを選択します。対応モード: "
+        + ", ".join(CONDENSE_RATIO_CONFIGS.keys()),
     )
     parser.add_argument(
-        "--mono",
+        "--monospace",
         action="store_true",
         help="等幅フォントなど、幅を変えたくない場合に有効化して下さい。有効の場合、長体タイプ設定は無視されます。",
     )
     parser.add_argument(
-        "--shift_height",
+        "--height_offset",
         type=int,
         default=None,
         help="上下の位置調整の値です。正の値で上方向へ、負の値で下方向へ移動します。設定しない場合は推奨値が自動適用されます。",
@@ -105,51 +99,47 @@ def main():
         output_font_path=args.output,
         base_type=args.base,
         subset_file_path=args.subset,
-        cond_type=args.cond,
-        mode_mono=args.mono,
-        shift_height=args.shift_height,
+        condense_type=args.condense,
+        mode_monospace=args.monospace,
+        height_offset=args.height_offset,
         anonymize=args.anonymize,
     )
 
 
-# shift_heightはNoneにしておかないと定数適用が出来ないので注意
+# height_offsetはNoneにしておかないと定数適用が出来ないので注意
 def convert(
     target_font_path: str,
     output_font_path: str,
     subset_file_path: str,
-    base_type: str = BASE_FONT_EVERY,
-    cond_type: str = MODE_COND_NORM,
-    mode_mono: bool = False,
-    shift_height: int = None,
+    base_type: str = "everywhere",
+    condense_type: str = "normal",
+    mode_monospace: bool = False,
+    height_offset: int = None,
     anonymize: bool = False,
 ):
-
+    """
+    # スカイリム向けにフォントを変換する
+    """
     if not target_font_path or not os.path.exists(target_font_path):
         raise FileNotFoundError(
-            f"入力されたファイルが正しくありません。: {target_font_path}"
+            f"フォントファイルが見当たりません。: {target_font_path}"
         )
 
-    # TODO: doc
-    vanilla_font_path = None
-    if base_type == BASE_FONT_EVERY:
-        # バニラのEverywhereフォントを基準にします
-        vanilla_font_path = BASE_FONT_FILE_EVERY
-        if shift_height is None:
-            shift_height = SHIFT_HEIGHT_EVERY
-    elif base_type == BASE_FONT_BOOK:
-        # バニラのBookフォントを基準にします
-        vanilla_font_path = BASE_FONT_FILE_BOOK
-        if shift_height is None:
-            shift_height = SHIFT_HEIGHT_BOOK
-    elif base_type == BASE_FONT_HAND:
-        # バニラのHandwriteフォントを基準にします
-        vanilla_font_path = BASE_FONT_FILE_HAND
-        if shift_height is None:
-            shift_height = SHIFT_HEIGHT_HAND
+    base_font_path = None
+    base_font_config = BASE_FONT_CONFIGS.get(base_type)
 
-    if not vanilla_font_path or not os.path.exists(vanilla_font_path):
+    if base_font_config:
+        base_font_path = base_font_config['file']
+        # 引数で個別に指定がない場合のみ、マップのデフォルト値（-96等）を適用
+        if height_offset is None:
+            height_offset = base_font_config['height_offset']
+    else:
+        # 想定外のbase_typeが来た場合の安全策
+        raise ValueError(f"不正なベースタイプです。: {base_type}")
+
+    if not base_font_path or not os.path.exists(base_font_path):
         raise FileNotFoundError(
-            f"バニラのフォントファイルが見当たりません。: {vanilla_font_path}"
+            f"比較用のベースフォントファイルが見当たりません。: {base_font_path}"
         )
 
     if subset_file_path != "" and not os.path.exists(subset_file_path):
@@ -157,162 +147,102 @@ def convert(
             f"サブセットファイルが見当たりません。: {subset_file_path}"
         )
 
-    # フォントを開く
-    vanilla_font_obj = TTFont(vanilla_font_path)
+    # 基準用のフォントと処理対象のフォントを開く
+    base_font_obj = TTFont(base_font_path)
     target_font_obj = TTFont(target_font_path)
 
-    # バニラのフォントの大きさとカスタムフォントの大きさを比較し、拡大縮小率を算出します。
-    # この際にUPMはBASE_UPMを基準としますので、あとから忘れずにスケーリングすること。
-    vanilla_result = get_average_size(vanilla_font_obj, UPM)
-    target_result = get_average_size(target_font_obj, UPM)
-    # print(
-    #     f"DEBUG: バニラフォントのサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{vanilla_result.avg_bbox_size_norm_w:.1f} 縦幅:{vanilla_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(
-    #     f"DEBUG: 対象フォントのサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{target_result.avg_bbox_size_norm_w:.1f} 縦幅:{target_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    scale_height = (
-        vanilla_result.avg_bbox_size_norm_h / target_result.avg_bbox_size_norm_h
-    )
-    scale_width = target_result.avg_bbox_size_norm_w * scale_height
-    # 長形モードの場合はそれらも考慮します。
-    if cond_type == MODE_COND_COND:
-        scale_width = (
-            vanilla_result.avg_bbox_size_norm_w * TARGET_RATIO_COND / scale_width
-        )
-    elif cond_type == MODE_COND_SKIN:
-        scale_width = (
-            vanilla_result.avg_bbox_size_norm_w * TARGET_RATIO_SKIN / scale_width
-        )
+    # 空白グリフ（正規の空白は除く）を消去
+    print("空白グリフを消去しています...")
+    remove_empty_result = remove_empty_glyphs(target_font_obj)
+    removed_glyphs_count = len(remove_empty_result.removed_glyphs)
+    if removed_glyphs_count > 0:
+        print(f"空白グリフが {removed_glyphs_count}個 ありました。")
     else:
-        scale_width = vanilla_result.avg_bbox_size_norm_w / scale_width
+        print("空白グリフはありませんでした。")
 
-    # 横方向の拡大率は、縦方向の拡大率も考慮する。
-    scale_width = scale_height * scale_width
-
-    # 計算の結果、横幅が意図せず拡大されてしまうのを防ぎます。
-    if scale_width > 1.0:
-        scale_width = 1.0
-
-    # 等幅モードが有効の時には幅変更は強制的にオフにします。
-    if mode_mono:
-        scale_width = 1.0
-
-    print("=== 処理実行前の各種パラメーター表示")
-    print(f"* 基準とするバニラの対象UI: {base_type}")
-    print(f"* 使用するバニラフォントのパス: {vanilla_font_path}")
+    # サブセットファイルが渡された場合にサブセットを作成
     if subset_file_path != "":
-        print(f"* 使用するサブセットファイル: {subset_file_path}")
-    else:
-        print("* サブセットは行いません")
-    print(f"* 横方向の拡大縮小率: x{scale_width:.3f} (長形モード: {cond_type})")
-    print(f"* 縦方向の拡大縮小率: x{scale_height:.3f}")
-    print(f"* 縦方向の移動量: {shift_height}")
-
-    # print("DEBUG:現時点でのフォント情報")
-    # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-    # print(
-    #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(report_font_info(target_font_obj))
-
-    # 意図しない空白グリフを削除
-    print("=== 意図しない空白グリフのクリーンアップ実施")
-    cleanup_result = remove_empty_glyphs(target_font_obj)
-    target_font_obj = cleanup_result.font_obj
-    if len(cleanup_result.removed_glyphs) > 0:
-        print(
-            f"意図しない空白グリフが {len(cleanup_result.removed_glyphs)}個 ありました。"
-        )
-    else:
-        print("意図しない空白グリフはありませんでした。")
-    # print("DEBUG:現時点でのフォント情報")
-    # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-    # print(
-    #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(report_font_info(target_font_obj))
-
-    # サブセット化
-    if subset_file_path != "":
-        print("=== サブセット実施")
+        print(f"サブセットを作成しています...: {subset_file_path}")
         subset_result = create_subset(target_font_obj, load_text(subset_file_path))
-        if len(subset_result.non_existed_glyphs) > 0:
-            non_existed_glyphs_path = (
-                Path("build") / f"{Path(target_font_path).stem}_nonexisted_glyphs.txt"
+        non_existed_glyphs_count = len(subset_result.non_existed_glyphs)
+        if non_existed_glyphs_count > 0:
+            print(f"サブセット欠落グリフが {non_existed_glyphs_count}個 ありました。")
+            save_text(
+                text=subset_result.non_existed_glyphs,
+                input=target_font_path,
+                suffix="_nonexisted_glyphs",
             )
-            non_existed_glyphs_path.write_text(
-                subset_result.non_existed_glyphs, encoding="utf-8"
-            )
-            print(
-                f"警告: サブセット文字列と比較したところ、欠落している文字を {len(subset_result.non_existed_glyphs)}個 発見しました。"
-            )
-            print(f"対象の文字は {non_existed_glyphs_path} に出力しています。")
-        else:
-            print("サブセット文字列と比較したところ、文字の欠落はありませんでした。")
-        target_font_obj = subset_result.font_obj
-        # print("DEBUG:現時点でのフォント情報")
-        # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-        # print(
-        #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-        # )
-        # print(report_font_info(target_font_obj))
 
-    # メトリクス調整
-    print("=== メトリクス調整の実施")
-    target_font_obj = set_metrics(target_font_obj, ASCENT, DESCENT)
-    # print("DEBUG:現時点でのフォント情報")
-    # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-    # print(
-    #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(report_font_info(target_font_obj))
+    # 必要に応じてメトリクス情報（及び実グリフサイズ）を変更
+    target_upm = get_info(target_font_obj).upm
+    if target_upm != UPM:
+        print(f"UPMを変更しています...: UPM: {UPM}")
+        set_metrics_result = set_metrics(
+            font_obj=target_font_obj, ascent=ASCENT, descent=DESCENT
+        )
+        need_scale_size = set_metrics_result.need_scale_size
+        if need_scale_size != 1.0:
+            print("UPM変更に合わせて実サイズを変更しています...")
+            target_font_obj = transform_glyphs(
+                font_obj=target_font_obj,
+                scale_width=need_scale_size,
+                scale_height=need_scale_size,
+            )
 
-    # サイズ調整・縦方向調整
-    print("=== サイズおよび縦方向調整の実施")
+    # 基準フォントとサイズを合わせる
+    print("基準フォントとサイズを合わせています...: タイプ: {base_type}")
+    base_avg_result = get_average_size(base_font_obj)
+    target_avg_result = get_average_size(target_font_obj)
+    # いろいろな判定方式がありますが、一番UIへの影響が大きいと考えられる縦方向の大きさを基準とします。
+    scale_ratio = base_avg_result.avg_h / target_avg_result.avg_h
+    # print(f"DEBUG: 基準フォントとの比較倍率: x{scale_ratio:.3f}")
     target_font_obj = transform_glyphs(
-        target_font_obj, scale_width, scale_height, shift_height
+        font_obj=target_font_obj,
+        scale_width=scale_ratio,
+        scale_height=scale_ratio,
     )
-    # print("DEBUG:現時点でのフォント情報")
-    # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-    # print(
-    #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-    # )
-    # print(report_font_info(target_font_obj))
 
-    # 匿名化
+    # 長体モードの変形を行う（等幅モードと排他）
+    if not mode_monospace:
+        condense_ratio = CONDENSE_RATIO_CONFIGS.get(condense_type)
+        if condense_ratio != 1.0:
+            print(
+                f"指定された長体モードで変形しています...: モード: {condense_type} 倍率: x{condense_ratio}"
+            )
+            target_font_obj = transform_glyphs(
+                target_font_obj, scale_width=condense_ratio
+            )
+    else:
+        print("等幅モードが設定されているため、横幅単体での変更は行いません。")
+
+    # 上下位置をずらす
+    if height_offset != 0:
+        print(f"上下位置を調整しています...: 調整値: {height_offset}")
+        target_font_obj = transform_glyphs(target_font_obj, height_offset=height_offset)
+
+    # 匿名化を行う
     if anonymize:
-        print("=== 匿名化の実施")
-        target_font_obj = anonymize(target_font_obj)
-        # print("DEBUG:現時点でのフォント情報")
-        # debug_result = get_metrics_average(target_font_obj, BASE_UPM)
-        # print(
-        #     f"DEBUG: 対象フォント現在のサイズ平均値(UPM={BASE_UPM}の場合): 横幅:{debug_result.avg_bbox_size_norm_w:.1f} 縦幅:{debug_result.avg_bbox_size_norm_h:.1f}"
-        # )
-        # print(report_font_info(target_font_obj))
+        print("匿名化を実施しています...")
+        target_font_obj = anonymize_info(target_font_obj)
 
-    # TODO: ヒンティング情報消さなくていいの？
+    # デバッグ表示
+    base_avg_result = get_average_size(base_font_obj)
+    target_avg_result = get_average_size(target_font_obj)
 
-    # 最適化が完了したTTFを出力
-    print("=== 最適化済みフォントの出力")
-    if not output_font_path:
-        base_dir = "build"
-        os.makedirs(base_dir, exist_ok=True)
-        file_name = os.path.basename(target_font_path)
-        name_without_ext = os.path.splitext(file_name)[0]
-        output_font_path = os.path.join(base_dir, f"{name_without_ext}_optimized.ttf")
-    target_font_obj.save(output_font_path)
+    # 結果を出力する
+    print("フォントを出力しています...")
+    save_font(
+        font_obj=target_font_obj,
+        input=target_font_path,
+        output=output_font_path,
+        suffix="_optimized",
+    )
+    print("フォント情報を出力しています...")
+    save_text(
+        text=str(get_info(target_font_obj)), input=target_font_path, suffix="_info"
+    )
 
-    # 最終のフォント情報レポートを出力
-    print("=== フォント情報レポートを出力")
-    report = get_info(target_font_obj)
-    report_path = Path("build") / f"{Path(target_font_path).stem}_report.txt"
-    report_path.write_text(report, encoding="utf-8")
-
-    print("=== 処理完了")
-    print(f"* フォント出力先: {output_font_path}")
-    print(f"* レポート出力先: {report_path}")
-    return output_font_path
+    print("処理が完了しました！")
 
 
 if __name__ == "__main__":

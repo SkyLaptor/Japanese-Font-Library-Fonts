@@ -35,10 +35,10 @@ $ uv run otf2xml フォントファイル.otf
 以下のコマンドを実行して、スカイリム用フォントを生成します。
 
 ```
-$ uv run convert_for_skyrim フォントファイル.ttf --base every --subset ./data/subsets/subset_jp_skyrim.txt
+$ uv run convert_for_skyrim フォントファイル.ttf --base everywhere --subset ./data/subsets/subset_jp_skyrim.txt
 ```
 
-* **実行内容**: スカイリム標準の Everywhere 日本語フォントに合わせてサイズを調整し、バニラで表示可能な文字のみに絞り込んだ（サブセット化）TTFファイルを build ディレクトリ内に出力します。
+* **実行内容**: スカイリム標準の Everywhere 日本語フォントに合わせてサイズを調整し、バニラで表示可能な文字のみに絞り込んだ（サブセット化）TTFファイルを `build` ディレクトリ内に出力します。
 * **カスタマイズ**: 基準サイズの変更、長体（コンデンス）の適用、サブセットの変更などが可能です。詳細は `$ uv run convert_for_skyrim --help` を参照してください。
 
 5. SWFへの埋め込み
