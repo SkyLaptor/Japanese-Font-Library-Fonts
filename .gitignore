@@ -9,3 +9,7 @@ __pycache__/
 # 成果物
 dist/
 build/
+
+# MEGASync
+.megaignore
+desktop.ini
