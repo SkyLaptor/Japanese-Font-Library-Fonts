@@ -1,8 +1,24 @@
-from fontTools.pens.boundsPen import ControlBoundsPen
 from fontTools.ttLib import TTFont
 
-from utils import BLANK_GLYPHS, MSG_FONTTYPE_UNIDENT, convert_timestamp, is_otf, is_ttf
+from utils import (
+    convert_timestamp,
+    is_cff,
+    is_cff2,
+)
 from utils.models import AverageSizeResult, FontInfo, NameRecord
+
+
+def get_outline_format(font_obj: TTFont) -> str:
+    outline_format = ""
+    if 'CFF2' in font_obj:
+        outline_format = "PostScript (CFF2 / Variable)"
+    elif 'CFF ' in font_obj:
+        outline_format = "PostScript (CFF)"
+    elif 'glyf' in font_obj:
+        outline_format = "TrueType"
+    else:
+        raise ValueError("フォントのアウトライン形式が不明です。")
+    return outline_format
 
 
 def get_info(font_obj: TTFont) -> FontInfo:
@@ -14,6 +30,30 @@ def get_info(font_obj: TTFont) -> FontInfo:
     :return: フォント情報
     :rtype: FontInfo
     """
+
+    table_names = font_obj.keys()
+    print("テーブル一覧")
+    print(table_names)
+
+    # どのテーブルが存在するかでアウトライン形式を判定
+    if 'CFF2' in font_obj:
+        outline_format = "PostScript (CFF2 / Variable)"
+    elif 'CFF ' in font_obj:
+        outline_format = "PostScript (CFF)"
+    elif 'glyf' in font_obj:
+        outline_format = "TrueType"
+    else:
+        outline_format = "Unknown"
+
+    if 'GSUB' in font_obj:
+        gsub_table = font_obj['GSUB'].table
+        feature_count = gsub_table.FeatureList.FeatureCount
+        print(f"OpenType機能数: {feature_count}")
+    else:
+        print("OpenType機能: なし")
+
+    print(f"アウトラインフォーマット: {outline_format}")
+
     head = font_obj.get('head')
     created_time = None
     upm = None
@@ -44,12 +84,12 @@ def get_info(font_obj: TTFont) -> FontInfo:
         os2_use_typometrics = bool(os2.fsSelection & 0b10000000)
 
     hhea = font_obj.get('hhea')
-    hhea_ascender = None
-    hhea_descender = None
+    hhea_ascent = None
+    hhea_descent = None
     hhea_linegap = None
     if hhea:
-        hhea_ascender = hhea.ascender
-        hhea_descender = hhea.descender
+        hhea_ascent = hhea.ascent
+        hhea_descent = hhea.descent
         hhea_linegap = hhea.lineGap
 
     name_table = font_obj.get('name')
@@ -91,8 +131,8 @@ def get_info(font_obj: TTFont) -> FontInfo:
         os2_typodescender=os2_typodescender,
         os2_typo_linegap=os2_typo_linegap,
         os2_use_typometrics=os2_use_typometrics,
-        hhea_ascender=hhea_ascender,
-        hhea_descender=hhea_descender,
+        hhea_ascent=hhea_ascent,
+        hhea_descent=hhea_descent,
         hhea_linegap=hhea_linegap,
         name_records=name_records,
     )
@@ -111,6 +151,7 @@ def get_glyphs(font_obj: TTFont) -> str:
     :rtype: str
 
     """
+
     # cmap（文字コードとグリフ名の対応表）を取得
     cmap = font_obj.getBestCmap()
 
@@ -128,55 +169,24 @@ def get_glyphs(font_obj: TTFont) -> str:
 
 
 def get_average_size(font_obj: TTFont) -> AverageSizeResult:
-    """
-    # フォント内の各グリフのサイズを解析して平均値を取得する
-
-    フォントのUPMと比例する値のため、異なるUPMのフォントと比較する際にはUPSを合わせてしてから比較して下さい。
-    * ノーマライズ計算式 (UPM1024に揃える場合)
-    ```
-    ノーマライズ横幅平均値 = (元の横幅平均値 / 元フォントのUPM) * 1024
-    ノーマライズ縦幅平均値 = (元の縦幅平均値 / 元フォントのUPM) * 1024
-    ```
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 平均値測定結果
-    :rtype: AverageSizeResult
-    """
-    head = font_obj.get('head')
-    upm = head.unitsPerEm
+    # CFF/CFF2の場合は非対応
+    if is_cff(font_obj) or is_cff2(font_obj):
+        raise ValueError("この関数はCFF/CFF2には対応していません。")
+    upm = font_obj.get('head').unitsPerEm
 
     total_width = 0
     total_height = 0
     count = 0
 
-    # TTFの場合、glyf_tableを取り出す際にグリフ数分の参照が発生するため、
-    # メインループの外で取り出しておくことで高速化します。
-    if is_ttf(font_obj):
-        glyf_table = font_obj["glyf"]
-
-    glyph_set = font_obj.getGlyphSet()
+    glyf_table = font_obj["glyf"]
     glyph_names = font_obj.getGlyphOrder()
 
     for name in glyph_names:
         w, h = 0, 0
-        if is_ttf(font_obj):
-            # TTFの場合
-            glyph = glyf_table[name]
-            if hasattr(glyph, "xMax"):
-                w = glyph.xMax - glyph.xMin
-                h = glyph.yMax - glyph.yMin
-        elif is_otf(font_obj):
-            # OTFの場合
-            glyph = glyph_set[name]
-            # ControlBoundsPen はベジェ曲線の制御点を含むので高速です。
-            pen = ControlBoundsPen(glyph_set)
-            glyph.draw(pen)
-            if pen.bounds:
-                w = pen.bounds[2] - pen.bounds[0]
-                h = pen.bounds[3] - pen.bounds[1]
-        else:
-            raise ValueError(MSG_FONTTYPE_UNIDENT)
+        glyph = glyf_table[name]
+        if hasattr(glyph, "xMax"):
+            w = glyph.xMax - glyph.xMin
+            h = glyph.yMax - glyph.yMin
 
         # ドットやカンマなどの小さいグリフ、横棒などのアスペクトが極端なものは無視します。
         # if (h > upm * 0.4) and (0.5 < w / h < 1.5): # ひらがなとか比較的小さいグリフも含まれる可能性あり
@@ -193,48 +203,7 @@ def get_average_size(font_obj: TTFont) -> AverageSizeResult:
         avg_h = total_height / count
 
     return AverageSizeResult(
-        upm=upm,
         count=count,
         avg_w=avg_w,
         avg_h=avg_h,
     )
-
-
-def get_empty_glyphs(font_obj: TTFont) -> set:
-    """
-    # フォント内の空白グリフ一覧を取得する
-
-    サブセット作成や空白グリフ削除といった内部でサブセッターを使っているものは、
-    同一のフォントオブジェクトに対して2回サブセッターを通すと不具合が発生します。
-    例えば空白グリフ削除（サブセッター使用）してからサブセット作成（サブセッター使用）すると不具合が発生します。
-    そのため本メソッドで空白グリフ判定部分を共通化し、それぞれの機能で利用します。
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 空白グリフ一覧
-    :rtype: set
-    """
-    empty_names = set()
-    all_glyphs = font_obj.getGlyphOrder()
-
-    if is_ttf(font_obj):  # TTF
-        glyf_table = font_obj['glyf']
-        for name in all_glyphs:
-            if name in BLANK_GLYPHS:
-                continue
-            glyph = glyf_table[name]
-            if glyph.numberOfContours == 0 and not hasattr(glyph, "components"):
-                empty_names.add(name)
-
-    elif is_otf(font_obj):  # OTF
-        charstrings = font_obj['CFF '].cff.topDictIndex[0].CharStrings
-        for name in all_glyphs:
-            if name in BLANK_GLYPHS:
-                continue
-            if len(charstrings[name].bytecode) <= 1:
-                empty_names.add(name)
-
-    else:
-        raise ValueError(MSG_FONTTYPE_UNIDENT)
-
-    return empty_names

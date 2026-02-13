@@ -1,209 +1,303 @@
+import argparse
 import math
 import re
+import sys
 import time
 
+from fontTools.misc.transform import Transform
 from fontTools.pens.recordingPen import RecordingPen
-from fontTools.pens.t2CharStringPen import T2CharStringPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from utils import MSG_FONTTYPE_UNIDENT, is_otf, is_ttf, reload_font
-from utils.models import MetricsSetResult
+from utils import (
+    is_cff,
+    is_cff2,
+    reload_font,
+    save_font,
+)
+from utils.inspector import get_average_size, get_info
 
 
-def transform_glyphs(
-    font_obj: TTFont,
-    scale_width: float = 1.0,
-    scale_height: float = 1.0,
-    width_offset: int = 0,
-    height_offset: int = 0,
+def main():
+    parser = argparse.ArgumentParser(
+        description="フォントへ各種更新を施すためのツールボックス"
+    )
+
+    parser.add_argument(
+        "--action",
+        choices=list(ACTION_MAP.keys()),
+        help="実行する操作を指定します。",
+    )
+    parser.add_argument(
+        "-i",
+        "--input_font_file",
+        type=str,
+        help="フォントファイル",
+    )
+    parser.add_argument(
+        "-b",
+        "--base_font_file",
+        type=str,
+        help="ベースとなるフォントファイル",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_font_file",
+        type=str,
+        help="ファイルの書き出し先",
+    )
+    parser.add_argument(
+        "--scale_width",
+        type=float,
+        default=1.0,
+        help="横方向の拡大縮小率 デフォルト: 1.0",
+    )
+
+    parser.add_argument(
+        "--scale_height",
+        type=float,
+        default=1.0,
+        help="縦方向の拡大縮小率 デフォルト: 1.0",
+    )
+    parser.add_argument(
+        "--offset_width",
+        type=int,
+        default=0,
+        help="横方向の移動量 デフォルト: 0",
+    )
+    parser.add_argument(
+        "--offset_height",
+        type=int,
+        default=0,
+        help="縦方向の移動量 デフォルト: 0",
+    )
+    parser.add_argument(
+        "--offset_weight",
+        type=int,
+        default=0,
+        help="文字の太さ調整量 デフォルト: 0",
+    )
+    parser.add_argument(
+        "--family_name",
+        type=str,
+        help="フォントファミリー名",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    dispatch_action(**vars(args))
+
+
+def dispatch_action(action, **kwargs):
+    handler = ACTION_MAP.get(action)
+    if handler:
+        handler(**kwargs)
+    else:
+        print(f"未実装のアクションです: {action}")
+
+
+def action_harmonize_font_metrics(
+    input_font_file,
+    output_font_file,
+    scale_width,
+    scale_height,
+    offset_width,
+    offset_height,
+    base_font_file,
+    **_,
+):
+    font_obj = TTFont(input_font_file)
+    base_font_obj = TTFont(base_font_file)
+    # print(f"アウトライン形式: {get_outline_format(font_obj)}")
+    # print("カスタム拡大縮小率: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f} ※最終的な倍率ではありません。")
+    # print(f"移動量: 横:{offset_width}units, 縦:{offset_height}units")
+    # print("処理前の操作対象フォント情報")
+    # print(get_info(font_obj=font_obj))
+    # print("ベースフォント情報")
+    # print(get_info(font_obj=base_font_obj))
+    font_obj = harmonize_font_metrics(
+        src_font_obj=font_obj,
+        scale_width=scale_width,
+        scale_height=scale_height,
+        offset_width=offset_width,
+        offset_height=offset_height,
+        base_font_obj=base_font_obj,
+    )
+    # print("処理後の操作対象フォント情報")
+    # print(get_info(font_obj))
+    output_font_file = save_font(
+        font_obj=font_obj,
+        input=input_font_file,
+        output=output_font_file,
+        suffix="_harmonized",
+    )
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def harmonize_font_metrics(
+    src_font_obj: TTFont,
+    base_font_obj: TTFont,
+    scale_width: float,
+    scale_height: float,
+    offset_width: int,
+    offset_height: int,
 ) -> TTFont:
     """
-    # グリフの変形を行う
+    渡されたベースフォント及びカスタムパラメーターに従いフォントメトリクスを更新する
 
-    本処理後のフォントオブジェクトはメトリクス情報が正しく取得できなくなります。
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :param scale_width: 横幅拡大率
+    :param src_font_obj: 処理対象のフォント
+    :type src_font_obj: TTFont
+    :param base_font_obj: ベースとなるフォント
+    :type base_font_obj: TTFont
+    :param scale_width: 横方向の拡大率
     :type scale_width: float
-    :param scale_height: 縦幅拡大率
+    :param scale_height: 縦方向の拡大率
     :type scale_height: float
-    :param width_offset: 横移動(正の値で右、負の値で左)
-    :type width_offset: int
-    :param height_offset: 縦移動(正の値で上、負の値で下)
-    :type height_offset: int
-    :return: 変形後のフォントオブジェクト
+    :param offset_width: 横方向オフセット
+    :type offset_width: int
+    :param offset_height: 縦方向オフセット
+    :type offset_height: int
+    :return: 処理後のフォント
     :rtype: TTFont
     """
-    upm = font_obj['head'].unitsPerEm
-    glyph_set = font_obj.getGlyphSet()
-    glyph_names = font_obj.getGlyphOrder()
-    hmtx_table = font_obj['hmtx']
+    # CFF/CFF2の場合は非対応
+    if is_cff(font_obj=src_font_obj) or is_cff2(font_obj=src_font_obj):
+        raise ValueError("この関数はCFF/CFF2には対応していません。")
 
-    # 中央寄せのための移動量を算出
-    dx = ((upm * (1.0 - scale_width)) / 2) + width_offset
-    dy = ((upm * (1.0 - scale_height)) / 2) + height_offset
-    transformation = (scale_width, 0, 0, scale_height, dx, dy)
+    # ベースフォントとフォントのグリフサイズ平均を取得し、どれだけ拡大縮小すればいいか算出します。
+    # 拡大縮小率は縦幅を基準とします。（縦に伸びるとUI破綻を起こしやすいが、横は伸びてもそこまで影響なし。）
+    src_avg_result = get_average_size(font_obj=src_font_obj)
+    base_avg_result = get_average_size(font_obj=base_font_obj)
+    # print("DEBUG:元フォント")
+    # print(src_avg_result)
+    # print("DEBUG:ベースフォント")
+    # print(base_avg_result)
+    scale_height_calc = base_avg_result.avg_h / src_avg_result.avg_h
+    scale_width_calc = scale_height
+    # print(
+    #     f"DEBUG: 平均値比較により算出した拡大縮小率: 横:x{scale_width_calc:.3f}, 縦:x{scale_height_calc:.3f}"
+    # )
 
-    # 既存のキャッシュをクリア
-    if hasattr(font_obj, "_glyphSet"):
-        del font_obj._glyphSet
+    # 手動での拡大縮小率を適用する
+    scale_width = scale_width_calc * scale_width
+    scale_height = scale_height_calc * scale_height
+    # print(
+    #     f"DEBUG: カスタム拡大縮小率を適用後の拡大縮小率: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f}"
+    # )
 
-    for name in glyph_names:
-        old_glyph = glyph_set[name]
-        # 元の幅とLSBを取得
-        old_width, old_lsb = hmtx_table[name]
+    # UPMをベースフォントに合わせる
+    src_upm = src_font_obj.get('head').unitsPerEm
+    base_upm = base_font_obj.get('head').unitsPerEm
+    if src_upm != base_upm:
+        # UPMの変更
+        src_font_obj.get('head').unitsPerEm = base_upm
+        # 拡大縮小率の算出
+        scale_width = scale_width * base_upm / src_upm
+        scale_height = scale_height * base_upm / src_upm
+        # print(f"DEBUG: UPMが変更されます。{base_upm}")
+        # print(
+        #     f"DEBUG: UPM変更に伴い、拡大率も変更されました: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f}"
+        # )
 
-        # 新しい幅とLSBを計算（OTF/TTF共通で使用する）
-        new_width = int(round(old_width * scale_width))
-        # new_lsb = int(round(old_lsb * scale_width + dx))
-        new_lsb = int(round(old_lsb * scale_width))
+    # メトリクス各種をベースフォントと同じにする
+    os2 = src_font_obj.get('OS/2')
+    base_os2 = base_font_obj.get('OS/2')
+    os2.usWinAscent = base_os2.usWinAscent
+    os2.usWinDescent = base_os2.usWinDescent
+    os2.sTypoAscender = base_os2.sTypoAscender
+    os2.sTypoDescender = base_os2.sTypoDescender
+    os2.sTypoLineGap = base_os2.sTypoLineGap
+    hhea = src_font_obj.get('hhea')
+    base_hhea = base_font_obj.get('hhea')
+    hhea.ascent = base_hhea.ascent
+    hhea.descent = base_hhea.descent
+    hhea.lineGap = base_hhea.lineGap
 
-        # 輪郭(Outline)の変形
-        if is_ttf(font_obj):
-            # TTFの場合
-            new_pen = TTGlyphPen(glyph_set)
-            trans_pen = TransformPen(new_pen, transformation)
-            old_glyph.draw(trans_pen)
-            new_glyph = new_pen.glyph()
-            new_glyph.recalcBounds(font_obj['glyf'])
-            font_obj['glyf'][name] = new_glyph
-        elif is_otf(font_obj):
-            # OTF (CFF) の処理
-            cff = font_obj['CFF '].cff if "CFF " in font_obj else font_obj['CFF2'].cff
-            old_charstring = cff.topDictIndex[0].CharStrings[name]
-            new_pen = T2CharStringPen(new_width, glyph_set)
-            trans_pen = TransformPen(new_pen, transformation)
-            old_glyph.draw(trans_pen)
+    # 奇跡的に拡大縮小率及びオフセット値が全て変更なしなら変形処理をスキップする。
+    if (
+        scale_width == 1.0
+        and scale_height == 1.0
+        and offset_width == 0
+        and offset_height == 0
+    ):
+        # print("変形の必要が無いため、処理をスキップします。")
+        return reload_font(font_obj=src_font_obj)
 
-            # 【ここが重要】新しいオブジェクトを代入せず、既存のプログラム(bytecode)だけを上書きする
-            # これにより、private参照やCIDのFontDict割り当てが維持されます
-            new_cs = new_pen.getCharString()
-            old_charstring.program = new_cs.program
-        else:
-            raise ValueError(MSG_FONTTYPE_UNIDENT)
+    glyph_set = src_font_obj.getGlyphSet()
+    glyph_order = src_font_obj.getGlyphOrder()
 
-        # メトリクス(hmtx)の更新
-        hmtx_table[name] = (new_width, new_lsb)
-
-    if is_otf(font_obj):
-        # BBox再計算
-        cff = font_obj['CFF '].cff if "CFF " in font_obj else font_obj['CFF2'].cff
-        cff.topDictIndex[0].recalcFontBBox()
-
-    return reload_font(font_obj)
-
-
-def set_metrics(font_obj: TTFont, ascent: int, descent: int) -> MetricsSetResult:
-    """
-    # 入力されたメトリクス値をフォント情報に設定する
-
-    Descentは負の値にして下さい。
-    Ascent,Descent及びその合算値であるUPMは8の倍数とする必要があります。1024が最適値です。
-    この処理ではフォント情報の書き換えのみ行うため、もしUPMが変更となる場合はその倍率分を変形メソッドに依頼して下さい。
-    UPMのみ変更しサイズ変更を行わなかった場合、SWF投入時に不具合が発生します。
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :param ascent: Ascent値。8の倍数にして下さい。
-    :type ascent: int
-    :param descent: Descent値。8の倍数にして下さい。
-    :type descent: int
-    :return: メトリクス設定結果
-    :rtype: MetricsSetResult
-    """
-
-    # Ascent,Descentペアのチェック
-    if ascent is not None and descent is None:
-        raise ValueError(
-            f"AscentとDescentは対で入力して下さい。: Ascent: {ascent}, Descent: {descent}"
-        )
-    if ascent is None and descent is not None:
-        raise ValueError(
-            f"AscentとDescentは対で入力して下さい。: Ascent: {ascent}, Descent: {descent}"
-        )
-
-    new_upm = ascent + abs(descent)
-
-    # 8の倍数チェック
-    if new_upm % 8 != 0 or ascent % 8 != 0 or descent % 8 != 0:
-        raise ValueError(
-            f"入力値が正しくありません。: Ascent({ascent}) + Descent({descent}) = UPM({new_upm}). "
-            f"各数値は8の倍数にして下さい。Ascent=880,Descent=-144,UPM=1024が最適値です。"
-        )
-
-    old_upm = font_obj['head'].unitsPerEm
-    need_scale_size = new_upm / old_upm
-
-    # head テーブルの更新
-    font_obj['head'].unitsPerEm = new_upm
-
-    # 4. OS/2 テーブル (Windows 用)
-    if "OS/2" in font_obj:
-        os2 = font_obj['OS/2']
-
-        # バージョンが古い（4未満）場合は、4に引き上げる
-        if os2.version < 4:
-            # バージョン 2 で追加された項目
-            if not hasattr(os2, "sxHeight"):
-                os2.sxHeight = 0
-            if not hasattr(os2, "sCapHeight"):
-                os2.sCapHeight = 0
-            if not hasattr(os2, "usDefaultChar"):
-                os2.usDefaultChar = 0
-            if not hasattr(os2, "usBreakChar"):
-                os2.usBreakChar = 32  # 半角スペース
-            if not hasattr(os2, "usMaxContext"):
-                os2.usMaxContext = 0
-            os2.version = 4
-
-        os2.sTypoAscender = ascent
-        os2.sTypoDescender = descent
-        os2.usWinAscent = abs(ascent)
-        os2.usWinDescent = abs(descent)
-        os2.sTypoLineGap = 0
-        # OS/2のメトリクス設定を優先させるフラグ
-        os2.fsSelection |= 1 << 7
-
-    # hhea テーブル
-    if "hhea" in font_obj:
-        hhea = font_obj['hhea']
-        hhea.ascent = ascent
-        hhea.descender = descent
-        hhea.lineGap = 0
-
-    # post テーブル (下線の位置と太さ)
-    if "post" in font_obj:
-        post = font_obj['post']
-        # UPM変更に合わせてスケールさせる
-        if need_scale_size != 1.0:
-            post.underlinePosition = int(
-                round(post.underlinePosition * need_scale_size)
-            )
-            post.underlineThickness = int(
-                round(post.underlineThickness * need_scale_size)
-            )
-
-    return MetricsSetResult(
-        font_obj=reload_font(font_obj),
-        old_upm=old_upm,
-        new_upm=new_upm,
-        need_scale_size=need_scale_size,
+    # 変換行列の作成（原点を中心に拡大/縮小）
+    t = (
+        Transform()
+        .scale(scale_width, scale_height)
+        .translate(offset_width, offset_height)
     )
+
+    # 変換
+    glyf_table = src_font_obj['glyf']
+    for name in glyph_order:
+        if name not in glyf_table:
+            continue
+
+        # TTGlyphPenを初期化
+        # (glyphSetを渡すと複合グリフを適切に分解してスケーリングできます)
+        tt_pen = TTGlyphPen(glyph_set)
+
+        # 変換行列を噛ませたTransformPenを作成
+        trans_pen = TransformPen(tt_pen, t)
+
+        # 既存のグリフをTransformPen経由で描画（これで変形しながらtt_penに録画される）
+        glyph_set[name].draw(trans_pen)
+
+        # 正しいメソッド名は glyph() です
+        glyf_table[name] = tt_pen.glyph()
+
+    # hmtx (水平メトリクス) の調整
+    # これをしないと、絵だけ大きくなって文字同士が重なる
+    if 'hmtx' in src_font_obj:
+        hmtx = src_font_obj['hmtx']
+        for name in hmtx.metrics:
+            advance_width, lsb = hmtx.metrics[name]
+            # 送り幅と左余白をスケーリング
+            hmtx.metrics[name] = (
+                int(round(advance_width * scale_width)),
+                int(round(lsb * scale_width)) + offset_width,
+            )
+
+    return reload_font(src_font_obj)
+
+
+def action_anonymize_info(input_font_file, output_font_file, family_name, **_):
+    font_obj = TTFont(input_font_file)
+    print("匿名化前のフォント情報")
+    print(get_info(font_obj))
+    font_obj = anonymize_info(font_obj=font_obj, family_name=family_name)
+    print("匿名化後のフォント情報")
+    print(get_info(font_obj))
+    output_font_file = save_font(
+        font_obj=font_obj,
+        input=input_font_file,
+        output=output_font_file,
+        suffix="_anonymized",
+    )
+    print(f"フォントを保存しました: {output_font_file}")
 
 
 def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
     """
-    # フォント情報を匿名化する
+    フォント情報を匿名化する
 
-    :param font_obj: フォントオブジェクト
+    :param font_obj: フォント
     :type font_obj: TTFont
-    :param family_name: フォントファミリー名。空白や記号類は使用できません。
+    :param family_name: フォントファミリー名。空白や記号類は使用できません。 デフォルト: Anonymous
     :type family_name: str
-    :return: 匿名化後のフォントオブジェクト
+    :return: 匿名化後のフォント
     :rtype: TTFont
     """
     sub_family = "Regular"
@@ -253,7 +347,7 @@ def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
         os2.achVendID = "NONE"
 
     # OTFの内部情報も書き換える
-    if is_otf(font_obj):
+    if is_cff(font_obj):
         cff = font_obj['CFF '].cff
         for font_name in cff.fontNames:
             top_dict = cff[font_name]
@@ -261,39 +355,45 @@ def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
             top_dict.FamilyName = family_name
             top_dict.Weight = sub_family
 
-    return font_obj
+    return reload_font(font_obj)
 
 
-def change_weight(font_obj: TTFont, weight_offset: int) -> TTFont:
+def action_change_weight(input_font_file, output_font_file, offset_weight, **_):
+    font_obj = TTFont(input_font_file)
+    font_obj = change_weight(font_obj=font_obj, offset_weight=offset_weight)
+    output_font_file = save_font(
+        font_obj=font_obj,
+        input=input_font_file,
+        output=output_font_file,
+        suffix="_weight_changed",
+    )
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def change_weight(font_obj: TTFont, offset_weight: int) -> TTFont:
     """
-    # 文字の太さを変更する
+    文字の太さを変更する
 
     負荷が高く不安定な処理です。可能な限り公式が提供しているウェイトフォントを使用することをお勧めします。
 
     :param font_obj: フォントオブジェクト
     :type font_obj: TTFont
-    :param weight_offset: 太さ調整値。正の値で太く、負の値で細くなります。
-    :type weight_offset: int
+    :param offset_weight: 太さ調整値。正の値で太く、負の値で細くなります。
+    :type offset_weight: int
     :return: 変形後のフォントオブジェクト
     :rtype: TTFont
     """
-    if weight_offset == 0:
-        return font_obj
+
+    # CFF/CFF2の場合は非対応
+    if is_cff(font_obj=font_obj) or is_cff2(font_obj=font_obj):
+        raise ValueError("この関数はCFF/CFF2には対応していません。")
+
+    if offset_weight == 0:
+        return reload_font(font_obj=font_obj)
 
     glyph_set = font_obj.getGlyphSet()
     glyph_names = font_obj.getGlyphOrder()
-    actual_offset = -weight_offset
-
-    # OTFの場合は CFF テーブルを直接取得
-    cff = None
-    char_strings = None
-    if is_otf(font_obj):
-        cff = font_obj['CFF '].cff if "CFF " in font_obj else font_obj['CFF2'].cff
-        char_strings = cff.topDictIndex[0].CharStrings
-
-    # OTFの場合はTTFと法線の向きが逆なので、TTFと調整量を逆にします。
-    if is_otf(font_obj):
-        actual_offset = weight_offset  # OTF用
+    actual_offset = -offset_weight
 
     def get_normal(dx, dy):
         l = math.sqrt(dx * dx + dy * dy)
@@ -341,52 +441,32 @@ def change_weight(font_obj: TTFont, weight_offset: int) -> TTFont:
 
         temp_glyph.coordinates = type(temp_glyph.coordinates)(new_coords)
 
-        # 書き戻し
-        if is_ttf(font_obj):
-            # TTFでも重なりを合体させて白抜けを防ぐ
-            rec_pen = RecordingPen()
-            temp_glyph.draw(rec_pen, font_obj['glyf'])
+        # 重なりを合体させて白抜けを防ぐ
+        rec_pen = RecordingPen()
+        temp_glyph.draw(rec_pen, font_obj['glyf'])
 
-            path = Path()
-            pen = path.getPen()
-            rec_pen.replay(pen)
+        path = Path()
+        pen = path.getPen()
+        rec_pen.replay(pen)
 
-            try:
-                path.simplify()
-            except Exception as e:
-                print(e)
-                print(f"警告: グリフ '{name}' の簡略化に失敗したためスキップします。")
+        try:
+            path.simplify()
+        except Exception as e:
+            print(e)
+            print(f"警告: グリフ '{name}' の簡略化に失敗したためスキップします。")
 
-            tt_pen = TTGlyphPen(glyph_set)
-            path.draw(tt_pen)
-            font_obj['glyf'][name] = tt_pen.glyph()
-        elif is_otf(font_obj):
-            # 肉付け後のパスを RecordingPen に記録
-            rec_pen = RecordingPen()
-            temp_glyph.draw(rec_pen, glyfTable={})
-
-            # RecordingPen の内容を Path オブジェクトに流し込む
-            path = Path()
-            pen = path.getPen()
-            rec_pen.replay(pen)
-
-            # パス簡略化
-            try:
-                path.simplify()
-            except Exception as e:
-                # simplifyに失敗しても止まらないようにする
-                print(e)
-                print(f"警告: グリフ '{name}' の簡略化に失敗したためスキップします。")
-
-            # T2CharStringPen に書き戻す
-            old_width = font_obj['hmtx'][name][0]
-            new_pen = T2CharStringPen(old_width, glyph_set)
-            path.draw(new_pen)  # Pathオブジェクトはそのまま描画可能
-
-            char_strings[name].setProgram(new_pen.getCharString().program)
-
-    # 全体の境界線を再計算
-    if is_otf(font_obj):
-        cff.topDictIndex[0].recalcFontBBox()
+        tt_pen = TTGlyphPen(glyph_set)
+        path.draw(tt_pen)
+        font_obj['glyf'][name] = tt_pen.glyph()
 
     return reload_font(font_obj)
+
+
+ACTION_MAP = {
+    "harmonize_font_metrics": action_harmonize_font_metrics,
+    "anonymize_info": action_anonymize_info,
+    "change_weight": action_change_weight,
+}
+
+if __name__ == "__main__":
+    main()

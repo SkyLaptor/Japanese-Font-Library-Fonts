@@ -1,67 +1,10 @@
-from fontTools import subset
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import Glyph
 from otf2ttf.cli import otf_to_ttf
 
-from utils import is_otf, reload_font
-from utils.inspector import get_average_size, get_empty_glyphs
-from utils.models import SubsetResult
+from utils import is_cff
+from utils.inspector import get_average_size
 from utils.modifier import set_metrics, transform_glyphs
-
-
-def create_subset(font_obj: TTFont, subset_chars: str) -> SubsetResult:
-    """
-    # フォントとサブセット文字列を用いてサブセットフォントを作成する
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :param subset_chars: サブセット文字列
-    :type subset_chars: str
-    :return: サブセット作成結果
-    :rtype: SubsetResult
-    """
-    cmap = font_obj.getBestCmap()
-    empty_glyphs = get_empty_glyphs(font_obj)
-
-    input_char_set = set(subset_chars)
-    keep_glyphs = {".notdef"}
-
-    # 欠落文字を記録するためのリスト
-    missing_chars = []
-
-    for char in input_char_set:
-        code = ord(char)
-        if code in cmap:
-            gname = cmap[code]
-            if gname not in empty_glyphs:
-                # 存在する、かつ中身がある場合のみ採用
-                keep_glyphs.add(gname)
-            else:
-                # 中身が空だったので「欠落」扱いにする
-                missing_chars.append(char)
-        else:
-            # そもそもフォントにない
-            missing_chars.append(char)
-
-    # サブセッタの設定と実行
-    options = subset.Options()
-    options.layout_features = ["*"]  # OpenType機能（合字、カーニング等）を維持
-    options.name_IDs = ["*"]  # フォント名や著作権情報をすべて維持
-    options.notdef_outline = True  # .notdef（豆腐）の形を維持
-    options.glyph_names = True  # グリフ名を維持（デバッグしやすくなる）
-    options.legacy_kern = True  # 古い形式のカーニングも維持
-    subsetter = subset.Subsetter(options=options)
-    subsetter.populate(glyphs=list(keep_glyphs))
-
-    # サブセット処理の適用 (インプレース書き換え)
-    subsetter.subset(font_obj)
-
-    # リストをソートしてレポートの可読性向上
-    non_existed_glyphs = "".join(sorted(missing_chars))
-
-    return SubsetResult(
-        font_obj=reload_font(font_obj), non_existed_glyphs=non_existed_glyphs
-    )
 
 
 def merge_fonts(
@@ -73,10 +16,10 @@ def merge_fonts(
     """
     print("DEBUG: Phase 1 - メトリクスの統一")
 
-    if is_otf(font_obj_a):
+    if is_cff(font_obj_a):
         print("AフォントがOTFのため変換します")
         otf_to_ttf(font_obj_a)
-    if is_otf(font_obj_b):
+    if is_cff(font_obj_b):
         print("BフォントがOTFのため変換します")
         otf_to_ttf(font_obj_b)
 

@@ -6,7 +6,7 @@ from fontTools.ttLib import TTFont
 
 from utils import (
     generate_jisx0208,
-    is_otf,
+    is_cff,
     is_ttf,
     load_text,
     merge_text_files,
@@ -123,7 +123,7 @@ def dispatch_action(action, **kwargs):
 def action_check_fonttype(input, **_):
     ext = Path(input).suffix.lower()
     font_obj = TTFont(input)
-    if is_otf(font_obj):
+    if is_cff(font_obj):
         if ".otf" != ext:
             print(
                 f"拡張子は{ext}ですが、フォントの形式はOTFです。拡張子が間違っています。"
@@ -241,7 +241,7 @@ def action_anonymize_info(input, output, no_otf2ttf, **_):
 def action_change_weight(input, output, weight_offset, no_otf2ttf, **_):
     print("フォントの太さを変更します。")
     font_obj = TTFont(input)
-    font_obj = change_weight(font_obj=font_obj, weight_offset=weight_offset)
+    font_obj = change_weight(font_obj=font_obj, offset_weight=weight_offset)
     save_font(
         font_obj=font_obj,
         input=input,

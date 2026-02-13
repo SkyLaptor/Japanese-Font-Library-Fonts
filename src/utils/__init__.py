@@ -20,22 +20,45 @@ MSG_FONTTYPE_UNIDENT = "フォントの形式が判別出来ません。"
 
 # 空白であることが正しいグリフ
 BLANK_GLYPHS = {
-    ".notdef",  # 未定義文字の代替（必須）
-    "space",  # 半角スペース
-    "uni0020",  # 半角スペース(Unicode)
-    "ideographicspace",  # 全角スペース
-    "uni3000",  # 全角スペース(Unicode)
-    "nbspace",  # 改行しないスペース
-    "nonbreakingspace",  # 改行しないスペース(別名)
-    "uni00A0",  # 改行しないスペース(Unicode)
-    "uni2002",  # En Space
-    "uni2003",  # Em Space
-    "uni2007",  # Figure Space
-    "uni2008",  # Punctuation Space
-    "uni2009",  # Thin Space
-    "uni200A",  # Hair Space
-    "uni000D",  # CR
-    "uni000A",  # LF
+    # 未定義文字の代替（絶対に消してはならない）
+    ".notdef",
+    # 半角スペース
+    "space",
+    "uni0020",
+    0x0020,
+    # 全角スペース
+    "ideographicspace",
+    "uni3000",
+    0x3000,
+    # 改行しないスペース
+    "nbspace",
+    "nonbreakingspace",
+    "uni00A0",
+    0x00A0,
+    # En Space
+    "uni2002",
+    0x2002,
+    # Em Space
+    "uni2003",
+    0x2003,
+    # Figure Space
+    "uni2007",
+    0x2007,
+    # Punctuation Space
+    "uni2008",
+    0x2008,
+    # Thin Space
+    "uni2009",
+    0x2009,
+    # Hair Space
+    "uni200A",
+    0x200A,
+    # CR
+    "uni000D",
+    0x000D,
+    # LF
+    "uni000A",
+    0x000A,
 }
 
 
@@ -59,23 +82,37 @@ def reload_font(font_obj: TTFont) -> TTFont:
     return font_obj
 
 
-def is_otf(font_obj: TTFont) -> bool:
+def is_cff2(font_obj: TTFont) -> bool:
     """
-    # ヘッダーを確認して、本当にOTFなのか確認する
+    テーブルを確認して本当にOTF(CFF2)なのか確認する
 
     :param font_obj: フォントオブジェクト
     :type font_obj: TTFont
     :return: 検査結果
     :rtype: bool
     """
-    if "CFF " in font_obj or "CFF2" in font_obj:
+    if "CFF " in font_obj:
+        return True
+    return False
+
+
+def is_cff(font_obj: TTFont) -> bool:
+    """
+    テーブルを確認して本当にOTF(CFF)なのか確認する
+
+    :param font_obj: フォントオブジェクト
+    :type font_obj: TTFont
+    :return: 検査結果
+    :rtype: bool
+    """
+    if "CFF " in font_obj:
         return True
     return False
 
 
 def is_ttf(font_obj: TTFont) -> bool:
     """
-    # ヘッダーを確認して、本当にTTFなのか確認する
+    テーブルを確認して本当にTTFなのか確認する
 
     :param font_obj: フォントオブジェクト
     :type font_obj: TTFont
@@ -142,7 +179,7 @@ def save_font(
     output: str = "",
     suffix: str = "",
     otf2ttf: bool = True,
-):
+) -> str:
     if not input and not output:
         raise ValueError(
             "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
@@ -150,13 +187,13 @@ def save_font(
     if not output:
         os.makedirs(BUILD_DIR, exist_ok=True)
         ext = Path(input).suffix
-        if is_otf(font_obj) and otf2ttf:
+        if is_cff(font_obj) and otf2ttf:
             ext = ".ttf"
         output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}{ext}"
     else:
         output = Path(output)
     # 特に指定が無い場合はOTFであればTTFに変換する。
-    if is_otf(font_obj) and otf2ttf:
+    if is_cff(font_obj) and otf2ttf:
         # 破壊的変更のため、font_objectには代入しないこと。
         print("OTFからTTFへの変換を行います。")
         print(
@@ -164,7 +201,8 @@ def save_font(
         )
         otf_to_ttf(font_obj)
     font_obj.save(output)
-    print(f"フォントファイルを保存しました。: {output}")
+    # print(f"フォントファイルを保存しました。: {output}")
+    return output
 
 
 def merge_text_files(input_dir: str, output_file: str):
@@ -205,6 +243,57 @@ def merge_text_files(input_dir: str, output_file: str):
     output_path.write_text("".join(unique_chars), encoding="utf-8")
 
     print(f"完了！: {output_path} (総文字数: {len(unique_chars)}文字)")
+
+
+def generate_subset_jp_full() -> str:
+    # 重複を防ぐため set を使用
+    target_chars = set()
+
+    # --- ASCII (0x20 - 0x7E) ---
+    for i in range(0x20, 0x7F):
+        target_chars.add(chr(i))
+
+    # --- JIS X 0213 (第1, 2, 3, 4水準) を網羅的に収集 ---
+    # 面1 (1面): 第1, 2, 3水準の一部
+    # 面2 (2面): 第4水準
+    for plane in [1, 2]:
+        for ku in range(1, 95):
+            for ten in range(1, 95):
+                try:
+                    # EUC-JIS-2004 のバイト順序に変換
+                    # 1面は 0xA1-0xFE, 2面は 0x8F + 0xA1-0xFE
+                    if plane == 1:
+                        b_data = bytes([ku + 0xA0, ten + 0xA0])
+                    else:
+                        b_data = bytes([0x8F, ku + 0xA0, ten + 0xA0])
+
+                    char = b_data.decode("euc_jis_2004")
+
+                    if char.isprintable():
+                        target_chars.add(char)
+                except UnicodeDecodeError:
+                    continue
+
+    # --- 追加文字（Unicode直接指定） ---
+    extra_unicodes = [
+        0x2026,  # … (三点リーダー)
+        0x2014,  # — (エムダッシュ)
+        0x32FF,  # ㋿ (令和合字)
+        0xFF01,
+        0xFF03,
+        0xFF04,
+        0xFF05,
+        0xFF06,  # などの全角記号 (念のため)
+    ]
+    # NEC/IBM拡張文字などの範囲 (CP932でよく使われる範囲)
+    # 0x2460 - 0x24FF (囲み英数字)
+    for i in range(0x2460, 0x2500):
+        extra_unicodes.append(i)
+
+    for code in extra_unicodes:
+        target_chars.add(chr(code))
+
+    return "".join(target_chars)
 
 
 def generate_jisx0208(output: str):

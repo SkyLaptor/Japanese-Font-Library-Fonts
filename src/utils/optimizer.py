@@ -1,69 +1,209 @@
-from fontTools import subset
+import argparse
+import sys
+
+from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
 
-from utils import BLANK_GLYPHS, is_ttf, reload_font
-from utils.models import RemoveEmptyResult
+from utils import (
+    BLANK_GLYPHS,
+    generate_subset_jp_full,
+    is_cff,
+    is_cff2,
+    load_text,
+    reload_font,
+    save_font,
+)
+from utils.inspector import get_info
 
 
-def remove_empty_glyphs(font_obj: TTFont) -> RemoveEmptyResult:
-    """
-    # フォントから空白グリフを消去する。
-
-    消してはならない空白グリフ(.notdefやスペースなど)は保護消去されません。
-    グリフID(順序)が変更されます。
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 空白グリフ消去結果
-    :rtype: RemoveEmptyResult
-    """
-    all_glyphs = font_obj.getGlyphOrder()
-    removed_glyphs = []
-
-    # 削除対象の特定
-    if is_ttf(font_obj):
-        # TTFの場合
-        glyf_table = font_obj['glyf']
-        for name in all_glyphs:
-            # 空白が正しいグリフはスルーします
-            if name in BLANK_GLYPHS:
-                continue
-
-            # 輪郭(contours)が0個、かつコンポーネント(参照)も持っていないものを抽出
-            glyph = glyf_table[name]
-            if glyph.numberOfContours == 0 and not hasattr(glyph, "components"):
-                removed_glyphs.append(name)
-
-    elif is_ttf(font_obj):
-        # OTFの場合
-        charstrings = font_obj['CFF '].cff.topDictIndex[0].CharStrings
-        for name in all_glyphs:
-            # 空白が正しいグリフはスルーします
-            if name in BLANK_GLYPHS:
-                continue
-            if len(charstrings[name].bytecode) <= 1:  # ほぼデータなし
-                removed_glyphs.append(name)
-
-    # サブセット機能を使って削除を実行
-    # 残すべきグリフ = (全てのグリフ) - (削除対象)
-    keep_glyphs = [g for g in all_glyphs if g not in removed_glyphs]
-
-    # サブセッタの設定と実行
-    options = subset.Options()
-    options.layout_features = ["*"]  # OpenType機能（合字、カーニング等）を維持
-    options.name_IDs = ["*"]  # フォント名や著作権情報をすべて維持
-    options.notdef_outline = True  # .notdef（豆腐）の形を維持
-    options.glyph_names = True  # グリフ名を維持（デバッグしやすくなる）
-    options.legacy_kern = True  # 古い形式のカーニングも維持
-    subsetter = subset.Subsetter(options=options)
-    subsetter.populate(glyphs=keep_glyphs)
-    subsetter.subset(font_obj)
-
-    return RemoveEmptyResult(
-        font_obj=reload_font(font_obj),
-        all_glyphs=all_glyphs,
-        removed_glyphs=removed_glyphs,
+def main():
+    parser = argparse.ArgumentParser(
+        description="フォントへ各種最適化を施すためのツールボックス"
     )
+
+    parser.add_argument(
+        "--action",
+        choices=list(ACTION_MAP.keys()),
+        help="実行する操作を指定します。",
+    )
+    parser.add_argument(
+        "-i",
+        "--input_font_file",
+        type=str,
+        help="フォントファイル",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_font_file",
+        type=str,
+        help="ファイルの書き出し先",
+    )
+    parser.add_argument(
+        "-s",
+        "--subset_file",
+        type=str,
+        default="",
+        help="サブセットファイル デフォルト: ''",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    dispatch_action(**vars(args))
+
+
+def dispatch_action(action, **kwargs):
+    handler = ACTION_MAP.get(action)
+    if handler:
+        handler(**kwargs)
+    else:
+        print(f"未実装のアクションです: {action}")
+
+
+def action_optimize_for_swf(input_font_file, output_font_file, **_):
+    font_obj = TTFont(input_font_file)
+    font_obj = optimize_for_swf(font_obj=font_obj)
+    output_font_file = save_font(
+        font_obj=font_obj, input=input_font_file, output=output_font_file
+    )
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def optimize_for_swf(font_obj: TTFont) -> TTFont:
+    """
+    SWFに埋め込むためのフォントに最適化する
+
+    :param font_obj: フォント
+    :type font_obj: TTFont
+    :return: 最適化済みフォント
+    :rtype: TTFont
+    """
+    # 縦書き関連などSWFに不要なテーブル
+    drop_tables = [
+        'mort',
+        'vhea',
+        'vmtx',
+        'VORG',
+        'BASE',
+        'DSIG',
+        'gasp',
+        'hdmx',
+        'LTSH',
+        'PCLT',
+        'GSUB',
+        'GPOS',
+    ]
+
+    for table_tag in drop_tables:
+        if table_tag in font_obj:
+            del font_obj[table_tag]
+            print(f"削除しました: {table_tag}")
+
+    return reload_font(font_obj=font_obj)
+
+
+def action_create_subset(input_font_file, output_font_file, subset_file="", **_):
+    font_obj = TTFont(input_font_file)
+    subset_text = load_text(subset_file)
+    print(f"入力文字数: {len(subset_text)}")
+    print("元フォント情報")
+    print(get_info(font_obj=font_obj))
+    font_obj = create_subset(font_obj=font_obj, subset_text=subset_text)
+    print(f"サブセット後の文字数(GlyphOrder): {len(font_obj.getGlyphOrder())}")
+    print(f"サブセット後の文字数(cmap): {len(font_obj.getBestCmap().keys())}")
+    print("サブセットフォント情報")
+    print(get_info(font_obj=font_obj))
+    output_font_file = save_font(
+        font_obj=font_obj, input=input_font_file, output=output_font_file
+    )
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def create_subset(font_obj: TTFont, subset_text: str) -> TTFont:
+    """
+    サブセットフォントを作成する
+
+    サブセッターによりタグ情報の一部書き換えが発生するため、
+    もしタグ情報の編集を行うのであればサブセット後に実施するようにして下さい。
+
+    :param font_obj: フォント
+    :type font_obj: TTFont
+    :param subset_text: サブセット文字列
+    :type subset_text: str
+    :return: サブセットフォント
+    :rtype: TTFont
+    """
+    # サブセットフォントのオプション設定
+    options = Options()
+    options.notdef_glyph = True  # 常に .notdef を含める（安全対策）
+    options.notdef_outline = True  # .notdef（豆腐）の形を維持
+    # options.glyph_names = True  # デバッグ用 Format 3.0への更新が行われなくなるため、古いシステムでは読み込みエラーの可能性あり。
+    options.retain_gids = False  # グリフIDを保持せず再割り当てする（軽量化のため）
+    options.legacy_kern = True  # 古い形式のカーニングも維持
+    options.name_IDs = ['*']  # 全てのnameレコードを保持する
+    options.name_languages = ['*']  # 全てのnameレコードを保持する
+    options.hinting = True  # ヒンティングの維持（デフォルトTrueですが念のため）
+    options.layout_features = ['*']  # レイアウト機能（合字やカーニング）を保持
+    options.recalc_timestamp = False  # 更新日時を変更したくない場合
+
+    subsetter = Subsetter(options=options)
+    subsetter.populate(text=subset_text)
+    subsetter.subset(font=font_obj)
+
+    return reload_font(font_obj=font_obj)
+
+
+def action_remove_empty_glyphs(input_font_file, output_font_file, **_):
+    font_obj = TTFont(input_font_file)
+    print("作業前")
+    print(get_info(font_obj=font_obj))
+    font_obj = remove_empty_glyphs(font_obj=font_obj)
+    output_font_file = save_font(
+        font_obj=font_obj, input=input_font_file, output=output_font_file
+    )
+    print("作業後")
+    print(get_info(font_obj=font_obj))
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def remove_empty_glyphs(font_obj: TTFont) -> TTFont:
+    """
+    実質的なアウトラインを持たないグリフをcmapから削除し、
+    ゲーム内で豆腐(.notdef)が表示されるようにする。
+    """
+    # CFF/CFF2の場合は非対応
+    if is_cff(font_obj) or is_cff2(font_obj):
+        raise ValueError("この関数はCFF/CFF2には対応していません。")
+
+    glyf = font_obj['glyf']
+    cmap = font_obj.getBestCmap()
+    deleted_glyphs = []
+
+    for code, name in cmap.items():
+        if code in BLANK_GLYPHS:
+            continue
+
+        glyph = glyf[name]
+
+        # TrueTypeの場合、numberOfContours が 0 ならアウトラインがない
+        # (複合グリフの場合は -1 になるので、0 かどうかで判定)
+        if glyph.numberOfContours == 0:
+            deleted_glyphs.append(code)
+
+    # cmapから削除（これでフォント的に「持っていない文字」になる）
+    for code in deleted_glyphs:
+        del cmap[code]
+        # 必要ならここでログを出す
+        # print(f"Removed empty glyph: U+{code:04X}")
+
+    # このままでは実体が残りっぱなしになるが、
+    # JIS第四基準+αまで網羅したサブセットを行うことで、実質的にGIDを整理した綺麗なフォントになる。
+    font_obj = create_subset(font_obj=font_obj, subset_text=generate_subset_jp_full())
+
+    return reload_font(font_obj)
 
 
 def remove_black_circles(font_obj):
@@ -123,3 +263,13 @@ def remove_black_circles(font_obj):
         removed_count += 1
 
     return reload_font(font_obj)
+
+
+ACTION_MAP = {
+    "optimize_for_swf": action_optimize_for_swf,
+    "create_subset": action_create_subset,
+    "remove_empty_glyphs": action_remove_empty_glyphs,
+}
+
+if __name__ == "__main__":
+    main()

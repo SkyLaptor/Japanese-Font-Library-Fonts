@@ -13,15 +13,12 @@ from utils.reconstructor import create_subset
 BASE_FONT_CONFIGS = {
     "everywhere": {
         "file": "./data/skyrim/1_Skyrim_JP_EveryFont_0805_empty_removed.ttf",
-        "height_offset": 0,  # フォントにもよるが、バニラは微妙に上にずれている。
     },
     "book": {
         "file": "./data/skyrim/22_Skyrim_JP_BookFont_0805_empty_removed.ttf",
-        "height_offset": 0,  # 変更非推奨
     },
     "handwritten": {
         "file": "./data/skyrim/5_Skyrim_JP_HandWriteFont_0805_empty_removed.ttf",
-        "height_offset": 0,  # 変更非推奨
     },
 }
 

@@ -29,8 +29,8 @@ class FontInfo:
     os2_typodescender: Optional[int] = None
     os2_typo_linegap: Optional[int] = None
     os2_use_typometrics: Optional[bool] = None
-    hhea_ascender: Optional[int] = None
-    hhea_descender: Optional[int] = None
+    hhea_ascent: Optional[int] = None
+    hhea_descent: Optional[int] = None
     hhea_linegap: Optional[int] = None
     name_records: list[NameRecord] = field(default_factory=list)
 
@@ -48,8 +48,8 @@ class FontInfo:
         output += f"OS/2 TypoDescender: {self.os2_typodescender}\n"
         output += f"OS/2 Typo LineGap: {self.os2_typo_linegap}\n"
         output += f"OS/2 Use TypoMetrics: {self.os2_use_typometrics}\n"
-        output += f"HHEA Ascender: {self.hhea_ascender}\n"
-        output += f"HHEA Descender: {self.hhea_descender}\n"
+        output += f"HHEA Ascent: {self.hhea_ascent}\n"
+        output += f"HHEA Descent: {self.hhea_descent}\n"
         output += f"HHEA LineGap: {self.hhea_linegap}\n"
         output += "NAMEテーブル\n"
         for name in self.name_records:
@@ -59,16 +59,14 @@ class FontInfo:
 
 @dataclass
 class AverageSizeResult:
-    upm: Optional[int] = None
     count: Optional[int] = None
     avg_w: Optional[float] = None
     avg_h: Optional[float] = None
 
     def __str__(self):
         output = "[サイズ平均測定結果]\n"
-        output += f"UPM: {self.upm}\n"
         output += f"平均算出に用いたグリフ数: {self.count}\n"
-        output += f"平均値: W:{self.avg_w:.2f}, H:{self.avg_h:.2f}\n"
+        output += f"平均値: W:{self.avg_w:.3f}, H:{self.avg_h:.3f}\n"
         return output
 
 
