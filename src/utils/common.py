@@ -332,7 +332,7 @@ def convert_timestamp(timestamp: int, format: str = "%Y/%m/%d %H:%M:%S (UTC)") -
     return (datetime(1904, 1, 1) + timedelta(seconds=timestamp)).strftime(format)
 
 
-def action_generate_subset_jp_full(output_text_file: str, debug: bool = False):
+def action_generate_subset_jp_full(output_text_file: str, debug: bool = False, **_):
     subset = generate_subset_jp_full(debug=debug)
     dprint(subset, debug)
     if output_text_file == "" or not output_text_file:
