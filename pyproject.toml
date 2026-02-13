@@ -14,6 +14,7 @@ dependencies = [
 package = true
 
 [project.scripts]
+common = "utils.common:main"
 inspector = "utils.inspector:main"
 optimizer = "utils.optimizer:main"
 modifier = "utils.modifier:main"

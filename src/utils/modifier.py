@@ -11,13 +11,15 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from utils import (
+from utils.common import (
+    dprint,
     is_cff,
     is_cff2,
     reload_font,
     save_font,
 )
 from utils.inspector import get_average_size, get_info
+from utils.models import HarmonizeResult
 
 
 def main():
@@ -54,7 +56,6 @@ def main():
         default=1.0,
         help="横方向の拡大縮小率 デフォルト: 1.0",
     )
-
     parser.add_argument(
         "--scale_height",
         type=float,
@@ -82,7 +83,13 @@ def main():
     parser.add_argument(
         "--family_name",
         type=str,
+        default="Anonymize",
         help="フォントファミリー名",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="デバッグ表示の有効化",
     )
 
     if len(sys.argv) == 1:
@@ -103,36 +110,58 @@ def dispatch_action(action, **kwargs):
 
 
 def action_harmonize_font_metrics(
-    input_font_file,
-    output_font_file,
-    scale_width,
-    scale_height,
-    offset_width,
-    offset_height,
-    base_font_file,
+    input_font_file: str,
+    output_font_file: str,
+    scale_width: float,
+    scale_height: float,
+    offset_width: int,
+    offset_height: int,
+    base_font_file: str,
+    debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_font_file)
+    target_font_obj = TTFont(input_font_file)
     base_font_obj = TTFont(base_font_file)
-    # print(f"アウトライン形式: {get_outline_format(font_obj)}")
-    # print("カスタム拡大縮小率: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f} ※最終的な倍率ではありません。")
-    # print(f"移動量: 横:{offset_width}units, 縦:{offset_height}units")
-    # print("処理前の操作対象フォント情報")
-    # print(get_info(font_obj=font_obj))
-    # print("ベースフォント情報")
-    # print(get_info(font_obj=base_font_obj))
-    font_obj = harmonize_font_metrics(
-        src_font_obj=font_obj,
-        scale_width=scale_width,
-        scale_height=scale_height,
+    dprint("ベースフォント情報", debug)
+    dprint(get_info(font_obj=base_font_obj), debug)
+    base_avg_result = get_average_size(font_obj=base_font_obj)
+    dprint(
+        f"ベースフォントのグリフ平均サイズ: 横: {base_avg_result.avg_w:.1f}, 縦: {base_avg_result.avg_h:.1f}",
+        debug,
+    )
+    dprint("処理前の操作対象フォント情報", debug)
+    dprint(get_info(font_obj=target_font_obj), debug)
+    target_avg_result = get_average_size(font_obj=target_font_obj)
+    dprint(
+        f"処理前の操作対象フォントのグリフ平均サイズ: 横: {target_avg_result.avg_w:.1f}, 縦: {target_avg_result.avg_h:.1f}",
+        debug,
+    )
+
+    result = harmonize_font_metrics(
+        src_font_obj=target_font_obj,
+        scale_width_manual=scale_width,
+        scale_height_manual=scale_height,
         offset_width=offset_width,
         offset_height=offset_height,
         base_font_obj=base_font_obj,
+        debug=False,
     )
-    # print("処理後の操作対象フォント情報")
-    # print(get_info(font_obj))
+    target_font_obj = result.font_obj
+    dprint(f"UPMを変更したか: {result.is_upm_change}", debug)
+    dprint(
+        f"最終的な拡大縮小率: 横:x{result.final_scale_width:.3f}, 縦:x{result.final_scale_height:.3f}",
+        debug,
+    )
+    dprint("処理後の操作対象フォント情報", debug)
+    dprint(get_info(font_obj=target_font_obj), debug)
+    target_avg_result = get_average_size(font_obj=target_font_obj)
+    dprint(
+        f"処理後の操作対象フォントのグリフ平均サイズ: 横: {target_avg_result.avg_w:.1f}, 縦: {target_avg_result.avg_h:.1f}",
+        debug,
+    )
+
     output_font_file = save_font(
-        font_obj=font_obj,
+        font_obj=result.font_obj,
         input=input_font_file,
         output=output_font_file,
         suffix="_harmonized",
@@ -143,11 +172,12 @@ def action_harmonize_font_metrics(
 def harmonize_font_metrics(
     src_font_obj: TTFont,
     base_font_obj: TTFont,
-    scale_width: float,
-    scale_height: float,
+    scale_width_manual: float,
+    scale_height_manual: float,
     offset_width: int,
     offset_height: int,
-) -> TTFont:
+    debug: bool = False,
+) -> HarmonizeResult:
     """
     渡されたベースフォント及びカスタムパラメーターに従いフォントメトリクスを更新する
 
@@ -163,8 +193,10 @@ def harmonize_font_metrics(
     :type offset_width: int
     :param offset_height: 縦方向オフセット
     :type offset_height: int
-    :return: 処理後のフォント
-    :rtype: TTFont
+    :param debug: デバッグモード
+    :type debug: bool
+    :return: 処理結果
+    :rtype: HarmonizeResult
     """
     # CFF/CFF2の場合は非対応
     if is_cff(font_obj=src_font_obj) or is_cff2(font_obj=src_font_obj):
@@ -174,36 +206,27 @@ def harmonize_font_metrics(
     # 拡大縮小率は縦幅を基準とします。（縦に伸びるとUI破綻を起こしやすいが、横は伸びてもそこまで影響なし。）
     src_avg_result = get_average_size(font_obj=src_font_obj)
     base_avg_result = get_average_size(font_obj=base_font_obj)
-    # print("DEBUG:元フォント")
-    # print(src_avg_result)
-    # print("DEBUG:ベースフォント")
-    # print(base_avg_result)
-    scale_height_calc = base_avg_result.avg_h / src_avg_result.avg_h
-    scale_width_calc = scale_height
-    # print(
-    #     f"DEBUG: 平均値比較により算出した拡大縮小率: 横:x{scale_width_calc:.3f}, 縦:x{scale_height_calc:.3f}"
-    # )
-
-    # 手動での拡大縮小率を適用する
-    scale_width = scale_width_calc * scale_width
-    scale_height = scale_height_calc * scale_height
-    # print(
-    #     f"DEBUG: カスタム拡大縮小率を適用後の拡大縮小率: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f}"
-    # )
+    dprint("元フォント", debug)
+    dprint(src_avg_result, debug)
+    dprint("ベースフォント", debug)
+    dprint(base_avg_result, debug)
+    scale_height_pure = base_avg_result.avg_h / src_avg_result.avg_h
+    scale_width_pure = scale_height_pure
+    dprint(
+        f"平均値比較により算出した拡大縮小率: 横:x{scale_width_pure:.3f}, 縦:x{scale_height_pure:.3f}",
+        debug,
+    )
 
     # UPMをベースフォントに合わせる
     src_upm = src_font_obj.get('head').unitsPerEm
     base_upm = base_font_obj.get('head').unitsPerEm
+    upm_ratio = base_upm / src_upm  # 1024 / 1000 = 1.024
+    is_upm_change = False
     if src_upm != base_upm:
         # UPMの変更
         src_font_obj.get('head').unitsPerEm = base_upm
-        # 拡大縮小率の算出
-        scale_width = scale_width * base_upm / src_upm
-        scale_height = scale_height * base_upm / src_upm
-        # print(f"DEBUG: UPMが変更されます。{base_upm}")
-        # print(
-        #     f"DEBUG: UPM変更に伴い、拡大率も変更されました: 横:x{scale_width:.3f}, 縦:x{scale_height:.3f}"
-        # )
+        dprint(f"UPM変更: {src_upm} -> {base_upm}", debug)
+        is_upm_change = True
 
     # メトリクス各種をベースフォントと同じにする
     os2 = src_font_obj.get('OS/2')
@@ -219,24 +242,31 @@ def harmonize_font_metrics(
     hhea.descent = base_hhea.descent
     hhea.lineGap = base_hhea.lineGap
 
+    # 最終の拡大縮小率を算出する
+    final_scale_width = scale_width_pure / upm_ratio * scale_width_manual
+    final_scale_height = scale_height_pure / upm_ratio * scale_height_manual
+
+    dprint(
+        f"カスタム拡大縮小率を適用後の拡大縮小率: 横:x{final_scale_width:.3f}, 縦:x{final_scale_height:.3f}",
+        debug,
+    )
+
     # 奇跡的に拡大縮小率及びオフセット値が全て変更なしなら変形処理をスキップする。
     if (
-        scale_width == 1.0
-        and scale_height == 1.0
+        final_scale_width == 1.0
+        and final_scale_height == 1.0
         and offset_width == 0
         and offset_height == 0
     ):
-        # print("変形の必要が無いため、処理をスキップします。")
+        dprint("変形の必要が無いため、処理をスキップします。", debug)
         return reload_font(font_obj=src_font_obj)
 
     glyph_set = src_font_obj.getGlyphSet()
     glyph_order = src_font_obj.getGlyphOrder()
 
     # 変換行列の作成（原点を中心に拡大/縮小）
-    t = (
-        Transform()
-        .scale(scale_width, scale_height)
-        .translate(offset_width, offset_height)
+    t = Transform(
+        final_scale_width, 0, 0, final_scale_height, offset_width, offset_height
     )
 
     # 変換
@@ -266,20 +296,31 @@ def harmonize_font_metrics(
             advance_width, lsb = hmtx.metrics[name]
             # 送り幅と左余白をスケーリング
             hmtx.metrics[name] = (
-                int(round(advance_width * scale_width)),
-                int(round(lsb * scale_width)) + offset_width,
+                int(round(advance_width * final_scale_width)),
+                int(round(lsb * final_scale_width)) + offset_width,
             )
 
-    return reload_font(src_font_obj)
+    return HarmonizeResult(
+        font_obj=reload_font(src_font_obj),
+        is_upm_change=is_upm_change,
+        final_scale_width=final_scale_width,
+        final_scale_height=final_scale_height,
+    )
 
 
-def action_anonymize_info(input_font_file, output_font_file, family_name, **_):
+def action_anonymize_info(
+    input_font_file: str,
+    output_font_file: str,
+    family_name: str,
+    debug: bool = False,
+    **_,
+):
     font_obj = TTFont(input_font_file)
-    print("匿名化前のフォント情報")
-    print(get_info(font_obj))
-    font_obj = anonymize_info(font_obj=font_obj, family_name=family_name)
-    print("匿名化後のフォント情報")
-    print(get_info(font_obj))
+    dprint("匿名化前のフォント情報", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
+    font_obj = anonymize_info(font_obj=font_obj, family_name=family_name, debug=debug)
+    dprint("匿名化後のフォント情報", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
     output_font_file = save_font(
         font_obj=font_obj,
         input=input_font_file,
@@ -289,7 +330,7 @@ def action_anonymize_info(input_font_file, output_font_file, family_name, **_):
     print(f"フォントを保存しました: {output_font_file}")
 
 
-def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
+def anonymize_info(font_obj: TTFont, family_name: str, debug: bool = False) -> TTFont:
     """
     フォント情報を匿名化する
 
@@ -297,6 +338,8 @@ def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
     :type font_obj: TTFont
     :param family_name: フォントファミリー名。空白や記号類は使用できません。 デフォルト: Anonymous
     :type family_name: str
+    :param debug: デバッグモード
+    :type debug: bool
     :return: 匿名化後のフォント
     :rtype: TTFont
     """
@@ -358,9 +401,17 @@ def anonymize_info(font_obj: TTFont, family_name: str = "Anonymous") -> TTFont:
     return reload_font(font_obj)
 
 
-def action_change_weight(input_font_file, output_font_file, offset_weight, **_):
+def action_change_weight(
+    input_font_file: str,
+    output_font_file: str,
+    offset_weight: int,
+    debug: bool = False,
+    **_,
+):
     font_obj = TTFont(input_font_file)
-    font_obj = change_weight(font_obj=font_obj, offset_weight=offset_weight)
+    font_obj = change_weight(
+        font_obj=font_obj, offset_weight=offset_weight, debug=debug
+    )
     output_font_file = save_font(
         font_obj=font_obj,
         input=input_font_file,
@@ -370,7 +421,7 @@ def action_change_weight(input_font_file, output_font_file, offset_weight, **_):
     print(f"フォントを保存しました: {output_font_file}")
 
 
-def change_weight(font_obj: TTFont, offset_weight: int) -> TTFont:
+def change_weight(font_obj: TTFont, offset_weight: int, debug: bool = False) -> TTFont:
     """
     文字の太さを変更する
 
@@ -380,6 +431,8 @@ def change_weight(font_obj: TTFont, offset_weight: int) -> TTFont:
     :type font_obj: TTFont
     :param offset_weight: 太さ調整値。正の値で太く、負の値で細くなります。
     :type offset_weight: int
+    :param debug: デバッグモード
+    :type debug: bool
     :return: 変形後のフォントオブジェクト
     :rtype: TTFont
     """

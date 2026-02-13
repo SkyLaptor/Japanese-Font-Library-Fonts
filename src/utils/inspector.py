@@ -1,14 +1,75 @@
+import argparse
+import sys
+from pathlib import Path
+
 from fontTools.ttLib import TTFont
 
-from utils import (
+from utils.common import (
     convert_timestamp,
+    dprint,
     is_cff,
     is_cff2,
+    is_ttf,
+    save_text,
 )
 from utils.models import AverageSizeResult, FontInfo, NameRecord
 
 
-def get_outline_format(font_obj: TTFont) -> str:
+def main():
+    parser = argparse.ArgumentParser(
+        description="フォントの検査を行うためのツールボックス"
+    )
+
+    parser.add_argument(
+        "--action",
+        choices=list(ACTION_MAP.keys()),
+        help="実行する操作を指定します。",
+    )
+    parser.add_argument(
+        "-i",
+        "--input_font_file",
+        type=str,
+        help="フォントファイル",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_text_file",
+        type=str,
+        help="テキストの書き出し先",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="デバッグ表示の有効化",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    dispatch_action(**vars(args))
+
+
+def dispatch_action(action, **kwargs):
+    handler = ACTION_MAP.get(action)
+    if handler:
+        handler(**kwargs)
+    else:
+        print(f"未実装のアクションです: {action}")
+
+
+def action_get_outline_format(
+    input_font_file: str, output_text_file: str = "", debug: bool = False
+):
+    font_obj = TTFont(input_font_file)
+    print(
+        f"フォントのアウトラインフォーマット: {get_outline_format(font_obj=font_obj, debug=debug)}"
+    )
+
+
+def get_outline_format(font_obj: TTFont, debug: bool = False) -> str:
     outline_format = ""
     if 'CFF2' in font_obj:
         outline_format = "PostScript (CFF2 / Variable)"
@@ -21,19 +82,54 @@ def get_outline_format(font_obj: TTFont) -> str:
     return outline_format
 
 
-def get_info(font_obj: TTFont) -> FontInfo:
+def action_check_fonttype(input, **_):
+    ext = Path(input).suffix.lower()
+    font_obj = TTFont(input)
+    if is_cff(font_obj) or is_cff2(font_obj):
+        if ".otf" != ext:
+            print(
+                f"拡張子は{ext}ですが、フォントの形式はOTFです。拡張子が間違っています。"
+            )
+        else:
+            print("フォントの形式はOTFです。(正常)")
+    elif is_ttf(font_obj):
+        if ".ttf" != ext:
+            print(
+                f"拡張子は{ext}ですが、フォントの形式はTTFです。拡張子が間違っています。"
+            )
+        else:
+            print("フォントの形式はTTFです。(正常)")
+    else:
+        print(
+            "フォントの形式が判別できませんでした。本スクリプトでは正常に動作しない可能性が高いです。"
+        )
+
+
+def action_get_info(input_font_file: str, output_text_file: str, debug: bool = False):
+    font_obj = TTFont(input_font_file)
+    info = get_info(font_obj=font_obj, debug=debug)
+    output_text_file = save_text(
+        text=str(info), input=input_font_file, output=output_text_file, suffix="_info"
+    )
+    dprint(info, debug)
+    print(f"フォント情報を保存しました: {output_text_file}")
+
+
+def get_info(font_obj: TTFont, debug: bool = False) -> FontInfo:
     """
     # フォント情報を取得する
 
     :param font_obj: フォントオブジェクト
     :type font_obj: TTFont
+    :param debug: デバッグモード
+    :type debug: bool
     :return: フォント情報
     :rtype: FontInfo
     """
 
     table_names = font_obj.keys()
-    print("テーブル一覧")
-    print(table_names)
+    dprint("テーブル一覧", debug)
+    dprint(table_names, debug)
 
     # どのテーブルが存在するかでアウトライン形式を判定
     if 'CFF2' in font_obj:
@@ -48,11 +144,11 @@ def get_info(font_obj: TTFont) -> FontInfo:
     if 'GSUB' in font_obj:
         gsub_table = font_obj['GSUB'].table
         feature_count = gsub_table.FeatureList.FeatureCount
-        print(f"OpenType機能数: {feature_count}")
+        dprint(f"OpenType機能数: {feature_count}", debug)
     else:
-        print("OpenType機能: なし")
+        dprint("OpenType機能: なし", debug)
 
-    print(f"アウトラインフォーマット: {outline_format}")
+    dprint(f"アウトラインフォーマット: {outline_format}", debug)
 
     head = font_obj.get('head')
     created_time = None
@@ -138,7 +234,17 @@ def get_info(font_obj: TTFont) -> FontInfo:
     )
 
 
-def get_glyphs(font_obj: TTFont) -> str:
+def action_get_glyphs(input_font_file: str, output_text_file: str, debug: bool = False):
+    font_obj = TTFont(input_font_file)
+    glyphs = get_glyphs(font_obj=font_obj, debug=debug)
+    dprint(f"フォント内のグリフ数(Unicode割当済): {len(glyphs)}", debug)
+    output_text_file = save_text(
+        text=glyphs, input=input_font_file, output=output_text_file, suffix="_glyphs"
+    )
+    print(f"グリフの一覧を保存しました: {output_text_file}")
+
+
+def get_glyphs(font_obj: TTFont, debug: bool = False) -> str:
     """
     # フォントに含まれるグリフの一覧を取得する
 
@@ -147,6 +253,8 @@ def get_glyphs(font_obj: TTFont) -> str:
 
     :param font_obj: フォントオブジェクト
     :type font_obj: TTFont
+    :param debug: デバッグモード
+    :type debug: bool
     :return: グリフ一覧
     :rtype: str
 
@@ -168,36 +276,60 @@ def get_glyphs(font_obj: TTFont) -> str:
     return glyph_text
 
 
-def get_average_size(font_obj: TTFont) -> AverageSizeResult:
+def action_get_average_size(
+    input_font_file: str, output_text_file: str, debug: bool = False
+):
+    font_obj = TTFont(input_font_file)
+    result = get_average_size(font_obj=font_obj, debug=debug)
+    output_text_file = save_text(
+        text=str(result),
+        input=input_font_file,
+        output=output_text_file,
+        suffix="_average_size",
+    )
+    dprint(result, debug)
+    print(f"平均値取得結果を保存しました: {output_text_file}")
+
+
+def get_average_size(font_obj: TTFont, debug: bool = False) -> AverageSizeResult:
     # CFF/CFF2の場合は非対応
     if is_cff(font_obj) or is_cff2(font_obj):
         raise ValueError("この関数はCFF/CFF2には対応していません。")
+
     upm = font_obj.get('head').unitsPerEm
+    cmap = font_obj.getBestCmap()
+    glyf_table = font_obj["glyf"]
 
     total_width = 0
     total_height = 0
     count = 0
 
-    glyf_table = font_obj["glyf"]
-    glyph_names = font_obj.getGlyphOrder()
+    # Unicode（コードポイント）でループを回す
+    # 4E00 - 9FFF が一般的な漢字の範囲
+    for code, name in cmap.items():
+        if not (0x4E00 <= code <= 0x9FFF):
+            continue
 
-    for name in glyph_names:
-        w, h = 0, 0
+        if name not in glyf_table:
+            continue
+
         glyph = glyf_table[name]
+        w, h = 0, 0
         if hasattr(glyph, "xMax"):
             w = glyph.xMax - glyph.xMin
             h = glyph.yMax - glyph.yMin
 
-        # ドットやカンマなどの小さいグリフ、横棒などのアスペクトが極端なものは無視します。
-        # if (h > upm * 0.4) and (0.5 < w / h < 1.5): # ひらがなとか比較的小さいグリフも含まれる可能性あり
-        if (h > upm * 0.5) and (0.8 < w / h < 1.2):  # ほぼ正方形の漢字型のグリフが対象
-            total_width += w
-            total_height += h
-            count += 1
+        # 漢字範囲に絞っているので、条件は少し緩めても「変な文字」が混ざらなくなります
+        # if h > upm * 0.2:
+        #     total_width += w
+        #     total_height += h
+        #     count += 1
+        total_width += w
+        total_height += h
+        count += 1
 
     if count == 0:
-        avg_w = 0
-        avg_h = 0
+        avg_w, avg_h = 0, 0
     else:
         avg_w = total_width / count
         avg_h = total_height / count
@@ -207,3 +339,15 @@ def get_average_size(font_obj: TTFont) -> AverageSizeResult:
         avg_w=avg_w,
         avg_h=avg_h,
     )
+
+
+ACTION_MAP = {
+    "check_fonttype": action_check_fonttype,
+    "get_outline_format": action_get_outline_format,
+    "get_info": action_get_info,
+    "get_glyphs": action_get_glyphs,
+    "get_average_size": action_get_average_size,
+}
+
+if __name__ == "__main__":
+    main()

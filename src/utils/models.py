@@ -39,7 +39,7 @@ class FontInfo:
         output += f"作成日時: {self.created_time}\n"
         output += f"更新日時: {self.modified_time}\n"
         output += f"総グリフ数: {self.glyph_count_all}\n"
-        output += f"Unicode値を持つグリフ数: {self.glyph_count_uni}\n"
+        output += f"グリフ数(Unicode割当済): {self.glyph_count_uni}\n"
         output += f"UPM: {self.upm}\n"
         output += f"OS/2 ベンダーID: {self.os2_vendorid}\n"
         output += f"OS/2 WinAscent: {self.os2_winascent}\n"
@@ -66,7 +66,7 @@ class AverageSizeResult:
     def __str__(self):
         output = "[サイズ平均測定結果]\n"
         output += f"平均算出に用いたグリフ数: {self.count}\n"
-        output += f"平均値: W:{self.avg_w:.3f}, H:{self.avg_h:.3f}\n"
+        output += f"平均値: 横幅:{self.avg_w:.1f}, 縦幅:{self.avg_h:.1f}\n"
         return output
 
 
@@ -106,4 +106,19 @@ class SubsetResult:
     def __str__(self):
         output = "[サブセット結果]\n"
         output += f"欠落しているグリフ: {self.non_existed_glyphs}\n"
+        return output
+
+
+@dataclass
+class HarmonizeResult:
+    font_obj: Optional[TTFont] = None
+    is_upm_change: Optional[bool] = None
+    final_scale_width: Optional[float] = None
+    final_scale_height: Optional[float] = None
+
+    def __str__(self):
+        output = "[フォントメトリクス更新結果]\n"
+        output += f"UPMの変更: {self.is_upm_change}\n"
+        output += f"最終的な横倍率: x{self.final_scale_width}\n"
+        output += f"最終的な縦倍率: x{self.final_scale_height}\n"
         return output

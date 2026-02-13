@@ -4,8 +4,9 @@ import sys
 from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
 
-from utils import (
+from utils.common import (
     BLANK_GLYPHS,
+    dprint,
     generate_subset_jp_full,
     is_cff,
     is_cff2,
@@ -45,6 +46,11 @@ def main():
         default="",
         help="サブセットファイル デフォルト: ''",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="デバッグ表示の有効化",
+    )
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -63,21 +69,25 @@ def dispatch_action(action, **kwargs):
         print(f"未実装のアクションです: {action}")
 
 
-def action_optimize_for_swf(input_font_file, output_font_file, **_):
+def action_optimize_for_swf(
+    input_font_file: str, output_font_file: str, debug: bool = False, **_
+):
     font_obj = TTFont(input_font_file)
-    font_obj = optimize_for_swf(font_obj=font_obj)
+    font_obj = optimize_for_swf(font_obj=font_obj, debug=debug)
     output_font_file = save_font(
         font_obj=font_obj, input=input_font_file, output=output_font_file
     )
     print(f"フォントを保存しました: {output_font_file}")
 
 
-def optimize_for_swf(font_obj: TTFont) -> TTFont:
+def optimize_for_swf(font_obj: TTFont, debug: bool = False) -> TTFont:
     """
     SWFに埋め込むためのフォントに最適化する
 
     :param font_obj: フォント
     :type font_obj: TTFont
+    :param debug: デバッグモード
+    :type debug: bool
     :return: 最適化済みフォント
     :rtype: TTFont
     """
@@ -105,24 +115,30 @@ def optimize_for_swf(font_obj: TTFont) -> TTFont:
     return reload_font(font_obj=font_obj)
 
 
-def action_create_subset(input_font_file, output_font_file, subset_file="", **_):
+def action_create_subset(
+    input_font_file: str,
+    output_font_file: str,
+    subset_file: str = "",
+    debug: bool = False,
+    **_,
+):
     font_obj = TTFont(input_font_file)
     subset_text = load_text(subset_file)
-    print(f"入力文字数: {len(subset_text)}")
-    print("元フォント情報")
-    print(get_info(font_obj=font_obj))
-    font_obj = create_subset(font_obj=font_obj, subset_text=subset_text)
-    print(f"サブセット後の文字数(GlyphOrder): {len(font_obj.getGlyphOrder())}")
-    print(f"サブセット後の文字数(cmap): {len(font_obj.getBestCmap().keys())}")
-    print("サブセットフォント情報")
-    print(get_info(font_obj=font_obj))
+    dprint(f"入力文字数: {len(subset_text)}", debug)
+    dprint("元フォント情報", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
+    font_obj = create_subset(font_obj=font_obj, subset_text=subset_text, debug=debug)
+    dprint(f"サブセット後の文字数(GlyphOrder): {len(font_obj.getGlyphOrder())}", debug)
+    dprint(f"サブセット後の文字数(cmap): {len(font_obj.getBestCmap().keys())}", debug)
+    dprint("サブセットフォント情報", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
     output_font_file = save_font(
         font_obj=font_obj, input=input_font_file, output=output_font_file
     )
     print(f"フォントを保存しました: {output_font_file}")
 
 
-def create_subset(font_obj: TTFont, subset_text: str) -> TTFont:
+def create_subset(font_obj: TTFont, subset_text: str, debug: bool = False) -> TTFont:
     """
     サブセットフォントを作成する
 
@@ -156,20 +172,25 @@ def create_subset(font_obj: TTFont, subset_text: str) -> TTFont:
     return reload_font(font_obj=font_obj)
 
 
-def action_remove_empty_glyphs(input_font_file, output_font_file, **_):
+def action_remove_empty_glyphs(
+    input_font_file: str, output_font_file: str, debug: bool = False, **_
+):
     font_obj = TTFont(input_font_file)
-    print("作業前")
-    print(get_info(font_obj=font_obj))
-    font_obj = remove_empty_glyphs(font_obj=font_obj)
+    dprint("作業前", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
+    font_obj = remove_empty_glyphs(font_obj=font_obj, debug=debug)
     output_font_file = save_font(
-        font_obj=font_obj, input=input_font_file, output=output_font_file
+        font_obj=font_obj,
+        input=input_font_file,
+        output=output_font_file,
+        suffix="empty_glyphs_removed",
     )
-    print("作業後")
-    print(get_info(font_obj=font_obj))
+    dprint("作業後", debug)
+    dprint(get_info(font_obj=font_obj, debug=debug), debug)
     print(f"フォントを保存しました: {output_font_file}")
 
 
-def remove_empty_glyphs(font_obj: TTFont) -> TTFont:
+def remove_empty_glyphs(font_obj: TTFont, debug: bool = False) -> TTFont:
     """
     実質的なアウトラインを持たないグリフをcmapから削除し、
     ゲーム内で豆腐(.notdef)が表示されるようにする。
@@ -196,17 +217,32 @@ def remove_empty_glyphs(font_obj: TTFont) -> TTFont:
     # cmapから削除（これでフォント的に「持っていない文字」になる）
     for code in deleted_glyphs:
         del cmap[code]
-        # 必要ならここでログを出す
-        # print(f"Removed empty glyph: U+{code:04X}")
+        # dprint(f"グリフをcmapから削除: U+{code:04X}", debug)
 
     # このままでは実体が残りっぱなしになるが、
     # JIS第四基準+αまで網羅したサブセットを行うことで、実質的にGIDを整理した綺麗なフォントになる。
-    font_obj = create_subset(font_obj=font_obj, subset_text=generate_subset_jp_full())
+    font_obj = create_subset(
+        font_obj=font_obj, subset_text=generate_subset_jp_full(), debug=debug
+    )
 
     return reload_font(font_obj)
 
 
-def remove_black_circles(font_obj):
+def action_remove_black_circles(
+    input_font_file: str, output_font_file: str, debug: bool = False
+):
+    font_obj = TTFont(input_font_file)
+    font_obj = remove_black_circles(font_obj=font_obj, debug=debug)
+    output_font_file = save_font(
+        font_obj=font_obj,
+        input=input_font_file,
+        output=output_font_file,
+        suffix="_black_circles_removed",
+    )
+    print(f"フォントを保存しました: {output_font_file}")
+
+
+def remove_black_circles(font_obj: TTFont, debug: bool = False):
     """
     フォントから黒丸（●）と思われるグリフを検出し、削除する。
     ただし、. や , などの基本文字は除外する。
@@ -269,6 +305,7 @@ ACTION_MAP = {
     "optimize_for_swf": action_optimize_for_swf,
     "create_subset": action_create_subset,
     "remove_empty_glyphs": action_remove_empty_glyphs,
+    "remove_black_circles": action_remove_black_circles,
 }
 
 if __name__ == "__main__":
