@@ -183,7 +183,7 @@ def action_remove_empty_glyphs(
         font_obj=font_obj,
         input=input_font_file,
         output=output_font_file,
-        suffix="empty_glyphs_removed",
+        suffix="_empty_glyphs_removed",
     )
     dprint("作業後", debug)
     dprint(get_info(font_obj=font_obj, debug=debug), debug)

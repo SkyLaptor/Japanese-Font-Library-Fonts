@@ -10,6 +10,7 @@ from utils.common import (
     is_cff,
     is_cff2,
     is_ttf,
+    load_text,
     save_text,
 )
 from utils.models import AverageSizeResult, FontInfo, NameRecord
@@ -36,6 +37,12 @@ def main():
         "--output_text_file",
         type=str,
         help="テキストの書き出し先",
+    )
+    parser.add_argument(
+        "--subset_text_file",
+        type=str,
+        default="",
+        help="サブセットテキストファイル",
     )
     parser.add_argument(
         "--debug",
@@ -234,7 +241,12 @@ def get_info(font_obj: TTFont, debug: bool = False) -> FontInfo:
     )
 
 
-def action_get_glyphs(input_font_file: str, output_text_file: str, debug: bool = False):
+def action_get_glyphs(
+    input_font_file: str,
+    output_text_file: str,
+    subset_text_file: set = "",
+    debug: bool = False,
+):
     font_obj = TTFont(input_font_file)
     glyphs = get_glyphs(font_obj=font_obj, debug=debug)
     dprint(f"フォント内のグリフ数(Unicode割当済): {len(glyphs)}", debug)
@@ -341,12 +353,71 @@ def get_average_size(font_obj: TTFont, debug: bool = False) -> AverageSizeResult
     )
 
 
+def action_validate_subset(
+    input_font_file: str,
+    output_text_file: str,
+    subset_text_file: str,
+    debug: bool = False,
+):
+    font_obj = TTFont(input_font_file)
+    subset_text = load_text(text_path=subset_text_file)
+    missing_glyphs = validate_subset(font_obj=font_obj, subset_text=subset_text)
+    output_text_file = save_text(
+        text=missing_glyphs,
+        input=input_font_file,
+        output=output_text_file,
+        suffix="_missing_glyphs",
+    )
+    print(f"サブセットにあってフォントに無い文字列を出力しました: {output_text_file}")
+
+
+def validate_subset(font_obj: TTFont, subset_text: str, debug: bool = False) -> str:
+    # 1. フォントが持っている全Unicode文字を取得（すでに作成済みの get_glyphs を利用）
+    # font_in_glyphs は set([ 'あ', 'い', 'う', ... ]) のような形式を想定
+    font_in_glyphs_str = get_glyphs(font_obj=font_obj)
+    font_in_glyphs = set(font_in_glyphs_str)  # ここで set に変換！
+
+    # 2. サブセットテキストも一文字ずつの set にする
+    subset_chars = set(subset_text)
+
+    # 3. 差分を抽出： subset_chars にあって font_in_glyphs にないもの
+    missing_chars = subset_chars - font_in_glyphs
+
+    # 4. 結果の表示
+    if not missing_chars:
+        print(
+            "[SUCCESS]: おめでとうございます！すべての文字がフォントに含まれています。"
+        )
+    else:
+        print(
+            f"[WARNING]: フォントに存在しない文字が {len(missing_chars)} 文字あります！"
+        )
+
+        # ソートして表示（何が足りないか見やすくする）
+        sorted_missing = sorted(list(missing_chars))
+
+        # あまりに多いとログが埋まるので、一部だけ出すか、デバッグ時のみ全出し
+        display_text = "".join(sorted_missing)
+        if len(display_text) > 100 and not debug:
+            print(f"足りない文字（先頭100文字）: {display_text[:100]}...")
+        else:
+            print(f"足りない文字: {display_text}")
+
+    # 欠落文字をソートしたリスト
+    sorted_missing_list = sorted(list(missing_chars))
+    # リストを一つの文字列に結合（これが必要！）
+    sorted_missing_str = "".join(sorted_missing_list)
+
+    return sorted_missing_str
+
+
 ACTION_MAP = {
     "check_fonttype": action_check_fonttype,
     "get_outline_format": action_get_outline_format,
     "get_info": action_get_info,
     "get_glyphs": action_get_glyphs,
     "get_average_size": action_get_average_size,
+    "validate_subset": action_validate_subset,
 }
 
 if __name__ == "__main__":
