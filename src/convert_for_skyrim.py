@@ -10,9 +10,9 @@ from utils.modifier import anonymize_info, harmonize_font_metrics
 from utils.optimizer import create_subset, remove_empty_glyphs
 
 BASE_FONT_CONFIGS = {
-    "everywhere": "data/skyrim/1_Skyrim_JP_EveryFont_0805.ttf",
-    "book": "data/skyrim/22_Skyrim_JP_BookFont_0805.ttf",
-    "handwritten": "data/skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf",
+    "everywhere": "data/basefonts/1_Skyrim_JP_EveryFont_0805.ttf",
+    "book": "data/basefonts/22_Skyrim_JP_BookFont_0805.ttf",
+    "handwritten": "data/basefonts/5_Skyrim_JP_HandWriteFont_0805.ttf",
 }
 
 CONDENSE_RATIO_CONFIGS = {

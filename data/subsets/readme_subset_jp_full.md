@@ -4,7 +4,7 @@
 1. スクリプトを実行して出力する。
 
 ```cmd:
-$ uv run common --action generate_subset_jp_full -o .\data\subsets\subset_jp_full.txt                                                                                
+$ uv run common --action generate_subset_jp_full -o .\data\subsets\subset_jp_full.txt
 生成したサブセットを出力しました。: data\subsets\subset_jp_full.txt
 ```
 

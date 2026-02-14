@@ -13,3 +13,15 @@ build/
 # MEGASync
 .megaignore
 desktop.ini
+
+# フォントファイル
+*.ttf
+*.otf
+*.ttc
+*.otc
+
+# 圧縮ファイル
+*.zip
+*.lzh
+*.7z
+*.rar

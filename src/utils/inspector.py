@@ -112,7 +112,9 @@ def action_check_fonttype(input, **_):
         )
 
 
-def action_get_info(input_font_file: str, output_text_file: str, debug: bool = False):
+def action_get_info(
+    input_font_file: str, output_text_file: str, debug: bool = False, **_
+):
     font_obj = TTFont(input_font_file)
     info = get_info(font_obj=font_obj, debug=debug)
     output_text_file = save_text(
