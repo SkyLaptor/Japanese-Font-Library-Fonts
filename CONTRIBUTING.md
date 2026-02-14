@@ -206,6 +206,77 @@ fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every 
         * Leadline: 0
 
 
+## ゲーム日本語化方法
+MODの互換性を考慮し、英語版を日本語化するという方式を採用する。Steam版のみ。
+
+## 不要なデータの掃除
+Skyrimをプレイするとあちこちにファイルが出来上がる。完全リセットする場合は以下を消去、必要に応じてバックアップすること。
+
+* ロードオーダーなど
+    * `C:\Users\{USERNAME}\Appdata\Local\Skyrim`
+    * `C:\Users\{USERNAME}\Appdata\Local\Skyrim Special Edition`
+* ゲーム設定、セーブデータ、SKSEログ類
+    * `C:\Users\{USERNAME}\Documents\My Games\Skyrim`
+    * `C:\Users\{USERNAME}\Documents\My Games\Skyrim Special Edition`
+* WryeBash Modディレクトリ ※WryeBashを使用していた場合
+    * `{SteamLibrary}\steamapps\common\Skyrim Mods`
+    * `{SteamLibrary}\steamapps\common\Skyrim Special Edition Mods`
+* Vortexディレクトリ ※Vortexを使用していた場合
+    * `C:\Users\{USERNAME}\Appdata\Roaming\Vortex` もしくは自身で設定したパス
+* ModOrganizer2ディレクトリ ※ModOrganizerを使用していた場合
+    * `C:\Modding\MO2` もしくは自身で設定したパス
+
+## SkyrimSE v1.6.629～v1.6.1170(現在)
+v1.6.629以降、SkyrimSE無料AEアップデートということで構造がSkyrimAEとほぼ同等となった？模様。
+英語版と日本語版の差がほぼ無くなり、英語版ファイル群に対し日本語版音声ファイルが追加され、Skyrim.iniが日本語版用にチューニングされただけとなった。
+
+```:差分
+Skyrim.ini(SSEゲームディレクトリ\Skyrim_Default.ini)の差分
+●言語設定
+sLanguage=ENGLISH
+↓
+sLanguage=JAPANESE
+
+●フォント設定
+※追加
+[Fonts]
+sFontConfigFile=Interface\FontConfig_ja.txt
+
+●音声ファイル読込
+sResourceArchiveList2=Skyrim - Voices_en0.bsa, 省略
+↓
+sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
+```
+
+まずは普通に英語版SkyrimSEをインストールし、`SkyrimSELauncher.exe`を起動してそのまま終了する。
+これにより、ロードオーダー情報及びゲーム設定ファイルがユーザープロファイルの各所に生成される。
+
+[BSA Browser](https://www.nexusmods.com/skyrimspecialedition/mods/1756)を使用して以下のファイルを開き、対象の日本語StringsとTranslateをエクスポートする。`japanese`で検索すると良い。
+
+* _ResourcePack.bsa
+* ccBGSSSE001-Fish.bsa
+* ccBGSSSE025-AdvDSGS.bsa
+* ccBGSSSE037-Curios.bsa
+* ccQDRSSE001-SurvivalMode.bsa
+* Skyrim - Interface.bsa
+
+
+**英語音声のままでよければ、この作業はスキップしてOK**
+日本語音声データをダウンロードする。
+Webブラウザを開き、`steam://open/console`と入力するとSteamコンソールが開くので、以下のコマンドを入力する。
+`download_depot 489830 544861 3494476046078906882`
+ダウンロードが完了したら、`C:\Program Files (x86)\Steam\steamapps\content\app_489830\depot_544861\Data`を開き、`skyrim - voices_ja0.bsa`をゲームディレクトリの`Data`直下にコピーする。
+
+ゲーム設定ファイル(`C:\Users\{USERNAME}\Documents\My Games\Skyrim Special Edition\Skyrim.ini`)を開き、以下を編集する。
+
+```
+編集
+sResourceArchiveList2=Skyrim - Voices_en0.bsa, 省略
+↓
+sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
+```
+
+
  ## バニラバグフィックスパッチの作り方
 ### 本UIの内蔵フォントバグ除去
 Skyrim時代から存在するバグ。
@@ -224,6 +295,10 @@ SE版はv1.6.629以降解消しているが、下位バージョンを使用し�
 ## SkyUI向けMCM専用フォントマップ適用パッチの作り方
 コンフィグメニュー(MCM)はデフォルトで`$EverywhereFont`系の汎用フォントを使用するが、日本語のような全角フォントだと文字が多すぎてUIをぶち抜いてしまう。かと言って`$EverywhereFont`系に長形フォントを指定すると他のUIが見づらくなる。その解決策として、MCMには専用のフォントマップを使用するパッチを用意する。
 MCMを実現しているUIは LE/SE共に`Interface/skyui/configpanel.swf` 。FFDecを使用してフォントマップを指定している箇所を検索して書き換える。
+
+
+
+
 
 ## 参考
 FontForge Scripting: https://fontforge.org/docs/scripting/scripting.html

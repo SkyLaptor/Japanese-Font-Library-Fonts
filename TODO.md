@@ -1,11 +1,12 @@
 # することリスト
 Issueに上げるほどのものでもないTODO。
 
+* [ ] JFL v2.3.1に内蔵されているフォントは少なくとも実装する。
+
 * [ ] 各フォントのoffset_height調査
   * 基準は `lore-friendly-everywhere`
   * premerge(`src\batch_harmonize.py`参照) 後のフォントを基準フォントにマージしてfontforgeで目視で確認。
-  * 調査完了したものはコミット
-  * ファイルがあるディレクトリの.git-keepは消しとく
+  * `uv run convert_for_skyrim .\assets\fonts\apricot\apricot.ttf --base everywhere --offset_height -64` こんな感じでオフセット確認は行う。
   * [ ] acgyosyo
   * [ ] apricot
   * [ ] cinecaption
