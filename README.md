@@ -52,31 +52,6 @@ $ uv run convert_for_skyrim フォントファイル.ttf --base everywhere --sub
 > [!NOTE]
 > FFDecをコマンドラインから実行可能な場合は、以下のコマンドで一括処理できます。
 
-```:PowerShell
-$ ffdec-cli.exe -replace fonts_template.swf ./build/fonts_フォント名_every.swf 1 最適化済フォントファイル
-```
-Ascent: 19408 (24260*0.8)
-Desent: 4852 (24260*0.2)
-Leading: 3882 (24260*0.16)
-```
-
-
-## セット
-### フルセット
-FFdecにてすべての文字を包含する。
-
-### 通常セット
-FFdecにて以下で絞る。
-
-* Uppercase
-* Lowercase
-* Numerals
-* Punctuation
-* Basic Latin
-* Japanese Kana
-* Japanese Kanji - Level 1
-* Japanese (All)
-
 5. SWFタグ情報の編集
 
 * 保存したSWFを再度FFDecで開き、以下の3箇所を編集します（右下の [編集] ボタンから値を変更後、 [保存] を押してください）。
