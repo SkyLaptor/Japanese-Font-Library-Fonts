@@ -355,6 +355,58 @@ def get_average_size(font_obj: TTFont, debug: bool = False) -> AverageSizeResult
     )
 
 
+def action_get_offset_to_align_bottom(input_font_file: str, **_):
+    font_obj = TTFont(input_font_file, lazy=True, ignoreDecompileErrors=True)
+    offset = get_offset_to_align_bottom(font_obj=font_obj, base_under=52)
+    print(f"オフセット値: {offset}")
+
+
+def get_offset_to_align_bottom(font_obj: TTFont, base_under: int) -> int:
+    """
+    漢字範囲のグリフの平均yMinを算出し、base_under（目標の底辺座標）に
+    合わせるために必要なオフセット値を返す。
+    """
+    if is_cff(font_obj) or is_cff2(font_obj):
+        raise ValueError("CFF/CFF2には対応していません。")
+
+    cmap = font_obj.getBestCmap()
+    glyf_table = font_obj["glyf"]
+
+    total_y_min = 0
+    count = 0
+
+    # 漢字の範囲でループ
+    for code, name in cmap.items():
+        if not (0x4E00 <= code <= 0x9FFF):
+            continue
+
+        if name not in glyf_table:
+            continue
+
+        glyph = glyf_table[name]
+
+        # yMinが存在し、かつ空のグリフでないことを確認
+        if hasattr(glyph, "yMin"):
+            # 極端に小さいゴミデータ（空白など）を除外したい場合はここでフィルタ
+            # if (glyph.yMax - glyph.yMin) > (font_obj['head'].unitsPerEm * 0.1):
+            total_y_min += glyph.yMin
+            count += 1
+
+    if count == 0:
+        return 0
+
+    # このフォントの「平均的な底辺」
+    avg_y_min = total_y_min / count
+    print(f"avg_y_min: {avg_y_min}")
+
+    # オフセット = 目標値 - 現在値
+    # 例: 目標が -140 で 現在が -200 なら、+60 して浮かせる必要がある
+    offset = base_under - avg_y_min
+
+    # 対応すべき値は反転
+    return round(-offset)
+
+
 def action_validate_subset(
     input_font_file: str,
     output_text_file: str,
@@ -419,6 +471,7 @@ ACTION_MAP = {
     "get_info": action_get_info,
     "get_glyphs": action_get_glyphs,
     "get_average_size": action_get_average_size,
+    "get_offset_to_align_bottom": action_get_offset_to_align_bottom,
     "validate_subset": action_validate_subset,
 }
 
