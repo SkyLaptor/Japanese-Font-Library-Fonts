@@ -1,0 +1,27 @@
+[project]
+name = "japanese-font-library-fonts"
+version = "2.4.0"
+description = "Project for developing Japanese fonts for Skyrim font mods."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fonttools>=4.61.1",
+    "otf2ttf>=0.2",
+    "skia-pathops>=0.9.1",
+]
+
+[tool.uv]
+package = true
+
+[project.scripts]
+common = "utils.common:main"
+inspector = "utils.inspector:main"
+optimizer = "utils.optimizer:main"
+modifier = "utils.modifier:main"
+reconstructor = "utils.reconstructor:main"
+convert_for_skyrim = "convert_for_skyrim:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

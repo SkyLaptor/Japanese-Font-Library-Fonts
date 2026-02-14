@@ -1,0 +1,25 @@
+[フォント情報]
+作成日時: 1969/12/31 22:40:00 (UTC)
+更新日時: 2026/02/14 09:28:14 (UTC)
+総グリフ数: 7909
+グリフ数(Unicode割当済): 7348
+UPM: 1024
+OS/2 ベンダーID: Take
+OS/2 WinAscent: 878
+OS/2 WinDescent: 220
+OS/2 TypoAscender: 880
+OS/2 TypoDescender: -144
+OS/2 Typo LineGap: 170
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 878
+HHEA Descent: -220
+HHEA LineGap: 170
+NAMEテーブル
+[NAMEレコード] 0, Copyright, ACワークス
+[NAMEレコード] 1, Family Name, 英椎行書
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, 英椎行書
+[NAMEレコード] 4, Full Name, 英椎行書
+[NAMEレコード] 5, Version, Version 1.00
+[NAMEレコード] 6, PostScript Name, acgyosyo
+[NAMEレコード] 13, License, (Not Found)
