@@ -14,12 +14,14 @@ def run_batch_harmonize():
     オフセット値はバニラのフォントと合わせると上にずれるため、lore-friendly-everywhereとアウトラインの下部を揃えることを目標とする。
     オフセット値は大事なデータであるため不用意に消さない事。
 
+    これを走らせたときにエラーになるフォントは、一度fontforgeで再エクスポートしてみると治る場合がある。
+
     特定のディレクトリ（search_root）内のTTFを総当たりする。
 
     """
     # ベースフォントの定義
     base_fonts = {
-        "everywhere": Path(r"data\basefonts\1_Skyrim_JP_EveryFont_0805.ttf").resolve(),
+        "everywhere": Path(r"data\basefonts\eveywhere.ttf").resolve(),
         # "book": Path(r"data\basefonts\22_Skyrim_JP_BookFont_0805.ttf").resolve(),
         # "handwritten": Path(
         #    r"data\basefonts\5_Skyrim_JP_HandWriteFont_0805.ttf"

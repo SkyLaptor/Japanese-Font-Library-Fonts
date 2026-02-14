@@ -1,0 +1,35 @@
+[フォント情報]
+作成日時: 2024/12/29 06:44:28 (UTC)
+更新日時: 2026/02/14 09:32:44 (UTC)
+総グリフ数: 15249
+グリフ数(Unicode割当済): 14556
+UPM: 1024
+OS/2 ベンダーID: PfEd
+OS/2 WinAscent: 878
+OS/2 WinDescent: 220
+OS/2 TypoAscender: 880
+OS/2 TypoDescender: -144
+OS/2 Typo LineGap: 170
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 878
+HHEA Descent: -220
+HHEA LineGap: 170
+NAMEテーブル
+[NAMEレコード] 0, Copyright, [Hack]
+Copyright (c) 2018 Source Foundry Authors
+
+[Gen Jyuu Gothic]
+Copyright (c) 2015 JIKASEI FONT KOUBOU
+
+[Nerd Fonts]
+Copyright (c) 2014, Ryan L McIntyre (https://ryanlmcintyre.com).
+
+[HackGen]
+Copyright (c) 2019, Yuko OTAWARA
+[NAMEレコード] 1, Family Name, HackGen
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, FontForge 2.0 : HackGen Regular : 29-12-2024
+[NAMEレコード] 4, Full Name, HackGen Regular
+[NAMEレコード] 5, Version, Version 2.10.0 ; ttfautohint (v1.8.3) -l 6 -r 45 -G 200 -x 14 -D latn -f none -m "hackgen-regular-ctrl.txt" -a nnn -W -X "12-"
+[NAMEレコード] 6, PostScript Name, HackGen-Regular
+[NAMEレコード] 13, License, (Not Found)

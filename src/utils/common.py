@@ -61,6 +61,12 @@ BLANK_GLYPHS = {
     0x000A,
 }
 
+# 下部位置基準フォントの下部のY座標平均値
+# 下部位置基準フォントをまずベースフォントでpremergeした後、
+# inspector.offset_to_align_bottomを通してavg_y_minを取得する。その値をここに入れる。
+# この値はlore-friendly-everyフォントから抽出した。
+BASE_UNDER = -76
+
 
 def main():
     parser = argparse.ArgumentParser(

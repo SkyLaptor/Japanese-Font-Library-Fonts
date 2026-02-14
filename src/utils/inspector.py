@@ -5,6 +5,7 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 
 from utils.common import (
+    BASE_UNDER,
     convert_timestamp,
     dprint,
     is_cff,
@@ -43,6 +44,12 @@ def main():
         type=str,
         default="",
         help="サブセットテキストファイル",
+    )
+    parser.add_argument(
+        "--base_under",
+        type=int,
+        default=BASE_UNDER,
+        help="基準とするグリフの下位置",
     )
     parser.add_argument(
         "--debug",
@@ -355,9 +362,18 @@ def get_average_size(font_obj: TTFont, debug: bool = False) -> AverageSizeResult
     )
 
 
-def action_get_offset_to_align_bottom(input_font_file: str, **_):
+def action_get_offset_to_align_bottom(input_font_file: str, base_under: int, **_):
+    """
+    ここで比較するフォントは、一度オフセット0の状態でpremergeしたもので比較すること！
+
+    :param input_font_file: 説明
+    :type input_font_file: str
+    :param base_under: 説明
+    :type base_under: int
+    :param _: 説明
+    """
     font_obj = TTFont(input_font_file, lazy=True, ignoreDecompileErrors=True)
-    offset = get_offset_to_align_bottom(font_obj=font_obj, base_under=52)
+    offset = get_offset_to_align_bottom(font_obj=font_obj, base_under=base_under)
     print(f"オフセット値: {offset}")
 
 
@@ -403,8 +419,7 @@ def get_offset_to_align_bottom(font_obj: TTFont, base_under: int) -> int:
     # 例: 目標が -140 で 現在が -200 なら、+60 して浮かせる必要がある
     offset = base_under - avg_y_min
 
-    # 対応すべき値は反転
-    return round(-offset)
+    return round(offset)
 
 
 def action_validate_subset(

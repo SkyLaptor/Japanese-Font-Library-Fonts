@@ -1,0 +1,25 @@
+[フォント情報]
+作成日時: 2021/02/26 07:42:34 (UTC)
+更新日時: 2026/02/14 09:33:20 (UTC)
+総グリフ数: 6068
+グリフ数(Unicode割当済): 5847
+UPM: 1024
+OS/2 ベンダーID: UFDN
+OS/2 WinAscent: 878
+OS/2 WinDescent: 220
+OS/2 TypoAscender: 880
+OS/2 TypoDescender: -144
+OS/2 Typo LineGap: 170
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 878
+HHEA Descent: -220
+HHEA LineGap: 170
+NAMEテーブル
+[NAMEレコード] 0, Copyright, Copyright 2021 The M+ FONTS Project Authors (https://github.com/coz-m/MPLUS_FONTS)
+[NAMEレコード] 1, Family Name, M PLUS 1 Medium
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, 1.007;UFDN;MPLUS1-Medium
+[NAMEレコード] 4, Full Name, M PLUS 1 Medium
+[NAMEレコード] 5, Version, Version 1.007
+[NAMEレコード] 6, PostScript Name, MPLUS1-Medium
+[NAMEレコード] 13, License, This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL

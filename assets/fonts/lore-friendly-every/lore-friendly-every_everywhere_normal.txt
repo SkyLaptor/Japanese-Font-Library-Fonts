@@ -1,0 +1,25 @@
+[フォント情報]
+作成日時: 2026/02/08 04:33:49 (UTC)
+更新日時: 2026/02/14 10:40:24 (UTC)
+総グリフ数: 7347
+グリフ数(Unicode割当済): 7346
+UPM: 1024
+OS/2 ベンダーID: Bird
+OS/2 WinAscent: 878
+OS/2 WinDescent: 220
+OS/2 TypoAscender: 880
+OS/2 TypoDescender: -144
+OS/2 Typo LineGap: 170
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 878
+HHEA Descent: -220
+HHEA LineGap: 170
+NAMEテーブル
+[NAMEレコード] 0, Copyright, © Copyright s, FFDec v.24.1.2.
+[NAMEレコード] 1, Family Name, Skyrim_n
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, dtype: FFDec v.24.1.2: Skyrim_n Regular: Version 1.0: s
+[NAMEレコード] 4, Full Name, Skyrim_n
+[NAMEレコード] 5, Version, Version 1.0
+[NAMEレコード] 6, PostScript Name, Skyrim_n
+[NAMEレコード] 13, License, (Not Found)

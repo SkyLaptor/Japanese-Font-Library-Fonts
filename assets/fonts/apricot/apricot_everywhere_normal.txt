@@ -1,0 +1,25 @@
+[フォント情報]
+作成日時: 2020/02/25 05:18:03 (UTC)
+更新日時: 2026/02/14 09:28:24 (UTC)
+総グリフ数: 7977
+グリフ数(Unicode割当済): 7383
+UPM: 1024
+OS/2 ベンダーID: Take
+OS/2 WinAscent: 878
+OS/2 WinDescent: 220
+OS/2 TypoAscender: 880
+OS/2 TypoDescender: -144
+OS/2 Typo LineGap: 170
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 878
+HHEA Descent: -220
+HHEA LineGap: 170
+NAMEテーブル
+[NAMEレコード] 0, Copyright, 京風子
+[NAMEレコード] 1, Family Name, あんずもじ2020
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, あんずもじ2020
+[NAMEレコード] 4, Full Name, あんずもじ2020
+[NAMEレコード] 5, Version, Version 1.00
+[NAMEレコード] 6, PostScript Name, apricotJapanesefont
+[NAMEレコード] 13, License, Cr:TTE01080200225141803A002023 Mo:TTE01080200301113525A002023
