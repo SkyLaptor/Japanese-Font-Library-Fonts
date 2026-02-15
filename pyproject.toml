@@ -20,6 +20,7 @@ optimizer = "utils.optimizer:main"
 modifier = "utils.modifier:main"
 reconstructor = "utils.reconstructor:main"
 convert_for_skyrim = "convert_for_skyrim:main"
+build_skyrim_fonts = "build_skyrim_fonts:main"
 
 [dependency-groups]
 dev = [

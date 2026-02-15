@@ -1,72 +1,92 @@
 # Japanese Font Library - Fonts
 [Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント関連サブプロジェクトです。  
-お好みのフォントを用意するだけで、スカイリムのUI表示に最適化されたフォントファイルを生成できます。  
+お好みのフォントを用意するだけで、スカイリムのUI表示に最適化されたフォントファイルを一括生成できます。
 
 
 ## 動作環境
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
-
-フォントファイルをSWFへ埋め込むために必要です。  
+フォントファイルをSWFへ埋め込むために必要です。`ffdec-cli` がパスに通っている必要があります。 
 
 * [UV](https://docs.astral.sh/uv/)
-
-スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。  
+スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。
  
+* [FontForge](https://fontforge.org/en-US/)
+フォントの目視検査、破損したフォントの修復、および手動マージの際に使用します。
 
 ## 使い方
-1. 本リポジトリをクローンまたはダウンロードします。
+### 1. 準備
+本リポジトリをクローンまたはダウンロードし、ルートディレクトリで環境構築を行います。
 
-2. ターミナルでリポジトリのルートディレクトリへ移動し、以下のコマンドを実行して環境を構築します。
-
-```:PowerShell
+```powershell:
 $ uv sync
 ```
 
-3. 使用したいTTFフォントを用意します。
-   * **OTF形式の場合**: 以下のコマンドでTTFに変換してください。
+### 2. フォントファイルの用意
+使用したいTTFフォントを用意します。  
+**OTF形式の場合**: `$ uv run otf2ttf フォントファイル.otf` 等を利用してTTFに変換してください。
 
-```:PowerShell
-$ uv run otf2xml フォントファイル.otf
-```
 
 > [!TIP]
-> フォント製作者よりTTF版が提供されている場合は、不具合防止のため可能な限りそちらを使用してください。
+> フォント製作者よりTTF版が提供されている場合は、変換による不具合防止のため可能な限りそちらを使用してください。
 
-4. フォントの最適化
+### 3. マージ前処理
+グリフを補完するためにフォント同士をマージする前の事前調整（UPM変更や空白グリフ削除）を一括で行います。
 
-以下のコマンドを実行して、スカイリム用フォントを生成します。
+1. 作業ディレクトリ (`build`) 内にフォント名ごとのフォルダを作成します。
+2. その中に処理対象のフォントファイル(`.ttf`)と、オフセット調整ファイル(`offset_height_everywhere.txt`)を配置します。
+オフセット値が不明な場合は、後述の[備考](#オフセット調整ファイルが無い場合)を参照してください。
+3. 以下のコマンドを実行します。
 
+```powershell:
+$ uv run build_skyrim_fonts --action run_batch_premerge_export --work_dir build
 ```
-$ uv run convert_for_skyrim フォントファイル.ttf --base everywhere --subset ./data/subsets/subset_jp_skyrim.txt
-```
 
-* **実行内容**: スカイリム標準の Everywhere 日本語フォントに合わせてサイズを調整し、バニラで表示可能な文字のみに絞り込んだ（サブセット化）TTFファイルを `build` ディレクトリ内に出力します。
-* **カスタマイズ**: 基準サイズの変更、長体（コンデンス）の適用、サブセットの変更などが可能です。詳細は `$ uv run convert_for_skyrim --help` を参照してください。
+実行後、フォルダ内にあるすべてのフォントに対して `*-premerge.ttf` が生成されます。
 
-5. SWFへの埋め込み
-   1. **FFDec**を起動し、 `assets/swf/skyrim/fonts_template.swf` を開きます。
-   2. 左ツリーの **[フォント]** > **[DefineFont3]** を選択し、右下の **[埋め込む]** をクリック。
-   3. 手順2で生成したTTFファイルを選択し、 **[全ての文字]** にチェックを入れて [OK]（上書き警告は「全て上書き」）。
-   4. **[名前を付けて保存]** で、 `build` ディレクトリ内へ `fonts_任意の名前.swf` として保存します。
+### 4. フォントのマージ (手動)
+FontForgeを使用して、メインフォントにサブフォントを統合します。
+
+   1. **基準となるフォント**（`*-premerge.ttf`）を FontForge で開きます。
+   2. メニュー **[エレメント]** > **[フォントの統合]** を選択し、マージしたいフォントを開きます。
+   3. メニュー **[ファイル]** > **[フォントを出力]** で、マージ済みフォントを保存します。
+      * **重要**: ファイル名末尾を必ず `*-merged.ttf` にしてください（次の工程のトリガーになります）。
 
 > [!NOTE]
-> FFDecをコマンドラインから実行可能な場合は、以下のコマンドで一括処理できます。
+> 単一フォントで使用し、マージが不要な場合は `*-premerge.ttf` をコピーして `*-merged.ttf` にリネームしてください。
 
-5. SWFタグ情報の編集
+### 5. フォントバリエーション作成
+スカイリムの各用途（全般、本、手書き）に合わせたサブセットと、長体（Condense）モデルを一括生成します。
 
-* 保存したSWFを再度FFDecで開き、以下の3箇所を編集します（右下の [編集] ボタンから値を変更後、 [保存] を押してください）。
-  * **DefineFont3**: [タグ内のフォント名] の `template` を任意の英数字に変更。
-  * **DefineFontName**: `fontName:String="template"` を上記と同じ名前に変更。
-  * **ExportAssets**: assets 内の `tag[0]:U16=1, name[0]:String="template"`を上記と同じ名前に変更。
+```powershell:
+$ uv run build_skyrim_fonts --action run_batch_variant_export --work_dir build
+```
 
-6. スカイリムへの適用
-   1. 作成したSWFを `Skyrim/Data/Interface` フォルダへ配置します。
-   2. 同フォルダの `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
-      * **フォント読み込み設定**: 上部に `fontlib "Interface\作成したファイル名.swf"` を追記。
-      * **フォント割り当て設定**: 中段の各 `map` 行の右側を、手順4で設定した「フォント名」に書き換えます。
-        * **一般的なUI（字幕・メニュー等）**: `$StartMenuFont`, `$DialogueFont`, `$EverywhereFont` など。
-        * **本・手紙**: `$SkyrimBooks`, `$HandwrittenFont` など。
+実行後、`*-full.ttf` や `*-skyrim.ttf` などのバリエーションファイルが生成されます。
 
-7. 完了
+### 6. フォントSWFの作成
+生成されたTTFを、ゲームが読み込み可能なSWF形式へ変換し、内部フォント名をパッチします。
 
-ゲームを起動し、フォントが美しく適用されていることを確認してください！
+```powershell:
+$ uv run build_skyrim_fonts --action run_batch_swf_export --work_dir build
+```
+
+`build` ディレクトリ内に、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。
+
+### 7. スカイリムへの適用
+1. 作成されたSWFファイルを `Skyrim/Data/Interface` フォルダへ配置します。
+2. 同フォルダの `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
+   * **読み込み設定**: 上部に `fontlib "Interface\作成したファイル名.swf"` を追記。
+   * **割り当て設定**: 各 `map` 行の右側を、[手順6](#6-フォントswfの作成)で設定されたフォント名（内部名）に書き換えます。
+
+## 備考
+### オフセット調整ファイルが無い場合
+フォントの上下位置をバニラの基準に合わせるための数値を算出します。
+
+1. まず `*-premerge.ttf` を作成します（`$ uv run build_skyrim_fonts --action run_batch_premerge_export --work_dir build` を実行）。
+2. 生成されたファイルに対し、以下のコマンドでオフセット値を取得します。
+
+```powershell:
+$ uv run inspector --action get_offset_to_align_bottom -i フォントファイル-premerge.ttf
+# 出力例: オフセット値: XXX
+```
+3. この数値を記載したテキストファイルを `offset_height_everywhere.txt` という名前でフォントフォルダに保存し、再度マージ前処理を実行してください。
