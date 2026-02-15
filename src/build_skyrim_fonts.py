@@ -234,40 +234,46 @@ def get_swf_name(font_name: str, font_file_name: str) -> str:
     :return: フォントファイル名
     :rtype: str
     """
+
+    # 判定用の文字列を作成（ファイル名からフォント名部分を削除して小文字化）
+    # これにより、フォント名自体に含まれる "every" や "hand" を無視します
     font_file_name_low = font_file_name.lower()
+    font_name_low = font_name.lower()
+    # フォント名部分を除去した、純粋な「属性（weightやui等）」判定用の文字列
+    features_part = font_file_name_low.replace(font_name_low, "")
     weight_type = ""
     ui_type = ""
     condense_type = ""
     subset_type = ""
 
-    if "bold" in font_file_name_low:
+    if "bold" in features_part:
         weight_type = "_bold"
-    elif "light" in font_file_name_low:
+    elif "light" in features_part:
         weight_type = "_light"
-    elif "heavy" in font_file_name_low or "extrabold" in font_file_name_low:
+    elif "heavy" in features_part or "extrabold" in features_part:
         weight_type = "_heavy"
 
-    if "every" in font_file_name_low or "everywhere" in font_file_name_low:
+    if "everywhere" in features_part or "every" in features_part:
         ui_type = "_every"
-    elif "book" in font_file_name_low:
+    elif "book" in features_part:
         ui_type = "_book"
     elif (
-        "hand" in font_file_name_low
-        or "handwrite" in font_file_name_low
-        or "handwritten" in font_file_name_low
+        "handwritten" in features_part
+        or "handwrite" in features_part
+        or "hand" in features_part
     ):
         ui_type = "_handwrite"
 
     if (
-        "condensed" in font_file_name_low
-        or "cond" in font_file_name_low
-        or "condense" in font_file_name_low
+        "condensed" in features_part
+        or "condense" in features_part
+        or "cond" in features_part
     ):
         condense_type = "_condensed"
-    elif "skinny" in font_file_name_low or "skin" in font_file_name_low:
+    elif "skinny" in features_part or "skin" in features_part:
         condense_type = "_skinny"
 
-    if "skyrim" in font_file_name_low or "lightweight" in font_file_name_low:
+    if "skyrim" in features_part or "lightweight" in features_part:
         subset_type = "_lightweight"
 
     return f"{FONTFILE_NAME_PREFIX}{font_name}{weight_type}{ui_type}{condense_type}{subset_type}{FONTFILE_EXT}"
