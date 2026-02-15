@@ -108,6 +108,16 @@ def dispatch_action(action, **kwargs):
         print(f"未実装のアクションです: {action}")
 
 
+def long_path(path: Path) -> str:
+    """
+    Windowsの260文字制限を回避するためのロングパスプレフィックスを付与
+    """
+    abs_path = str(path.resolve())
+    if abs_path.startswith("\\\\?\\"):
+        return abs_path
+    return f"\\\\?\\{abs_path}"
+
+
 def dprint(message: str, debug: bool = False, prefix: str = "[DEBUG]: "):
     """
     デバッグモードが有効の時だけ表示する
