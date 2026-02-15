@@ -61,11 +61,7 @@ BLANK_GLYPHS = {
     0x000A,
 }
 
-# 下部位置基準フォントの下部のY座標平均値
-# 下部位置基準フォントをまずベースフォントでpremergeした後、
-# inspector.offset_to_align_bottomを通してavg_y_minを取得する。その値をここに入れる。
-# この値はlore-friendly-everyフォントから抽出した。
-BASE_UNDER = -76
+BASE_UNDER = 0
 
 
 def main():
@@ -110,6 +106,16 @@ def dispatch_action(action, **kwargs):
         handler(**kwargs)
     else:
         print(f"未実装のアクションです: {action}")
+
+
+def long_path(path: Path) -> str:
+    """
+    Windowsの260文字制限を回避するためのロングパスプレフィックスを付与
+    """
+    abs_path = str(path.resolve())
+    if abs_path.startswith("\\\\?\\"):
+        return abs_path
+    return f"\\\\?\\{abs_path}"
 
 
 def dprint(message: str, debug: bool = False, prefix: str = "[DEBUG]: "):
@@ -342,7 +348,7 @@ def action_generate_subset_jp_full(output_text_file: str, debug: bool = False, *
     subset = generate_subset_jp_full(debug=debug)
     dprint(subset, debug)
     if output_text_file == "" or not output_text_file:
-        output_text_file = "build/subset_jp_full.txt"
+        output_text_file = f"{BUILD_DIR}/subset_jp_full.txt"
     output_text_file = save_text(text=subset, output=output_text_file)
     print(f"生成したサブセットを出力しました。: {output_text_file}")
 
@@ -401,11 +407,86 @@ def generate_subset_jp_full(debug: bool = False) -> str:
     for code in extra_unicodes:
         target_chars.add(chr(code))
 
-    return "".join(sorted(target_chars))
+    # 生成された文字列をソートして返す
+    result = "".join(sorted(target_chars))
+
+    if debug:
+        print(f"Total characters: {len(result)}")
+
+    return result
+
+
+def action_generate_subset_jp_jisx0208(output_text_file: str, debug: bool = False, **_):
+    subset = generate_subset_jp_jisx0208(debug=debug)
+    subset = escape_for_fontconfig(subset)
+    dprint(subset, debug)
+    if output_text_file == "" or not output_text_file:
+        output_text_file = f"{BUILD_DIR}/subset_jp_jisx0208.txt"
+    output_text_file = save_text(text=subset, output=output_text_file)
+    print(f"生成したサブセットを出力しました。: {output_text_file}")
+
+
+def escape_for_fontconfig(text: str) -> str:
+    """
+    全文字の前にバックスラッシュを付与する
+    (fontconfigのvalidNameChars形式用)
+    """
+    return text.replace('"', '\\"')
+
+
+def generate_subset_jp_jisx0208(debug: bool = False) -> str:
+    """
+    JIS第二基準(JISX0208)サブセットテキストを生成する
+
+    fontconfigのvalidNameCharsで使用する想定。
+    なお、validNameCharsは生成後に'\'でエスケープするのを忘れずに。
+
+    :return: JIS第二基準(JISX0208)サブセットテキスト
+    :rtype: str
+    """
+    target_chars = set()
+
+    # --- ASCII (0x20 - 0x7E) ---
+    for i in range(0x20, 0x7F):
+        target_chars.add(chr(i))
+
+    # --- JIS X 0208 (第1水準, 第2水準, 非漢字) ---
+    # EUC-JPの漢字範囲（0xA1-0xFE）を利用すると、
+    # 拡張文字を含まない純粋なJIS X 0208だけを抽出できます。
+    for ku in range(1, 95):
+        for ten in range(1, 95):
+            try:
+                # EUC-JPの区点番号へのマッピング
+                # 第1・第2水準は 0xA1〜0xFE の範囲に収まります
+                b_data = bytes([ku + 0xA0, ten + 0xA0])
+
+                # 'euc_jp' は純粋な JIS X 0208 範囲（+補助漢字など）を扱います
+                char = b_data.decode("euc_jp", errors="strict")
+
+                if char.isprintable():
+                    target_chars.add(char)
+            except UnicodeDecodeError:
+                continue
+
+    # --- 追加文字（Unicode直接指定） ---
+    extra_unicodes = [
+        # 0x2026,  # … (三点リーダー)
+    ]
+    for code in extra_unicodes:
+        target_chars.add(chr(code))
+
+    # 生成された文字列をソートして返す
+    result = "".join(sorted(target_chars))
+
+    if debug:
+        print(f"Total characters: {len(result)}")
+
+    return result
 
 
 ACTION_MAP = {
     "generate_subset_jp_full": action_generate_subset_jp_full,
+    "generate_subset_jp_jisx0208": action_generate_subset_jp_jisx0208,
     "merge_text": action_merge_text,
 }
 
