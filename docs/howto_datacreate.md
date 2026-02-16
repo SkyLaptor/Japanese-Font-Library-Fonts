@@ -1,8 +1,6 @@
 # 各種データの作り方
 万が一紛失した時用の備忘録
 
-TODO: 後で手順を検証すること。
-
 ## ベースフォントの作成
 任意のフォントをゲーム内フォントに合わせるための基準となるフォントです。  
 パス直指定で各スクリプトから使用されているため迂闊に名前を変更したりしないように注意して下さい。
@@ -82,7 +80,7 @@ $ uv run common --action generate_subset_jp_full --input_text_dir build -o data\
 ```
 
 > [!NOTE]
-> `common.generate_subset_jp_full()` では可能な限り日本語圏で表示しうる文字列を生成していますが、> もし不足が出た場合にはソースの `extra_unicodes` にUnicode指定で追加することを検討します。
+> `common.generate_subset_jp_full()` では可能な限り日本語圏で表示しうる文字列を生成していますが、> もし不足が出た場合にはソースの `extra_unicodes` にUnicode指定で追加することを検討して下さい。
 
 
 ## コアフォントSWFの作成
@@ -94,15 +92,19 @@ $ uv run common --action generate_subset_jp_full --input_text_dir build -o data\
 
 3. `fonts_ja.swf`（または `fonts_jp.swf`）を任意の場所にエクスポートします。
 
-4. エクスポートした `.swf` を[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)で開き、**[フォント]** セクションから以下の3種類以外のフォントをエクスポートします。
+4. エクスポートした `.swf` を[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)で開き、**[フォント]** セクションから以下のフォントをエクスポートします。
 
-   * **Everywhere** : `1_Skyrim_JP_EveryFont_0805`
-   * **Book** : `22_Skyrim_JP_BookFont_0805`
-   * **Handwrite** : `5_Skyrim_JP_HandWriteFont_0805`
+   * **コントローラーボタン** : `Controller  Buttons`
+   * **コントローラーボタン(反転)** : `Controller  Buttons inverted`
+   * **ドラゴン文字** : `Dragon_script`
+   * **デイドラ文字** : `Daedric`
+   * **ドゥーマー文字** : `Dwemer`
+   * **ファルマー文字** : `Falmer`
+   * **ゲーム内シンボルマーク** : `SkyrimSymbols`
+   * **魔術文字** : `Mage Script`
+   * **読めない本の文字** : `SkyrimBooks_Unreadable`
 
 5. [FFDec](https://github.com/jindrapetrik/jpexs-decompiler)を起動し、**[New empty]** から以下のパラメーター通りに新しいSWFを作成します。
-
-TODO: これで作ったやつ試験する。これで問題なければ、気持ちよいが
 
 * ヘッダー
   * 圧縮: 無圧縮
@@ -113,20 +115,23 @@ TODO: これで作ったやつ試験する。これで問題なければ、気�
   * フレーム数: 1
   * ディスプレイの大きさ: 全て0
 * フォント
-  * DefineFont3 ※4でエクスポートしたフォント全て
+  * DefineFont3: `Controller  Buttons` Ascent: 17160, Descent: 4180, Leading: 860 ※メトリクス値は元のデータを参照すること。
+  * DefineFont3: `Controller  Buttons inverted` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Dragon_script` Ascent: 19900, Descent: 3900, Leading: 3320
+  * DefineFont3: `Daedric` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Dwemer` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Falmer` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `SkyrimSymbols` Ascent: 15800, Descent: 4180, Leading: -500
+  * DefineFont3: `Mage Script` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `SkyrimBooks_Unreadable` Ascent: 20460, Descent: 12600, Leading: 12580
 * フレーム
   * frame 1
 * その他
   * FileAttributes
-    * 全項目: □
-
-
-
+    * 全項目: □ または 0
 
 ## フォントテンプレートSWFの作成
 フォントを格納するためのガワのみのフォントSWFを作成します。
-
-TODO: これで作ったやつ試験する。これで問題なければ今のテンプレよりさらに小さくできるが、、
 
 1. [FFDec](https://github.com/jindrapetrik/jpexs-decompiler)を起動し、**[New empty]** から以下のパラメーター通りに新しいSWFを作成します。
 
@@ -179,7 +184,6 @@ TODO: これで作ったやつ試験する。これで問題なければ今の�
 ```
 $ uv run common --action generate_subset_jp_jisx0208 --output_text_file data\fontconfigs\validNameChars.txt
 ```
-
 
 > [!NOTE]
 > validNameCharsはRaceMenuでキャラ名に使用できる名前の文字の一覧です。フォントとは直接の関係はありません。
