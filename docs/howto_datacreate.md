@@ -105,7 +105,7 @@ $ uv run common --action generate_subset_jp_full --input_text_dir build -o data\
 TODO: これで作ったやつ試験する。これで問題なければ、気持ちよいが
 
 * ヘッダー
-  * 圧縮: ZLIB
+  * 圧縮: 無圧縮
   * SWFのバージョン: 10
   * Harman encrypted: □
   * GFX: □
@@ -131,7 +131,7 @@ TODO: これで作ったやつ試験する。これで問題なければ今の�
 1. [FFDec](https://github.com/jindrapetrik/jpexs-decompiler)を起動し、**[New empty]** から以下のパラメーター通りに新しいSWFを作成します。
 
 * ヘッダー
-  * 圧縮: ZLIB
+  * 圧縮: 無圧縮
   * SWFのバージョン: 10
   * Harman encrypted: □
   * GFX: □
