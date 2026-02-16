@@ -20,6 +20,11 @@ desktop.ini
 *.ttc
 *.otc
 
+# ベースフォント例外許可
+!data/basefonts/everywhere.ttf
+!data/basefonts/book.ttf
+!data/basefonts/handwrite.ttf
+
 # 圧縮ファイル
 *.zip
 *.lzh
