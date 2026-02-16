@@ -182,8 +182,8 @@ def run_batch_variant_export(work_dir: str) -> None:
         ("everywhere", "skinny", "subset_jp_skyrim.txt", "skyrim"),
         ("book", "normal", "subset_jp_full.txt", "full"),
         ("book", "normal", "subset_jp_skyrim.txt", "skyrim"),
-        ("handwritten", "normal", "subset_jp_full.txt", "full"),
-        ("handwritten", "normal", "subset_jp_skyrim.txt", "skyrim"),
+        ("handwrite", "normal", "subset_jp_full.txt", "full"),
+        ("handwrite", "normal", "subset_jp_skyrim.txt", "skyrim"),
     ]
 
     for font_dir in search_root.iterdir():
