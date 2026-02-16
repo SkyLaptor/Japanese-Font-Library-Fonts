@@ -194,37 +194,40 @@ def run_batch_variant_export(work_dir: str) -> None:
         if not merged_fonts:
             continue
 
-        target_font = merged_fonts[0]
         print(f"\n[FINAL EXPORT]: {font_dir.name}")
 
-        for base, condense, subset_file, label in matrix:
-            # Path(SUBSETS_DIR) が既に Path なので / で連結
-            subset_path = SUBSETS_DIR / subset_file
+        # フォルダ内の各フォント（heavy, mediumなど）を回すループ
+        for target_font in merged_fonts:
+            print(f"  Processing base font: {target_font.name}")
 
-            out_name = f"{target_font.stem}-{base}-{condense}-{label}.ttf"
-            out_path = font_dir / out_name
+            # そのフォントに対して、各バリエーションを作るループ
+            for base, condense, subset_file, label in matrix:
+                subset_path = SUBSETS_DIR / subset_file
 
-            cmd = [
-                "convert_for_skyrim",
-                str(target_font),
-                "--base",
-                base,
-                "--subset",
-                str(subset_path),
-                "--condense",
-                condense,
-                "-o",
-                str(out_path),
-                "--anonymize",
-            ]
+                out_name = f"{target_font.stem}-{base}-{condense}-{label}.ttf"
+                out_path = font_dir / out_name
 
-            print(f"Command: {cmd}")
-            print(f"  -> Generating: {out_name}...")
+                cmd = [
+                    "convert_for_skyrim",
+                    str(target_font),
+                    "--base",
+                    base,
+                    "--subset",
+                    str(subset_path),
+                    "--condense",
+                    condense,
+                    "-o",
+                    str(out_path),
+                    "--anonymize",
+                ]
 
-            try:
-                subprocess.run(cmd, check=True)
-            except subprocess.CalledProcessError:
-                print(f"  [ERROR]: {out_name} の生成に失敗しました。")
+                print(f"Command: {cmd}")
+                print(f"  -> Generating: {out_name}...")
+
+                try:
+                    subprocess.run(cmd, check=True)
+                except subprocess.CalledProcessError:
+                    print(f"  [ERROR]: {out_name} の生成に失敗しました。")
 
     print("\n--- 一括バリエーションフォントエクスポート処理が完了しました！ ---")
 
