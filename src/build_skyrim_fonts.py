@@ -16,9 +16,9 @@ BUILD_DIR = Path(r"build")
 TEMPLATE_FONTSWF_PATH = Path(r"data\fontsswf\fonts_template.swf")
 
 BASE_FONTS = {
-    "everywhere": Path(r"data\basefonts\eveywhere.ttf").resolve(),
+    "everywhere": Path(r"data\basefonts\everywhere.ttf").resolve(),
     # "book": Path(r"data\basefonts\book.ttf").resolve(),
-    # "handwritten": Path(r"data\basefonts\hand.ttf").resolve(),
+    # "handwrite": Path(r"data\basefonts\handwrite.ttf").resolve(),
 }
 
 # フォントテンプレートSWFで設定したフォント名であること
@@ -93,7 +93,17 @@ def run_batch_premerge_export(work_dir: str) -> None:
     suffix = "-premerge"
     search_root = Path(work_dir).resolve()
 
-    for font_path in search_root.rglob("*.ttf"):
+    # 処理前にベースフォントがあるか確認
+    for mode, path in BASE_FONTS.items():
+        if not path.exists():
+            print(f"[FATAL]: ベースフォントが見つかりません: {path}")
+            print("         .gitignore で除外されていないか、配置を確認してください。")
+            return
+
+    # 最初にリスト化し、尚且つ suffix (-premerge) が付いているものは処理済みフォントとして除外する
+    font_files = [f for f in search_root.rglob("*.ttf") if suffix not in f.name]
+
+    for font_path in font_files:
         if suffix in font_path.name:
             print(f"\n[SKIP]: {font_path.name}")
             continue
@@ -172,8 +182,8 @@ def run_batch_variant_export(work_dir: str) -> None:
         ("everywhere", "skinny", "subset_jp_skyrim.txt", "skyrim"),
         ("book", "normal", "subset_jp_full.txt", "full"),
         ("book", "normal", "subset_jp_skyrim.txt", "skyrim"),
-        ("handwritten", "normal", "subset_jp_full.txt", "full"),
-        ("handwritten", "normal", "subset_jp_skyrim.txt", "skyrim"),
+        ("handwrite", "normal", "subset_jp_full.txt", "full"),
+        ("handwrite", "normal", "subset_jp_skyrim.txt", "skyrim"),
     ]
 
     for font_dir in search_root.iterdir():

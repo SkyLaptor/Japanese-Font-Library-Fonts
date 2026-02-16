@@ -12,7 +12,7 @@ from utils.optimizer import create_subset, remove_empty_glyphs
 BASE_FONT_CONFIGS = {
     "everywhere": "data/basefonts/everywhere.ttf",
     "book": "data/basefonts/book.ttf",
-    "handwritten": "data/basefonts/handwritten.ttf",
+    "handwrite": "data/basefonts/handwrite.ttf",
 }
 
 CONDENSE_RATIO_CONFIGS = {
