@@ -199,7 +199,7 @@ def load_text(text_path: str) -> str:
     return "".join(sorted(char_set))
 
 
-def action_merge_text(input_text_dir, output_text_file, debug: bool = False):
+def action_merge_text(input_text_dir, output_text_file, debug: bool = False, **_):
     unique_sorted_chars = merge_text(input_text_dir=input_text_dir)
     output_text_file = save_text(
         text=unique_sorted_chars, input="", output=output_text_file
