@@ -229,7 +229,7 @@ def remove_empty_glyphs(font_obj: TTFont, debug: bool = False) -> TTFont:
 
 
 def action_remove_black_circles(
-    input_font_file: str, output_font_file: str, debug: bool = False
+    input_font_file: str, output_font_file: str, debug: bool = False, **_
 ):
     font_obj = TTFont(input_font_file)
     font_obj = remove_black_circles(font_obj=font_obj, debug=debug)

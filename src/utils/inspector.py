@@ -75,7 +75,7 @@ def dispatch_action(action, **kwargs):
 
 
 def action_get_outline_format(
-    input_font_file: str, output_text_file: str = "", debug: bool = False
+    input_font_file: str, output_text_file: str = "", debug: bool = False, **_
 ):
     font_obj = TTFont(input_font_file)
     print(
@@ -255,6 +255,7 @@ def action_get_glyphs(
     output_text_file: str,
     subset_text_file: set = "",
     debug: bool = False,
+    **_,
 ):
     font_obj = TTFont(input_font_file)
     glyphs = get_glyphs(font_obj=font_obj, debug=debug)
@@ -298,7 +299,7 @@ def get_glyphs(font_obj: TTFont, debug: bool = False) -> str:
 
 
 def action_get_average_size(
-    input_font_file: str, output_text_file: str, debug: bool = False
+    input_font_file: str, output_text_file: str, debug: bool = False, **_
 ):
     font_obj = TTFont(input_font_file)
     result = get_average_size(font_obj=font_obj, debug=debug)
@@ -427,6 +428,7 @@ def action_validate_subset(
     output_text_file: str,
     subset_text_file: str,
     debug: bool = False,
+    **_,
 ):
     font_obj = TTFont(input_font_file)
     subset_text = load_text(text_path=subset_text_file)
