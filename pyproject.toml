@@ -26,3 +26,7 @@ build_skyrim_fonts = "build_skyrim_fonts:main"
 dev = [
     "pytest>=9.0.2",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

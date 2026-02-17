@@ -1,26 +1,24 @@
-import argparse
 import os
-import sys
-from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-from otf2ttf.cli import otf_to_ttf
 
-# ビルド物の配置場所(コミット対象外)
-BUILD_DIR = "build"
-# 出力テキストファイルのエンコード
-ENCODE = "utf-8"
+from const import BUILD_DIR
+from utils.common.dprint import dprint
+from utils.common.save_text import save_text
+
 # 基準となるメトリクス
 ASCENT = 880
 DESCENT = -144
 UPM = ASCENT + abs(DESCENT)
-# 各種固定メッセージ
-MSG_FONTTYPE_UNIDENT = "フォントの形式が判別出来ません。"
+# アウトラインフォーマット
+FORMAT_TTF = 'glyh'
+FORMAT_CFF = 'CFF '  # 空白は抜いてはなりません。
+FORMAT_CFF2 = 'CFF2'
 # 空白であることが正しいグリフ
 BLANK_GLYPHS = {
-    # 未定義文字の代替（絶対に消してはならない）
+    # 未定義文字の代替（絶対に消してはなりません）
     ".notdef",
     # 半角スペース
     "space",
@@ -64,214 +62,15 @@ BLANK_GLYPHS = {
 BASE_UNDER = 0
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="フォントの検査を行うためのツールボックス"
-    )
-
-    parser.add_argument(
-        "--action",
-        choices=list(ACTION_MAP.keys()),
-        help="実行する操作を指定します。",
-    )
-    parser.add_argument(
-        "--input_text_dir",
-        type=str,
-        help="テキストファイルのディレクトリ",
-    )
-    parser.add_argument(
-        "-o",
-        "--output_text_file",
-        type=str,
-        help="テキストの書き出し先",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="デバッグ表示の有効化",
-    )
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
-    args = parser.parse_args()
-
-    dispatch_action(**vars(args))
-
-
-def dispatch_action(action, **kwargs):
-    handler = ACTION_MAP.get(action)
-    if handler:
-        handler(**kwargs)
-    else:
-        print(f"未実装のアクションです: {action}")
-
-
-def long_path(path: Path) -> str:
-    """
-    Windowsの260文字制限を回避するためのロングパスプレフィックスを付与
-    """
-    abs_path = str(path.resolve())
-    if abs_path.startswith("\\\\?\\"):
-        return abs_path
-    return f"\\\\?\\{abs_path}"
-
-
-def dprint(message: str, debug: bool = False, prefix: str = "[DEBUG]: "):
-    """
-    デバッグモードが有効の時だけ表示する
-
-    :param message: メッセージ
-    :type message: str
-    :param debug: デバッグモード
-    :type debug: bool
-    :param prefix: 接詞詞
-    :type prefix: str
-    """
-    if debug:
-        print(prefix, message)
-
-
-def is_ttf(font_obj: TTFont) -> bool:
-    """
-    テーブルを確認してアウトラインフォーマットがTrueTypeなのか確認する
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 検査結果
-    :rtype: bool
-    """
-    if "glyf" in font_obj:
-        return True
-    return False
-
-
-def is_cff(font_obj: TTFont) -> bool:
-    """
-    テーブルを確認してアウトラインフォーマットがCFF(PostScript (CFF))なのか確認する
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 検査結果
-    :rtype: bool
-    """
-    if "CFF " in font_obj:
-        return True
-    return False
-
-
-def is_cff2(font_obj: TTFont) -> bool:
-    """
-    テーブルを確認してアウトラインフォーマットがCFF2(PostScript (CFF2 / Variable))なのか確認する
-
-    :param font_obj: フォントオブジェクト
-    :type font_obj: TTFont
-    :return: 検査結果
-    :rtype: bool
-    """
-    if "CFF " in font_obj:
-        return True
-    return False
-
-
-def load_text(text_path: str) -> str:
-    """
-    指定されたパスからテキストファイルを読み込む
-
-    改行などの制御コードと重複している文字は排除されます。
-
-    :param text_path: テキストファイルパス
-    :type text_path: str
-    :return: 読み込んだ文字列
-    :rtype: str
-    """
-    path = Path(text_path)
-    if not path.exists():
-        raise FileNotFoundError(f"テキストファイルが見つかりません: {text_path}")
-    content = path.read_text(encoding=ENCODE)
-
-    # 改行やタブなどの制御文字を除去し、重複を排除（setを使用）
-    # 基本的には含めておいたほうが安全です。
-    char_set = set(content.replace("\n", "").replace("\r", "").replace("\t", ""))
-
-    # ソートして文字列に戻す（デバッグ時に中身を確認しやすくするため）
-    return "".join(sorted(char_set))
-
-
-def action_merge_text(input_text_dir, output_text_file, debug: bool = False, **_):
-    unique_sorted_chars = merge_text(input_text_dir=input_text_dir)
-    output_text_file = save_text(
-        text=unique_sorted_chars, input="", output=output_text_file
-    )
-    print(f"マージ済みテキストを出力しました。{output_text_file}")
-
-
-def merge_text(input_text_dir: str | Path) -> str:
-    """
-    指定ディレクトリ内の全txtファイルを読み込み、重複なし・ソート済みの1ファイルにまとめます。
-    """
-    input_text_dir = Path(input_text_dir)
-    all_text = ""
-
-    # 1. ディレクトリ内の全 .txt ファイルをループ
-    for txt_file in input_text_dir.glob("*.txt"):
-        print(f"[DEBUG]: 読み込み中... {txt_file.name}")
-        all_text += txt_file.read_text(encoding="utf-8")
-
-    # 2. 改行・空白・タブを削除
-    # スカイリムのサブセットには不要な制御文字をここで一掃します
-    table = str.maketrans("", "", "\n\r\t ")
-    clean_text = all_text.translate(table)
-
-    # 3. 重複排除 & ソート
-    unique_sorted_chars = "".join(sorted(set(clean_text)))
-
-    return unique_sorted_chars
-
-
-def save_text(
-    text: str, input: str = "", output: str = "", suffix: str = "", ext: str = ".txt"
-) -> str:
-    """
-    テキストファイルに内容を書き出す
-
-    :param text: 内容
-    :type text: str
-    :param input: 入力ファイルパス
-    :type input: str
-    :param output: 出力ファイルパス
-    :type output: str
-    :param suffix: 接尾詞
-    :type suffix: str
-    :return: 出力ファイルパス
-    :rtype: str
-    """
-    if not input and not output:
-        raise ValueError(
-            "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
-        )
-    if not output:
-        os.makedirs(BUILD_DIR, exist_ok=True)
-        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}{ext}"
-    else:
-        output = Path(output)
-    output.write_text(text, encoding=ENCODE)
-    return output
-
-
 def save_font(
     font_obj: TTFont,
-    input: str = "",
-    output: str = "",
+    input_path: str = "",
+    output_path: str = "",
     suffix: str = "",
-    otf2ttf: bool = True,
+    ext: str = ".ttf",
 ) -> str:
     """
     フォントファイルに内容を書き出す
-
-    与えられた拡張子のアウトラインフォーマットに自動で変換はされません。
-    フォントオブジェクトの中身には留意して下さい。
 
     :param font_obj: フォント
     :type font_obj: TTFont
@@ -281,33 +80,34 @@ def save_font(
     :type output: str
     :param suffix: 接尾詞
     :type suffix: str
-    :param otf2ttf: TTF変換を有効
-    :type otf2ttf: bool
     :return: 出力ファイルパス
     :rtype: str
     """
-    if not input and not output:
+
+    if not input_path and not output_path:
         raise ValueError(
             "入力ファイルパスと出力ファイルパスの両方を空にすることは出来ません。"
         )
-    if not output:
+
+    final_output_path = ""
+    if not output_path:
         os.makedirs(BUILD_DIR, exist_ok=True)
-        ext = Path(input).suffix
-        if is_cff(font_obj) or is_cff2(font_obj) and otf2ttf:
-            ext = ".ttf"
-        output = Path(BUILD_DIR) / f"{Path(input).stem}{suffix}{ext}"
-    else:
-        output = Path(output)
-    # 特に指定が無い場合はOTFであればTTFに変換する。
-    if is_cff(font_obj) or is_cff2(font_obj) and otf2ttf:
-        # 破壊的変更のため、font_objectには代入しないこと。
-        print("OTFからTTFへの変換を行います。")
-        print(
-            "注: 出力ファイルパスで.otfを指定したとしても中身はTTFとなります。変換したくない場合は --no_otf2ttf フラグを有効にして下さい。"
+        # もし input_path が ".otf" なら、デフォルトでも ".otf" を維持するようにする
+        # input_path の拡張子をそのまま使う（または引数 ext を尊重する）
+        actual_ext = ext if ext else Path(input_path).suffix
+        final_output_path = (
+            Path(BUILD_DIR) / f"{Path(input_path).stem}{suffix}{actual_ext}"
         )
-        otf_to_ttf(font_obj)
-    font_obj.save(output)
-    return output
+    else:
+        final_output_path = Path(output_path)
+
+    final_output_path_abs = final_output_path.resolve()
+    # 途中のディレクトリが存在しなければ作成
+    final_output_path_abs.parent.mkdir(parents=True, exist_ok=True)
+
+    font_obj.save(final_output_path_abs)
+
+    return final_output_path_abs
 
 
 def reload_font(font_obj: TTFont) -> TTFont:
@@ -330,26 +130,12 @@ def reload_font(font_obj: TTFont) -> TTFont:
     return font_obj
 
 
-def convert_timestamp(timestamp: int, format: str = "%Y/%m/%d %H:%M:%S (UTC)") -> str:
-    """
-    タイムスタンプ秒数を任意のフォーマットの文字列表記に変換する
-
-    :param timestamp: UNIXタイムスタンプ
-    :type timestamp: int
-    :param format: フォーマット
-    :type format: str
-    :return: フォーマット済みタイムスタンプ
-    :rtype: str
-    """
-    return (datetime(1904, 1, 1) + timedelta(seconds=timestamp)).strftime(format)
-
-
 def action_generate_subset_jp_full(output_text_file: str, debug: bool = False, **_):
     subset = generate_subset_jp_full(debug=debug)
     dprint(subset, debug)
     if output_text_file == "" or not output_text_file:
         output_text_file = f"{BUILD_DIR}/subset_jp_full.txt"
-    output_text_file = save_text(text=subset, output=output_text_file)
+    output_text_file = save_text(content=subset, output_path=output_text_file)
     print(f"生成したサブセットを出力しました。: {output_text_file}")
 
 
@@ -422,7 +208,7 @@ def action_generate_subset_jp_jisx0208(output_text_file: str, debug: bool = Fals
     dprint(subset, debug)
     if output_text_file == "" or not output_text_file:
         output_text_file = f"{BUILD_DIR}/subset_jp_jisx0208.txt"
-    output_text_file = save_text(text=subset, output=output_text_file)
+    output_text_file = save_text(content=subset, output_path=output_text_file)
     print(f"生成したサブセットを出力しました。: {output_text_file}")
 
 
@@ -482,14 +268,3 @@ def generate_subset_jp_jisx0208(debug: bool = False) -> str:
         print(f"Total characters: {len(result)}")
 
     return result
-
-
-ACTION_MAP = {
-    "generate_subset_jp_full": action_generate_subset_jp_full,
-    "generate_subset_jp_jisx0208": action_generate_subset_jp_jisx0208,
-    "merge_text": action_merge_text,
-}
-
-
-if __name__ == "__main__":
-    main()

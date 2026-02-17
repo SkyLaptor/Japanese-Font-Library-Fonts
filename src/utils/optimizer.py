@@ -6,15 +6,15 @@ from fontTools.ttLib import TTFont
 
 from utils.common import (
     BLANK_GLYPHS,
-    dprint,
     generate_subset_jp_full,
-    is_cff,
     is_cff2,
-    load_text,
     reload_font,
     save_font,
 )
-from utils.inspector import get_info
+from utils.common.dprint import dprint
+from utils.common.load_text import load_text
+from utils.inspector.get_formats import is_cff
+from utils.inspector.inspector import get_info
 
 
 def main():
@@ -75,7 +75,7 @@ def action_optimize_for_swf(
     font_obj = TTFont(input_font_file)
     font_obj = optimize_for_swf(font_obj=font_obj, debug=debug)
     output_font_file = save_font(
-        font_obj=font_obj, input=input_font_file, output=output_font_file
+        font_obj=font_obj, input_path=input_font_file, output_path=output_font_file
     )
     print(f"フォントを保存しました: {output_font_file}")
 
@@ -133,7 +133,7 @@ def action_create_subset(
     dprint("サブセットフォント情報", debug)
     dprint(get_info(font_obj=font_obj, debug=debug), debug)
     output_font_file = save_font(
-        font_obj=font_obj, input=input_font_file, output=output_font_file
+        font_obj=font_obj, input_path=input_font_file, output_path=output_font_file
     )
     print(f"フォントを保存しました: {output_font_file}")
 
@@ -181,8 +181,8 @@ def action_remove_empty_glyphs(
     font_obj = remove_empty_glyphs(font_obj=font_obj, debug=debug)
     output_font_file = save_font(
         font_obj=font_obj,
-        input=input_font_file,
-        output=output_font_file,
+        input_path=input_font_file,
+        output_path=output_font_file,
         suffix="_empty_glyphs_removed",
     )
     dprint("作業後", debug)
@@ -235,8 +235,8 @@ def action_remove_black_circles(
     font_obj = remove_black_circles(font_obj=font_obj, debug=debug)
     output_font_file = save_font(
         font_obj=font_obj,
-        input=input_font_file,
-        output=output_font_file,
+        input_path=input_font_file,
+        output_path=output_font_file,
         suffix="_black_circles_removed",
     )
     print(f"フォントを保存しました: {output_font_file}")

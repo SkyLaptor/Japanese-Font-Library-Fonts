@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from utils.common import long_path
+from utils.common.long_path import long_path
 
 ENCODE = "utf-8"
 FONTFILE_EXT = ".swf"

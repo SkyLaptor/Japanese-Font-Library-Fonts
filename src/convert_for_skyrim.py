@@ -3,9 +3,12 @@ import os
 import sys
 
 from fontTools.ttLib import TTFont
+from utils.inspector.inspector import get_average_size, get_glyphs, get_info
 
-from utils.common import dprint, load_text, save_font, save_text
-from utils.inspector import get_average_size, get_glyphs, get_info
+from utils.common import save_font
+from utils.common.dprint import dprint
+from utils.common.load_text import load_text
+from utils.common.save_text import save_text
 from utils.modifier import anonymize_info, harmonize_font_metrics
 from utils.optimizer import create_subset, remove_empty_glyphs
 
@@ -219,14 +222,14 @@ def convert(
     print("フォントを出力しています...")
     save_font(
         font_obj=target_font_obj,
-        input=target_font_path,
-        output=output_font_path,
+        input_path=target_font_path,
+        output_path=output_font_path,
         suffix=f"_{base_type}_{condense_type}",
     )
     print("フォント情報を出力しています...")
     save_text(
-        text=str(get_info(target_font_obj)),
-        input=target_font_path,
+        content=str(get_info(target_font_obj)),
+        input_path=target_font_path,
         suffix=f"_{base_type}_{condense_type}",
     )
 

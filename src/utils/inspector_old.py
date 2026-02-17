@@ -7,13 +7,13 @@ from fontTools.ttLib import TTFont
 from utils.common import (
     BASE_UNDER,
     convert_timestamp,
-    dprint,
     is_cff,
     is_cff2,
     is_ttf,
-    load_text,
-    save_text,
 )
+from utils.common.dprint import dprint
+from utils.common.load_text import load_text
+from utils.common.save_text import save_text
 from utils.models import AverageSizeResult, FontInfo, NameRecord
 
 

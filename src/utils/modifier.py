@@ -12,13 +12,13 @@ from fontTools.ttLib import TTFont
 from pathops import Path
 
 from utils.common import (
-    dprint,
-    is_cff,
     is_cff2,
     reload_font,
     save_font,
 )
-from utils.inspector import get_average_size, get_info
+from utils.common.dprint import dprint
+from utils.inspector.get_formats import is_cff
+from utils.inspector.inspector import get_average_size, get_info
 from utils.models import HarmonizeResult
 
 
@@ -162,8 +162,8 @@ def action_harmonize_font_metrics(
 
     output_font_file = save_font(
         font_obj=result.font_obj,
-        input=input_font_file,
-        output=output_font_file,
+        input_path=input_font_file,
+        output_path=output_font_file,
         suffix="_harmonized",
     )
     print(f"フォントを保存しました: {output_font_file}")
@@ -323,8 +323,8 @@ def action_anonymize_info(
     dprint(get_info(font_obj=font_obj, debug=debug), debug)
     output_font_file = save_font(
         font_obj=font_obj,
-        input=input_font_file,
-        output=output_font_file,
+        input_path=input_font_file,
+        output_path=output_font_file,
         suffix="_anonymized",
     )
     print(f"フォントを保存しました: {output_font_file}")
@@ -414,8 +414,8 @@ def action_change_weight(
     )
     output_font_file = save_font(
         font_obj=font_obj,
-        input=input_font_file,
-        output=output_font_file,
+        input_path=input_font_file,
+        output_path=output_font_file,
         suffix="_weight_changed",
     )
     print(f"フォントを保存しました: {output_font_file}")
