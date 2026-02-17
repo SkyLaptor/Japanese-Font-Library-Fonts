@@ -3,11 +3,9 @@ import sys
 from pathlib import Path
 
 from const import ENCODE
-from utils.common import (
-    EXT_TXT,
-)
 from utils.common.dprint import dprint
 from utils.common.save_text import save_text
+from utils.inspector.validate_subset import EXCLUDE_CHARS
 
 
 def main():
@@ -42,11 +40,12 @@ def main():
 
 
 def action_merge_text(input_dir, output_path, debug: bool = False, **_):
-    unique_sorted_chars = merge_text(input_dir)
-    saved_output_path = save_text(
-        unique_sorted_chars, input_dir, output_path, suffix="_merged"
-    )
-    print(f"マージ済みテキストを出力しました。: {saved_output_path}")
+    unique_sorted_chars = merge_text(input_dir, debug)
+    if output_path is not None:
+        saved_output_path = save_text(
+            unique_sorted_chars, output_path=output_path, suffix="_merged"
+        )
+        print(f"マージ済みテキストを出力しました。: {saved_output_path}")
 
 
 def merge_text(input_dir: str, debug: bool = False) -> str:
@@ -61,19 +60,22 @@ def merge_text(input_dir: str, debug: bool = False) -> str:
     :rtype: str
     """
     input_dir_path = Path(input_dir)
-    all_text = ""
+    all_content = []
 
-    # 1. ディレクトリ内の全 .txt ファイルをループ
-    for txt_file in input_dir_path.glob("*" + EXT_TXT):
+    # 1. 読み込み
+    # EXT_TXT は ".txt" の想定。もしドットがないなら f".{EXT_TXT}" としてください
+    for txt_file in input_dir_path.glob("*.txt"):
         dprint(f"読み込み中... {txt_file.name}", debug)
-        all_text += txt_file.read_text(encoding=ENCODE)
+        all_content.append(txt_file.read_text(encoding=ENCODE))
 
-    # 2. 改行・空白・タブを削除
-    # スカイリムのサブセットには不要な制御文字をここで一掃します
-    table = str.maketrans("", "", "\n\r\t ")
-    clean_text = all_text.translate(table)
+    # 2. 結合
+    combined_text = "".join(all_content)
 
-    # 3. 重複排除 & ソート
+    # 3. EXCLUDE_CHARS を除外
+    table = str.maketrans("", "", EXCLUDE_CHARS)
+    clean_text = combined_text.translate(table)
+
+    # 4. 重複排除 & ソート
     unique_sorted_chars = "".join(sorted(set(clean_text)))
 
     return unique_sorted_chars

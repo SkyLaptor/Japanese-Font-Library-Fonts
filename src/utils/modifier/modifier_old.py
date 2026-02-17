@@ -11,12 +11,12 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from utils.common import (
+from utils.common.common_old import (
     is_cff2,
-    reload_font,
-    save_font,
 )
 from utils.common.dprint import dprint
+from utils.common.reload_font import reload_font
+from utils.common.save_font import save_font
 from utils.inspector.get_formats import is_cff
 from utils.inspector.inspector import get_average_size, get_info
 from utils.models import HarmonizeResult

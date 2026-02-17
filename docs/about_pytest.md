@@ -35,6 +35,15 @@ conftest.py の中で @pytest.fixture が付いた create_mock_font を発見す
 ### capsys とは？
 これを使うと、print で画面に出たはずの文字列を横取りして、「ちゃんと表示されたか？」「余計なものは出ていないか？」をチェックできます。
 
+### monkeypatch とは？
+* 役割: テスト実行中だけ、定数や関数の中身を「偽物」に差し替える魔法。
+* 弱点: 対象を "src.const.BUILD_DIR" のように 「文字列」 で指定するため、IDEのリファクタリング（名前の一括変更）が効かない！
+* 対策:
+定数名を変えたら、テストが AttributeError で落ちていないか必ず確認する。
+エラーが出たら「あ、モンキーパッチの文字列が古いな」と思い出すこと。
+
+* monkeypatch.setattr(src.const, "BUILD_DIR", value) のようにモジュールをインポートして渡すと、少しだけタイポに強くなる。
+
 ## まとめ
 * conftest.py: 道具箱の「棚」そのもの。
 * test_*.py: 実際の作業手順書。
@@ -42,3 +51,4 @@ conftest.py の中で @pytest.fixture が付いた create_mock_font を発見す
 * test_ で始まる名前: pytestへの「これはテストだよ！」というサイン。
 * tmp_path: テスト専用の使い捨て砂場（フォルダ）
 * capsys: プログラムの「お喋り」を録音してチェックする道具。
+* monkeypatch: テスト実行中だけ、定数や関数の中身を「偽物」に差し替える魔法。

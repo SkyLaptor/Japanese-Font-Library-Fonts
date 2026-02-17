@@ -7,9 +7,7 @@ from typing import Optional
 from fontTools.ttLib import TTFont
 
 from utils.common.dprint import dprint
-from utils.common.save_text import (
-    save_text,
-)
+from utils.common.save_text import save_text
 
 # 時刻フォーマット
 TIME_FORMAT = "%Y/%m/%d %H:%M:%S (UTC)"

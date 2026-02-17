@@ -5,9 +5,7 @@ from typing import Optional
 
 from fontTools.ttLib import TTFont
 
-from utils.common.save_text import (
-    save_text,
-)
+from utils.common.save_text import save_text
 
 
 @dataclass

@@ -5,12 +5,13 @@ import sys
 from fontTools.ttLib import TTFont
 from utils.inspector.inspector import get_average_size, get_glyphs, get_info
 
-from utils.common import save_font
 from utils.common.dprint import dprint
 from utils.common.load_text import load_text
+from utils.common.save_font import save_font
 from utils.common.save_text import save_text
-from utils.modifier import anonymize_info, harmonize_font_metrics
-from utils.optimizer import create_subset, remove_empty_glyphs
+from utils.modifier.modifier_old import anonymize_info, harmonize_font_metrics
+from utils.subsetter.create_subset import create_subset
+from utils.subsetter.remove_empty_glyphs import remove_empty_glyphs
 
 BASE_FONT_CONFIGS = {
     "everywhere": "data/basefonts/everywhere.ttf",
@@ -150,7 +151,9 @@ def convert(
         f"消去前のグリフ数(Unicode割当済): {len(get_glyphs(font_obj=target_font_obj, debug=debug))}",
         debug,
     )
-    target_font_obj = remove_empty_glyphs(font_obj=target_font_obj, debug=debug)
+    target_font_obj = remove_empty_glyphs(
+        gid_cleaned_font_obj=target_font_obj, debug=debug
+    )
     dprint(
         f"消去後のグリフ数(Unicode割当済): {len(get_glyphs(font_obj=target_font_obj, debug=debug))}",
         debug,

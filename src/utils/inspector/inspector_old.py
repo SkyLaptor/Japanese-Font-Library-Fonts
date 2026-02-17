@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-from utils.common import (
+from utils.common.common_old import (
     BASE_UNDER,
     convert_timestamp,
     is_cff,

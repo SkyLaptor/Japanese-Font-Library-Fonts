@@ -1,9 +1,16 @@
 from pathlib import Path
 
 
-def long_path(path: Path) -> str:
+def long_path(path: Path, debug: bool = False) -> str:
     """
     Windowsの260文字制限を回避するためのロングパスプレフィックスを付与
+
+    :param path: テキストファイルパス
+    :type path: Path
+    :param debug: デバッグモード
+    :type debug: bool
+    :return: ロングパスプレフィックスを付与したパス
+    :rtype: str
     """
     abs_path = str(path.resolve())
 

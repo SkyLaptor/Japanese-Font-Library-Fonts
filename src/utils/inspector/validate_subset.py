@@ -3,12 +3,10 @@ import sys
 
 from fontTools.ttLib import TTFont
 
+from const import EXCLUDE_CHARS
 from utils.common.load_text import load_text
 from utils.common.save_text import save_text
 from utils.inspector.get_glyphs import get_glyphs
-
-# 検証を行わない文字(改行コードなど特殊なもの)
-EXCLUDE_CHARS = "\r\n"
 
 
 def main():
