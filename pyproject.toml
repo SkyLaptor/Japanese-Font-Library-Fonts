@@ -14,15 +14,28 @@ dependencies = [
 package = true
 
 [project.scripts]
-common = "utils.common:main"
-inspector = "utils.inspector:main"
-optimizer = "utils.optimizer:main"
-modifier = "utils.modifier:main"
-reconstructor = "utils.reconstructor:main"
-convert_for_skyrim = "convert_for_skyrim:main"
-build_skyrim_fonts = "build_skyrim_fonts:main"
+generate_subset_jp_full = "utils.common.generate_subset_jp_full:main"
+generate_subset_jp_jisx0208 = "utils.common.generate_subset_jp_jisx0208:main"
+get_average_size = "utils.inspector.get_average_size:main"
+get_glyphs = "utils.inspector.get_glyphs:main"
+get_info = "utils.inspector.get_info:main"
+get_offset_to_align_bottom = "utils.inspector.get_offset_to_align_bottom:main"
+validate_subset = "utils.inspector.validate_subset:main"
+anonymize_info = "utils.modifier.anonymize_info:main"
+change_weight = "utils.modifier.change_weight:main"
+harmonize_font_metrics = "utils.modifier.harmonize_font_metrics:main"
+#merge_font = "utils.modifier.merge_font:main"
+remove_black_circles = "utils.optimizer.remove_black_circles:main"
+create_subset = "utils.subsetter.create_subset:main"
+merge_text = "utils.subsetter.merge_text:main"
+remove_empty_glyphs = "utils.subsetter.remove_empty_glyphs:main"
+builder = "apps.skyrim.builder:main"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
