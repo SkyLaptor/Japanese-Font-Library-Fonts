@@ -17,11 +17,11 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Set up JDK 17 (FFDec用)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+      # - name: Set up JDK 17 (FFDec用)
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     java-version: '17'
+      #     distribution: 'temurin'
 
       - name: Install uv
         run: irm https://astral.sh/uv/install.ps1 | iex
@@ -29,13 +29,13 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Setup FFDec and Update PATH
-        shell: pwsh
-        run: |
-          if (!(Test-Path "ffdec")) { mkdir ffdec }
-          Invoke-WebRequest -Uri "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.0/ffdec_25.1.0.zip" -OutFile "ffdec.zip"
-          Expand-Archive -Path "ffdec.zip" -DestinationPath "ffdec" -Force
-          echo "${{ github.workspace }}\ffdec" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      # - name: Setup FFDec and Update PATH
+      #   shell: pwsh
+      #   run: |
+      #     if (!(Test-Path "ffdec")) { mkdir ffdec }
+      #     Invoke-WebRequest -Uri "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.0/ffdec_25.1.0.zip" -OutFile "ffdec.zip"
+      #     Expand-Archive -Path "ffdec.zip" -DestinationPath "ffdec" -Force
+      #     echo "${{ github.workspace }}\ffdec" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Run pytest
         run: uv run -m pytest -s
