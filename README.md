@@ -51,7 +51,7 @@ $ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premere.
 ```
 
 > [!NOTE]
-> 単一フォントで使用し、マージが不要な場合は `*_premerge.ttf` をコピーまたはそのまま `*_merged.ttf` にリネームしてください。
+> 単一フォントで使用し、マージが不要な場合は `*_premerge.ttf` をコピーしてから、またはそのまま `*_merged.ttf` にリネームしてください。
 
 ### 5. フォントバリエーション作成
 スカイリムの各用途（全般、本、手書き）に合わせたサブセットと、長体（Condense）モデルを一括生成します。
@@ -69,7 +69,9 @@ $ uv run builder --action run_batch_variant_export --work_dir build
 $ uv run builder --action run_batch_swf_export --work_dir build
 ```
 
-実行後、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。
+実行後、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。  
+内部のフォント名は、フォントSWFファイル名から`fonts_`を抜いたものになります。例: `fonts_example_bold_every_condensed_lightweight.swf` なら `example_bold_every_condensed_lightweight` が内部フォント名です。
+
 
 > [!NOTE]
 > 非常に重い処理です。場合により処理に失敗することがあります。
@@ -78,7 +80,7 @@ $ uv run builder --action run_batch_swf_export --work_dir build
 1. 作成されたSWFファイルを `Skyrim/Data/Interface` フォルダへ配置します。
 2. 同フォルダの `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
    * **読み込み設定**: 上部に `fontlib "Interface\作成したファイル名.swf"` を追記。
-   * **割り当て設定**: 各 `map` 行の右側を、[手順6](#6-フォントswfの作成)で設定されたフォント名（内部名）に書き換えます。
+   * **割り当て設定**: 各 `map` 行の右側を、[手順6](#6-フォントswfの作成)で設定された内部フォント名に書き換えます。
 
 ## 備考
 ### オフセット調整ファイルが無い場合
@@ -88,7 +90,7 @@ $ uv run builder --action run_batch_swf_export --work_dir build
 2. 生成された `*_premerge.ttf` ファイルに対し、以下のコマンドでオフセット値を取得します。
 
 ```powershell:
-$ uv run get_offset_to_align_bottom build\フォント名\フォントファイル-premerge.ttf -o build\フォント名\offset_height_everywhere.txt
+$ uv run get_offset_to_align_bottom build\フォント名\フォントファイル_premerge.ttf -o build\フォント名\offset_height_every.txt
 ```
 
 3. この時点で生成された `*_premerge.ttf` ファイルはオフセット値が適用されていないため不要なファイルとなります。削除してからもう一度[マージ前処理](#3-マージ前処理)を実施して下さい。
