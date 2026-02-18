@@ -39,3 +39,5 @@ jobs:
 
       - name: Run pytest
         run: uv run -m pytest -s
+        env:
+          PYTHONUTF8: "1"
