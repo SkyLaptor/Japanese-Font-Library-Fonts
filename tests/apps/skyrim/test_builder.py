@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -21,6 +22,10 @@ def test_workspace(tmp_path):
     return work_dir
 
 
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true",
+    reason="FFDec を使用する結合テストは重いため CI では実行しません",
+)
 def test_swf_internal_name_consistency(test_workspace):
     """
     SWFが生成され、内部名が期待通り(fonts_抜き)になっているかの結合テスト
