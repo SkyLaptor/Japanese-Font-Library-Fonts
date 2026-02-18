@@ -42,3 +42,19 @@ def test_swf_internal_name_consistency(test_workspace):
 
     # ログ等で internal_font_name が正しいか確認できればベストですが
     # まずは「エラーなく完走すること」を確認します
+
+    # 4. 検証: SWFファイルが存在するか
+    variant_name = "test-font_bold_every"
+    expected_swf = font_dir / f"fonts_{variant_name}.swf"
+    assert (
+        expected_swf.exists()
+    ), f"SWFファイル {expected_swf.name} が生成されていません"
+
+    # 5. 検証: SWF内部に書き込まれたフォント名が正しいか（簡易バイナリチェック）
+    # FFDecが正しく動作していれば、SWF内にバリエーション名が文字列として含まれているはず
+    with open(expected_swf, "rb") as f:
+        content = f.read()
+        # bytes型で検索。内部名が "test-font_bold_every" になっているか確認
+        assert (
+            variant_name.encode("ascii") in content
+        ), f"SWF内部のフォント名が {variant_name} に更新されていない可能性があります"
