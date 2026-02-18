@@ -13,8 +13,7 @@ def main():
     )
 
     parser.add_argument(
-        "-o",
-        "--output_path",
+        "output_path",
         type=str,
         help="サブセットテキストの書き出し先",
     )

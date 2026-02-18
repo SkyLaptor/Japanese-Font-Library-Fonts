@@ -185,12 +185,44 @@ def run_batch_swf_export(work_dir: str) -> None:
         print(f"\n[SWF EXPORT]: {font_name}")
         for ttf_path in variant_fonts:
 
-            # 【修正ポイント2】判定用文字列のクリーニング
-            # get_swf_nameの中で font_name("noto-sans") は除去されますが、
-            # 余計な "-merged" も消してから渡すと、SWF名がより正確に判定されます。
-            clean_name = ttf_path.name.replace("-merged", "")
+            variant_fonts = [
+                f
+                for f in font_dir.glob("*.ttf")
+                if "-merged"
+                in f.name  # 最後のハイフンを取る（拡張子直前の場合があるため）
+            ]
 
-            swf_filename = get_swf_name(font_name, clean_name)
+        # ... (中略) ...
+
+        for ttf_path in variant_fonts:
+            # stem: "test-font-bold-merged-book-normal-full"
+            stem_name = ttf_path.stem
+
+            # 1. まず "-merged" で分割して、左側（フォント名+ウェイト）と右側（バリエーション等）に分ける
+            if "-merged" in stem_name:
+                left_side, right_side = stem_name.split("-merged", 1)
+            else:
+                left_side, right_side = stem_name, ""
+
+            # 2. 右側の残りカス（-book-normal-full など）を処理
+            # 先頭のハイフンを除去してから分割
+            right_parts = right_side.lstrip("-").split("-")
+
+            # 3. 左側（test-font-bold）はハイフンを維持したいので、最後のハイフンだけアンダースコアにしたい
+            # ...ですが、もっとシンプルに「全体を特定のキーワードで掃除する」のが楽です
+
+            # 全体を一度アンダースコア結合の対象にする（ただしフォント名は保護）
+            # ここでは「左側」はそのまま使い、「右側」から不要なものを消す
+            ignore_keywords = {"medium", "normal", "full", ""}
+            clean_right = [p for p in right_parts if p not in ignore_keywords]
+
+            # 左側と右側をアンダースコアで合体
+            if clean_right:
+                omission_name = f"{left_side}_{'_'.join(clean_right)}"
+            else:
+                omission_name = left_side
+
+            swf_filename = get_swf_name(font_name, omission_name)
             output_swf_path = font_dir / swf_filename
 
             #  SWF内のフォント名をファイル名と一致させる

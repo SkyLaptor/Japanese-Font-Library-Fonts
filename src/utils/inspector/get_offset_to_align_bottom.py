@@ -27,7 +27,8 @@ def main():
         "-b",
         "--base_line",
         type=int,
-        help="基準となるY座標",
+        default=0,
+        help="基準となるY座標 デフォルト:0",
     )
     parser.add_argument(
         "--debug",
@@ -53,7 +54,7 @@ def action_get_offset_to_align_bottom(
 ):
     with TTFont(input_path) as input_font_obj:
         offset = get_offset_to_align_bottom(input_font_obj, base_line, debug)
-        print(f"ベースライン: {base_line}, オフセット値: {offset:.1f}")
+        print(f"ベースライン: {base_line}, オフセット値: {offset}")
         if output_path is not None:
             output_path = save_text(
                 str(offset), input_path, output_path, "_bottom_offset"
@@ -63,7 +64,7 @@ def action_get_offset_to_align_bottom(
 
 def get_offset_to_align_bottom(
     font_obj: TTFont, base_line: int, debug: bool = False
-) -> float:
+) -> int:
     """
     フォント内のグリフの底面位置が基準値からどれだけ異なるか計算する
 
@@ -115,7 +116,7 @@ def get_offset_to_align_bottom(
     # 例: 目標が -140 で 現在が -200 なら、+60 して浮かせる必要がある
     offset = base_line - avg_y_min
 
-    return offset
+    return round(offset)
 
 
 if __name__ == "__main__":

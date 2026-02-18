@@ -1,6 +1,26 @@
+from pathlib import Path
+
 from fontTools.ttLib.tables._g_l_y_f import Glyph
 
-from utils.inspector.get_offset_to_align_bottom import get_offset_to_align_bottom
+from utils.inspector.get_offset_to_align_bottom import (
+    action_get_offset_to_align_bottom,
+    get_offset_to_align_bottom,
+)
+
+
+def test_action_get_offset_to_align_bottom_output(tmp_path):
+    # 準備: 入力フォントと出力場所を準備
+    input_path = Path("tests/data/test-font/test-font-medium.ttf")
+    output_path = tmp_path / "test.txt"
+    action_get_offset_to_align_bottom(
+        input_path=input_path, output_path=output_path, base_line=0, debug=True
+    )
+
+    # 3. 検証: ファイルが物理的に存在し、中身が空でないか
+    assert output_path.exists(), "ファイルが生成されていません"
+
+    content = output_path.read_text(encoding="utf-8")
+    assert len(content) > 0, "生成されたファイルが空です"
 
 
 def test_get_offset_to_align_bottom_basic(create_mock_font):

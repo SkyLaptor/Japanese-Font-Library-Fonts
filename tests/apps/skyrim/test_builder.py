@@ -24,7 +24,7 @@ def test_workspace(tmp_path):
 
 @pytest.mark.skipif(
     os.environ.get("GITHUB_ACTIONS") == "true",
-    reason="FFDec を使用する結合テストは重いため CI では実行しません",
+    reason="FFDecを使用する結合テストは重いためCIでは実行しません",
 )
 def test_swf_internal_name_consistency(test_workspace):
     """
@@ -41,8 +41,11 @@ def test_swf_internal_name_consistency(test_workspace):
     # 3. SWFエクスポートを実行
     run_batch_swf_export(str(test_workspace))
 
-    # 4. 検証の準備：まず「期待する名前」を定義する（★ここが重要！）
+    # 4. 検証の準備：新しい命名ルール（medium, normal, full を削る）に合わせる
+    # 元が "test-font-bold-merged" で、ここから "-merged" が消え、
+    # さらに他も省略されると、期待値はこうなります。
     variant_name = "test-font_bold_every"
+
     font_dir = test_workspace / "test-font"
     expected_swf = font_dir / f"fonts_{variant_name}.swf"
 

@@ -25,18 +25,16 @@
 * src: プログラムソースコードを配置します。
 * tests: pytestなどのテスト用コードを配置します。
 
-## 大まかな開発手順
-
-1. リポジトリから `main` ブランチをクローン/チェックアウトする。
-2. 開発ツール類、テスト環境をセットアップする。
-3. コンテンツを修正し、テストを実行する。
-4. `main` ブランチに対してプルリクエストを作成する。
-
 ## テスト環境
 * 対象のゲーム: Skyrim, SkyrimSE(SkyrimAE), SkyrimVR
 * 対象のModマネージャー: [Vortex](https://www.nexusmods.com/about/vortex), [ModOrganizer2](https://www.nexusmods.com/about/vortex) ※公式そのままの状態でカスタムを加えていないものであること。
 * Mod: [SKSE](https://skse.silverlock.org/), [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) ※フォント周りに影響を及ぼす場合はIssueで提案すること。
 
+## 大まかな開発手順
+1. リポジトリから `main` ブランチをクローン/チェックアウトします。
+2. 開発ツール類、テスト環境をセットアップします。
+3. コンテンツを修正し、テストを実行する。`$ uv run -m pytest`
+4. `main` ブランチに対してプルリクエストを作成します。
 
 ## 開発及びテスト時に使用するツール
 ### Visual Studio Code (VSCode)
@@ -61,7 +59,7 @@ $ uv sync
 ```
 
 ### FontForge
-作成したフォントを確認するとき等に使用します。
+作成したフォントの確認やマージにて使用します。`fontforge.exe` にパスを通してください。
 https://fontforge.org/en-US/
 
 ### JPEXS Free Flash Decompiler - FFDec
@@ -69,110 +67,204 @@ SWFを作成加工するために使用します。`ffdec-cli.exe` にパスを�
 https://github.com/jindrapetrik/jpexs-decompiler
 
 
-## 開発手順
-
-
-## テスト項目
-* [ ] pytestを通過するか。`$ uv run -m pytest`
-  * [ ] 追加した関数であれば、セットでpytest項目を追加してパスすること。
-* [ ] 変更した関数がコマンドライン起動できる場合、正常性確認を行うこと。
-* [ ] ゲーム起動直後にCTDが起きないこと。
-* [ ] ゲーム内の各UIにて全豆腐化が起きないこと。
-
-
-
-
-## バニラの日本語フォントの取り出し方
-対象バージョン: SkyrimSE 英語版 v1.6.1170
-
-1. 最新版のSkyrimSE 英語版をインストールする。※最新SkyrimSE英語版v1.6.1170には日本語フォントが含まれている。
-2. `ゲームインストールディレクトリ\Data\Skyrim - Interface.bsa` を [BSA Browser](https://www.nexusmods.com/skyrimspecialedition/mods/1756) で開く。
-3. `interface\fonts_ja.swf` を取り出し、[JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) で開く。
+## ゲームデフォルトの日本語フォントの取り出し方
+1. 最新版のSkyrimSE 英語版をインストールします。※最新SkyrimSE英語版v1.6.1170には日本語フォントが含まれています。
+2. `ゲームインストールディレクトリ\Data\Skyrim - Interface.bsa` をBSA Browserで開きます。
+3. `interface\fonts_ja.swf` を取り出し、FFDecで開きます。
 4. 左ツリーから`フォント`を選び、任意のフォントを右クリックし'選択中のものをエクスポート'から任意の場所にエクスポートする。
 
 
-## コアフォントSWFの作り方
-対象バージョン: SkyrimSE 英語版 v1.6.1170
-スカイリムのフォントにはコントローラーボタンやドラゴン文字などの言語を問わないシンボル系のフォントが含まれている。
-バージョン（特にCreationClub実装あたり）により追加されていったものはあるが、基本的にスカイリムでもスカイリムSEでも同じものが使用されているが、ファイル名がゲームバージョンによりまちまちである。
-つまり、最新の英語版スカイリムから取り出し、余計なフォントを削除して軽量化したfonts_core.swfとかにし、fontconfig.txtでインポートすればコアフォントとして利用可能となる。
+## ベースフォントの作成
+任意のフォントをゲーム内フォントに合わせるための基準となるフォントです。  
+パス直指定で各スクリプトから使用されているため迂闊に名前を変更したりしないように注意して下さい。
 
-1. 最新版のSkyrimSE 英語版をインストールする。
-2. `ゲームインストールディレクトリ\Data\Skyrim - Interface.bsa` を [BSA Browser](https://www.nexusmods.com/skyrimspecialedition/mods/1756) で開く。
-3. `interface\fonts_en.swf`を`fonts_core.swf`として取り出す。
-4. `fonts_core.swf`を [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) で開く。
-5. 左ツリーから`テキスト`を選び、全て消す。
-6. 左ツリーから`フォント`を選び、フォント名が以下のもの**以外**のフォントを削除する。※バージョンが上がった際は差異を確認すること。多分これから増えることはないと思われるが。
-    * `Controller  Buttons`
-    * `Controller  Buttons inverted`
-    * `Dragon_script`
-    * `Daedric`
-    * `Dwemer`
-    * `Falmer`
-    * `SkyrimSymbols`
-    * `Mage Script`
-    * `SkyrimBooks_Unreadable`
-7. 各フォントの配下にある`DefineFontAlignZones`と`DefineFontName`を開き、それぞれの`forceWriteAsLong`を`false`にする。
-7. 動作高速化のため残ったフォントにExportAssetsを付ける。
-    1. 左ツリーから`その他`→`Add tag inside`→`ExportAssets`→各フォント`DefineFontName`の直下に差し込む。
-    2. 差し込んだExportAssetsの編集にて、assetsを右クリック`先頭にassetを挿入します`でassetを追加する。
-    3. 追加したassetのU16を、フォントのChildIDにし、Stringを**フォント名**と同じにする。
-    4. 全フォントに同様の操作を行う。
-8. 左ツリーから`ヘッダー`を選択し、編集から以下のように設定する。
-    * 圧縮: ZLIB
-    * SWFのバージョン: 10
-    * Harman encrypted: False
-    * GFX: False
-    * フレームレート: 24
-    * ディスプレイの大きさ: 0,0～0,0
-9. 左ツリーから`その他`を選択し、`FileAttributes`を以下のように設定する。
-    * reservedA: false
-    * useDirectBlit: false
-    * useGPU: false
-    * hasMetadata: false
-    * actionScript3: false
-    * useNetwork: false
-    * noCrossDomainCache: false
-    * swfRelativeUrls: false
-    * reservedB: 0
-    * forceWriteAsLong: false
-8. 左ツリーから`その他`を選択し、`Metadata`と`SetBackgroundColor`を削除する。
-9. 保存して完了。
+1. 日本語版スカイリムをインストールします。
+
+2. インストール後、BSABrowserを使って `Skyrim\Data\Skyrim - Interface.bsa`を開きます。
+
+3. `fonts_ja.swf`（または `fonts_jp.swf`）を任意の場所にエクスポートします。
+
+4. エクスポートした `.swf` を[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)で開き、**[フォント]** セクションから以下の3種類のフォントを取り出します。
+
+   * **Everywhere** : `1_Skyrim_JP_EveryFont_0805`
+   * **Book** : `22_Skyrim_JP_BookFont_0805`
+   * **Handwrite** : `5_Skyrim_JP_HandWriteFont_0805`
+
+> [!NOTE]
+> ゲームバージョンにより若干フォント名前が異なります。
+
+5. 取り出したフォントに対し空白除去処理を行います。
+以下のコマンドで空白が除去されます。
+
+```powershell:
+$ uv run remove_empty_glyphs build\1_Skyrim_JP_EveryFont_0805.ttf -o data\base_fonts\skyrim\everywhere.ttf
+$ uv run remove_empty_glyphs build\22_Skyrim_JP_BookFont_0805.ttf -o data\base_fonts\skyrim\book.ttf
+$ uv run remove_empty_glyphs build\5_Skyrim_JP_HandWriteFont_0805.ttf -o data\base_fonts\skyrim\handwrite.ttf
+```
+
+以上でベースフォントの作成が完了となります。このフォントはサイズ変更処理などで基準となるので、空白グリフクリーンアップ以外の変更は行ってはなりません。
 
 
-## 比較対象バニラフォントの作り方
-1. FFDecを使い、最新Skyrimの日本語フォント(interface\fonts_jp.swf)からTTFで日本語フォントを抜く。以下のような名前が付いている
-   * Everywhere_JP
-   * Book_JP
-   * JP_Handwritten
+## コアフォントSWFの作成
+どの言語であろうともゲーム内で使用する特殊なフォントのみを格納したフォントSWFを作成します。これにより無駄なフォント容量を削減できます。
 
-2. 取り出したフォントに対し、以下の処理を掛ける
-   1. 空白グリフ消去 `$ uv run font_tools --action remove_empty_glyphs 対象のフォント`
-   2. 空白グリフを消去したフォントから文字列を抜き出してサブセットテキスト作成。`$ uv run font_tools --action get_glyphs 対象のフォント（空白除去済）`
-   3. 空白グリフを消去したフォントをメトリクス調整 `$ uv run font_tools --action set_metrics 対象のフォント（空白除去済） --ascent 880 --descent -144`
+1. 日本語版スカイリムをインストールします。
 
-## フォントテンプレートSWFの作り方
-対象バージョン: SkyrimSE 英語版 v1.6.1170
+2. インストール後、BSABrowserを使って `Skyrim\Data\Skyrim - Interface.bsa`を開きます。
 
-1. [コアフォント](##コアフォントSWFの作り方)を`fonts_template.swf`としてコピーする。
-3. `fonts_template.swf` を [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) で開く。
-5. 左ツリーから`フォント`を選び、フォントIDが1以外を全て削除する。
-8. 左ツリーから`その他`を選択し、フォントIDが1以外の`ExportAssets`を削除する。
-9. 保存して完了。
+3. `fonts_ja.swf`（または `fonts_jp.swf`）を任意の場所にエクスポートします。
 
-メモ バニラ日本語SWFのメトリクス値:
-* メトリクス ※twips単位(1px=20twips) EM換算にすると880,144なので、フォント側メトリクスをそれに合わせておけばいいはず。
-    * Everywere/Book/Handwrite:
-        * Ascent: 17600
-        * Descent: 2880
-        * Leadline: 0
+4. エクスポートしたSWFファイルを[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)で開き、**[フォント]** セクションから以下のフォントをエクスポートします。
+
+   * **コントローラーボタン** : `Controller  Buttons`
+   * **コントローラーボタン(反転)** : `Controller  Buttons inverted`
+   * **ドラゴン文字** : `Dragon_script`
+   * **デイドラ文字** : `Daedric`
+   * **ドゥーマー文字** : `Dwemer`
+   * **ファルマー文字** : `Falmer`
+   * **ゲーム内シンボルマーク** : `SkyrimSymbols`
+   * **魔術文字** : `Mage Script`
+   * **読めない本の文字** : `SkyrimBooks_Unreadable`
+
+5. [FFDec](https://github.com/jindrapetrik/jpexs-decompiler)を起動し、**[New empty]** から以下のパラメーター通りに新しいSWFを作成します。
+
+* ヘッダー
+  * 圧縮: 無圧縮
+  * SWFのバージョン: 10
+  * Harman encrypted: □
+  * GFX: □
+  * フレームレート: 24.0
+  * フレーム数: 1
+  * ディスプレイの大きさ: 全て0
+* フォント
+  * DefineFont3: `Controller  Buttons` Ascent: 17160, Descent: 4180, Leading: 860 ※メトリクス値は元のデータを参照すること。
+  * DefineFont3: `Controller  Buttons inverted` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Dragon_script` Ascent: 19900, Descent: 3900, Leading: 3320
+  * DefineFont3: `Daedric` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Dwemer` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `Falmer` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `SkyrimSymbols` Ascent: 15800, Descent: 4180, Leading: -500
+  * DefineFont3: `Mage Script` Ascent: 17160, Descent: 4180, Leading: 860
+  * DefineFont3: `SkyrimBooks_Unreadable` Ascent: 20460, Descent: 12600, Leading: 12580
+* フレーム
+  * frame 1
+* その他
+  * FileAttributes
+    * 全項目: □ または 0
 
 
-## ゲーム日本語化方法
-MODの互換性を考慮し、英語版を日本語化するという方式を採用する。Steam版のみ。
+## フォントテンプレートSWFの作成
+フォントを格納するための中身が空のフォントSWFを作成します。
+
+1. [FFDec](https://github.com/jindrapetrik/jpexs-decompiler)を起動し、**[New empty]** から以下のパラメーター通りに新しいSWFを作成します。
+
+* ヘッダー
+  * 圧縮: 無圧縮
+  * SWFのバージョン: 10
+  * Harman encrypted: □
+  * GFX: □
+  * フレームレート: 24.0
+  * フレーム数: 1
+  * ディスプレイの大きさ: 全て0
+* フォント
+  * DefineFont3 chid:1 フォント名: `REPLACE_ME_FONT_NAME_LENGTH_MAX_XXXXXXXXXXXXXXX`
+* フレーム
+  * frame 1
+* その他
+  * FileAttributes
+    * 全項目: □
+
+> [!IMPORTANT]
+> フォント名は必ず `src/const.py` 内の `DUMMY_FONT_NAME_IN_SWF` 定数と同じにして下さい。SWF変換の際にフォント名が書き換わらなくなります。
+
+## テンプレートフォントコンフィグの作り方
+マスターコンフィグを作るため、各ゲームの英語版、日本語版フォントコンフィグを比較し、全てのマップを網羅します。
+
+1. 各バージョンの英語版、日本語版スカイリムをインストールします。
+
+2. インストール後、BSABrowserを使って `Skyrim\Data\Skyrim - Interface.bsa`を開きます。
+
+3. フォント設定ファイル( `fontconfig.txt` または `fontconfig_ja.txt`) を任意の場所にエクスポートします。
+
+4. 各バージョンのフォント設定ファイルを比較し、`map "キー名"`を重複なしで結合していきます。マップされるフォント名は、以下を除いて全て `template` などにしておきます。
+
+`$DragonFont, $FalmerFont, $DwemerFont, $DaedricFont, $MageScriptFont, $SkyrimSymbolsFont, $SkyrimBooks_UnreadableFont, ControllerButtons, ControllerButtonsInverted`
+
+5. 以下のマップを書き足します。
+
+`$MCMFont, $MCMMediumFont, $MCMBoldFont`
+
+6. フォント設定ファイルの先頭にある `fontlib ～` は `fontlib "Interface\fonts_core.swf"` のみにします。
+
+7. フォント設定ファイルの末尾にある `validNameChars ～` は `data\fontconfigs\validNameChars.txt` に中身を書き換えます。`validNameChars` は [生成手順](#validnamecharsの生成) を参照してください。
+
+
+## validNameCharsの生成
+
+1. 以下のコマンドを実行します。
+
+```
+$ uv run generate_subset_jp_jisx0208 data\fontconfigs\skyrim\validNameChars.txt --validnamechars_escape
+```
+
+> [!NOTE]
+> validNameCharsはRaceMenuでキャラ名に使用できる名前の文字の一覧です。フォントとは直接の関係はありません。
+> validNameCharsにダブルクォーテーションを入れる場合は、`\`でエスケープする必要があります。なお、この手順では自動でエスケープされています。
+
+
+## サブセットテキスト作成(軽量版)
+ゲームデフォルトのフォントで使用可能な文字列のみの軽量なサブセットテキストを作成します。  
+事前に[ベースフォント](#ベースフォントの作成)を作成しておく必要があります。
+
+1. 各フォントに含まれている文字を取り出します。
+以下のコマンドを実行します。
+
+```powershell:
+$ uv run get_glyphs data\base_fonts\skyrim\everywhere.ttf -o build\everywhere_glyphs.txt
+$ uv run get_glyphs data\base_fonts\skyrim\book.ttf -o build\book_glyphs.txt
+$ uv run get_glyphs data\base_fonts\skyrim\handwrite.ttf -o build\handwrite_glyphs.txt
+```
+
+> [!NOTE]
+> 困ったことにバニラのゲームフォントには意図しない空白が多数存在します。それをクリーニングしていない状態で含まれている文字を検索してしまうと正しい結果を得られません。なお、各フォントに含まれる文字には若干の差があります。
+
+2. 全角英数記号ファイルを準備します。
+以下の文字列を記載したファイルを **UTF-8(BOMなし)** で `build\essential_glyphs_zenkaku.txt` に保存します。
+
+```text:
+！＂＃＄％＆＇（）＊＋，－．／０１２３４５６７８９：；＜＝＞？＠ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿｀ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝～｟｠｡｢｣､
+```
+
+> [!NOTE]
+> 最新スカイリム(v1.6.1170)の日本語フォントはなぜか全角英数字が空白グリフで登録されているというとんでもないバグがあります。さすがにこれは看過できないため、補間用として準備します。
+
+3. 文字列を結合します。
+以下のコマンドを実行します。
+
+```powershell:
+$ uv run merge_text build -o data\subsets\skyrim\subset_jp_lightweight.txt
+```
+
+> [!NOTE]
+> 結合を実行する際、`build` ディレクトリには**フォントから抽出した文字列ファイル**と**全角英数補間ファイル**以外のテキストファイルは置かないで下さい。それらも結合されてしまいます。
+
+
+## サブセットテキスト作成(日本語フル)
+JIS第四水準＋いくつかの最新文字を加えた、おおよそ日本で使用しうる文字を網羅したサブセットテキストを作成します。
+
+1. 以下のコマンドを実行します。
+
+```powershell:
+$ uv run generate_subset_jp_full data\subsets\skyrim\subset_jp_full.txt
+```
+
+> [!NOTE]
+> 可能な限り日本語圏で表示しうる文字列を生成していますが、> もし不足が出た場合には `src\const.py` の `EXTRA_UNICODES` にUnicode指定で追加することを検討して下さい。
+
+
 
 ## 不要なデータの掃除
-Skyrimをプレイするとあちこちにファイルが出来上がる。完全リセットする場合は以下を消去、必要に応じてバックアップすること。
+Skyrimをプレイするとあちこちにファイルが出来上がります。完全リセットする場合は以下を消去して下さい。必要に応じてバックアップするのを忘れずに。
 
 * ロードオーダーなど
     * `C:\Users\{USERNAME}\Appdata\Local\Skyrim`
@@ -189,8 +281,8 @@ Skyrimをプレイするとあちこちにファイルが出来上がる。完�
     * `C:\Modding\MO2` もしくは自身で設定したパス
 
 ## SkyrimSE v1.6.629～v1.6.1170(現在)
-v1.6.629以降、SkyrimSE無料AEアップデートということで構造がSkyrimAEとほぼ同等となった？模様。
-英語版と日本語版の差がほぼ無くなり、英語版ファイル群に対し日本語版音声ファイルが追加され、Skyrim.iniが日本語版用にチューニングされただけとなった。
+v1.6.629以降、SkyrimSE無料AEアップデートということで構造がSkyrimAEとほぼ同等となった？模様です。
+英語版と日本語版の差がほぼ無くなり、英語版ファイル群に対し日本語版音声ファイルが追加され、Skyrim.iniが日本語版用にチューニングされただけとなりました。
 
 ```:差分
 Skyrim.ini(SSEゲームディレクトリ\Skyrim_Default.ini)の差分
@@ -210,10 +302,10 @@ sResourceArchiveList2=Skyrim - Voices_en0.bsa, 省略
 sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
 ```
 
-まずは普通に英語版SkyrimSEをインストールし、`SkyrimSELauncher.exe`を起動してそのまま終了する。
-これにより、ロードオーダー情報及びゲーム設定ファイルがユーザープロファイルの各所に生成される。
+まずは普通に英語版SkyrimSEをインストールし、`SkyrimSELauncher.exe`を起動してそのまま終了します。
+これにより、ロードオーダー情報及びゲーム設定ファイルがユーザープロファイルの各所に生成されます。
 
-[BSA Browser](https://www.nexusmods.com/skyrimspecialedition/mods/1756)を使用して以下のファイルを開き、対象の日本語StringsとTranslateをエクスポートする。`japanese`で検索すると良い。
+BSA Browserを使用して以下のファイルを開き、対象の日本語StringsとTranslateをエクスポートします。`japanese`で検索すると見つけやすいです。
 
 * _ResourcePack.bsa
 * ccBGSSSE001-Fish.bsa
@@ -224,10 +316,10 @@ sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
 
 
 **英語音声のままでよければ、この作業はスキップしてOK**
-日本語音声データをダウンロードする。
-Webブラウザを開き、`steam://open/console`と入力するとSteamコンソールが開くので、以下のコマンドを入力する。
+日本語音声データをダウンロードします。
+Webブラウザを開き、`steam://open/console`と入力するとSteamコンソールが開くので、以下のコマンドを入力して下さい。
 `download_depot 489830 544861 3494476046078906882`
-ダウンロードが完了したら、`C:\Program Files (x86)\Steam\steamapps\content\app_489830\depot_544861\Data`を開き、`skyrim - voices_ja0.bsa`をゲームディレクトリの`Data`直下にコピーする。
+ダウンロードが完了したら、`C:\Program Files (x86)\Steam\steamapps\content\app_489830\depot_544861\Data`を開き、`skyrim - voices_ja0.bsa`をゲームディレクトリの`Data`直下にコピーします。
 
 ゲーム設定ファイル(`C:\Users\{USERNAME}\Documents\My Games\Skyrim Special Edition\Skyrim.ini`)を開き、以下を編集する。
 
@@ -241,22 +333,22 @@ sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
 
  ## バニラバグフィックスパッチの作り方
 ### 本UIの内蔵フォントバグ除去
-Skyrim時代から存在するバグ。
-SE版はv1.6.629以降解消しているが、下位バージョン(特に1.5.97.0)を使用している場合向けにパッチする必要あり。
-英語版の最新の本UI`interface/book.swf`にはなぜかフォントファイルそのものが格納されており、そちらが使用されてしまうことにより発生する。FFDecを使用して余分なフォントを除去する。
-動作確認としては、「エリトリスのノート」や「アーヴェルの日記」を開いてみると良い。
+Skyrim時代から存在するバグです。
+SE版はv1.6.629(AEアップデート)以降解消していますが、下位バージョン(特に1.5.97.0)を使用している場合はパッチする必要があります。
+英語版の本UI`interface/book.swf`にはなぜかフォントファイルそのものが格納されていて、それが優先して使用されてしまうことにより発生します。FFDecを使用して余分なフォントを除去して下さい。
+動作確認を行う場合は、「エリトリスのノート」や「アーヴェルの日記」を開いてみると良でしょう。
 参考情報: https://obachanskyrim.blogspot.com/2012/07/bookswf.html
 
 ### レベルアップメニューUI
-Skyrim時代から存在するバグ。
-SE版はv1.6.629以降解消しているが、下位バージョンを使用している場合向けにパッチする必要あり。  
-日本語版のレベルアップメニューUI`interface/levelupmenu.swf`のフォントマップが正しく指定されておらず、きちんと表示されない。英語版ではバグがないため、英語版の`interface/levelupmenu.swf`を取り出して使用する。  
-ただ、デフォルトUIはバグは解消されていても表示が非常に大きく見切れているため、そこも修正する。yminを増やして文字の位置を変えた上で、HTMLレンダリングに変えてフォントサイズを指定する。
-
+Skyrim時代から存在するバグです。
+SE版はv1.6.629(AEアップデート)以降解消していますが、下位バージョン(特に1.5.97.0)を使用している場合向けはパッチする必要があります。  
+日本語版のレベルアップメニューUI`interface/levelupmenu.swf`のフォントマップが正しく指定されておらず、きちんと表示されません。英語版ではバグがないため、英語版の`interface/levelupmenu.swf`を取り出して使用することで解消します。  
+ただし、デフォルトUIはバグは解消されていても表示が非常に大きく見切れていますので、そこも修正する必要があります。
+FFdecを使用して、該当部品のyminを増やして文字の位置を変えた上で、HTMLレンダリングに変えてフォントサイズを指定することでサイズが変わります。
 
 ## SkyUI向けMCM専用フォントマップ適用パッチの作り方
-コンフィグメニュー(MCM)はデフォルトで`$EverywhereFont`系の汎用フォントを使用するが、日本語のような全角フォントだと文字が多すぎてUIをぶち抜いてしまう。かと言って`$EverywhereFont`系に長形フォントを指定すると他のUIが見づらくなる。その解決策として、MCMには専用のフォントマップを使用するパッチを用意する。
-MCMを実現しているUIは LE/SE共に`Interface/skyui/configpanel.swf` 。FFDecを使用してフォントマップを指定している箇所を検索して書き換える。
+コンフィグメニュー(MCM)はデフォルトで`$EverywhereFont`系の汎用フォントを使用しますが、日本語のような全角フォントだと文字が多すぎてUIからはみ出てしまいます。かと言って`$EverywhereFont`系に長形フォントを指定すると他のUIが見づらくなります。そこで、MCMには専用のフォントマップを使用するパッチを用意することで対応します。  
+MCMを実現しているUIは SkyUI LE/SE共に`Interface/skyui/configpanel.swf`です。FFDecを使用してフォントマップを指定している箇所を検索して書き換えます。
 
 
 

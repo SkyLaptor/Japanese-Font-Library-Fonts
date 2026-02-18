@@ -7,13 +7,11 @@
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
 フォントファイルをSWFへ埋め込むために必要です。`ffdec-cli` がパスに通っている必要があります。 
 
-
-
 * [UV](https://docs.astral.sh/uv/)
 スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。
  
 * [FontForge](https://fontforge.org/en-US/)
-フォントの目視検査、破損したフォントの修復、および手動マージの際に使用します。
+フォントの目視検査、破損したフォントの修復、およびマージの際に使用します。`fontforge` がパスに通っている必要があります。 
 
 ## 使い方
 ### 1. 準備
@@ -40,18 +38,17 @@ $ uv sync
 3. 以下のコマンドを実行します。
 
 ```powershell:
-$ uv run build_skyrim_fonts --action run_batch_premerge_export --work_dir build
+$ uv run builder --action run_batch_premerge_export --work_dir build
 ```
 
 実行後、フォルダ内にあるすべてのフォントに対して `*-premerge.ttf` が生成されます。
 
-### 4. フォントのマージ (手動)
-FontForgeを使用して、メインフォントにサブフォントを統合します。
+### 4. フォントのマージ
+以下のコマンドを実行します。
 
-   1. **基準となるフォント**（`*-premerge.ttf`）を FontForge で開きます。
-   2. メニュー **[エレメント]** > **[フォントの統合]** を選択し、マージしたいフォントを開きます。
-   3. メニュー **[ファイル]** > **[フォントを出力]** で、マージ済みフォントを保存します。
-      * **重要**: ファイル名末尾を必ず `*-merged.ttf` にしてください（次の工程のトリガーになります）。
+```powershell:
+$ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント-premere.ttf 補間フォント-premerge.ttf -o build\フォント名-merged.ttf
+```
 
 > [!NOTE]
 > 単一フォントで使用し、マージが不要な場合は `*-premerge.ttf` をコピーして `*-merged.ttf` にリネームしてください。
@@ -60,19 +57,22 @@ FontForgeを使用して、メインフォントにサブフォントを統合�
 スカイリムの各用途（全般、本、手書き）に合わせたサブセットと、長体（Condense）モデルを一括生成します。
 
 ```powershell:
-$ uv run build_skyrim_fonts --action run_batch_variant_export --work_dir build
+$ uv run builder --action run_batch_variant_export --work_dir build
 ```
 
-実行後、`*-full.ttf` や `*-skyrim.ttf` などのバリエーションファイルが生成されます。
+実行後、`*-full.ttf` や `*-lightweight.ttf` などのバリエーションファイルが生成されます。
 
 ### 6. フォントSWFの作成
-生成されたTTFを、ゲームが読み込み可能なSWF形式へ変換し、内部フォント名をパッチします。
+生成されたTTFをゲームが読み込み可能なSWF形式へ変換します。
 
 ```powershell:
-$ uv run build_skyrim_fonts --action run_batch_swf_export --work_dir build
+$ uv run builder --action run_batch_swf_export --work_dir build
 ```
 
-`build` ディレクトリ内に、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。
+実行後、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。
+
+> [!NOTE]
+> 非常に重い処理です。場合により処理に失敗することがあります。
 
 ### 7. スカイリムへの適用
 1. 作成されたSWFファイルを `Skyrim/Data/Interface` フォルダへ配置します。
@@ -85,10 +85,10 @@ $ uv run build_skyrim_fonts --action run_batch_swf_export --work_dir build
 フォントの上下位置をバニラの基準に合わせるための数値を算出します。
 
 1. まず `*-premerge.ttf` を作成します（`$ uv run builder --action run_batch_premerge_export --work_dir build` を実行）。
-2. 生成されたファイルに対し、以下のコマンドでオフセット値を取得します。
+2. 生成された `*-premerge.ttf` ファイルに対し、以下のコマンドでオフセット値を取得します。
 
 ```powershell:
-$ uv run inspector --action get_offset_to_align_bottom -i フォントファイル-premerge.ttf
-# 出力例: オフセット値: XXX
+$ uv run get_offset_to_align_bottom build\フォント名\フォントファイル-premerge.ttf -o build\フォント名\offset_height_everywhere.txt
 ```
-3. この数値を記載したテキストファイルを `offset_height_everywhere.txt` という名前でフォントフォルダに保存し、再度マージ前処理を実行してください。
+
+3. この時点で生成された `*-premerge.ttf` ファイルはオフセット値が適用されていないため不要なファイルとなります。削除してからもう一度[マージ前処理](#3-マージ前処理)を実施して下さい。
