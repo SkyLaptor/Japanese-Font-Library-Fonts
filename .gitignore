@@ -21,9 +21,14 @@ desktop.ini
 *.otc
 
 # ベースフォント例外許可
-!data/basefonts/everywhere.ttf
-!data/basefonts/book.ttf
-!data/basefonts/handwrite.ttf
+!data/base_fonts/skyrim/everywhere.ttf
+!data/base_fonts/skyrim/book.ttf
+!data/base_fonts/skyrim/handwrite.ttf
+
+# テストフォント例外許可
+!tests/data/test-font/test-font-medium.ttf
+!tests/data/test-font/test-font-bold.ttf
+!tests/data/test-font/test-font-heavy.ttf
 
 # 圧縮ファイル
 *.zip

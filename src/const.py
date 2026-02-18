@@ -1,7 +1,49 @@
 # 出力テキストファイルのエンコード
+from pathlib import Path
+
 ENCODE = "utf-8"
-# ビルド物の配置場所(コミット対象外)
-BUILD_DIR = "build"
+# 各種ディレクトリ
+BASE_DIR = Path(__file__).parent.parent
+DATA_DIR = BASE_DIR / "data"
+BUILD_DIR = BASE_DIR / "build"
+SUBSETS_DIR = DATA_DIR / "subsets"
+# === キー名は不整合が起きないように注意 ===
+# Skyrim用ベースフォントマップ
+SKYRIM_BASE_FONT_DIR = DATA_DIR / "base_fonts" / "skyrim"
+SKYRIM_BASE_FONT_CONFIGS = {
+    "everywhere": SKYRIM_BASE_FONT_DIR / "everywhere.ttf",
+    "book": SKYRIM_BASE_FONT_DIR / "book.ttf",
+    "handwrite": SKYRIM_BASE_FONT_DIR / "handwrite.ttf",
+}
+# Skyrim用のベースフォント毎の長体バリエーション
+SKYRIM_MODE_VARIANTS = {
+    "everywhere": ["normal", "condensed", "skinny"],
+    "book": ["normal"],
+    "handwrite": ["normal"],
+}
+# Skyrim用サブセットバリエーション
+SKYRIM_SUBSET_DIR = DATA_DIR / "subsets" / "skyrim"
+SKYRIM_SUBSET_CONFIGS = {
+    "full": "subset_jp_full.txt",
+    "lightweight": "subset_jp_lightweight.txt",
+}
+SKYRIM_EXPORT_MATRIX = [
+    {
+        "base": base,
+        "condense": condense,
+        "label": label,
+        "path": SKYRIM_SUBSET_DIR / filename,
+    }
+    for base, condenses in SKYRIM_MODE_VARIANTS.items()
+    for condense in condenses
+    for label, filename in SKYRIM_SUBSET_CONFIGS.items()
+]
+# 長体別倍率マップ
+CONDENSE_RATIO_CONFIGS = {
+    "normal": 1.0,
+    "condensed": 0.64,
+    "skinny": 0.48,
+}
 # 追加文字（Unicode直接指定）
 EXTRA_UNICODES = [
     0x2026,  # … (三点リーダー)
@@ -51,4 +93,30 @@ BLANK_GLYPHS = {
     # LF
     "uni000A",
     0x000A,
+}
+# テンプレートSWFパス
+TEMPLATE_FONTSWF_PATH = DATA_DIR / "font_swfs" / "fonts_template.swf"
+# テンプレートSWF内のリプレース文字列
+DUMMY_FONT_NAME_IN_SWF = "REPLACE_ME_FONT_NAME_LENGTH_MAX_XXXXXXXXXXXXXXX"
+# フォントSWFのファイル名の頭に付ける文字列（慣例的につけてるだけ）
+FONTFILE_NAME_PREFIX = "fonts_"
+# SWF名判定ルール
+SWF_NAME_RULES = {
+    "weight": [
+        (["bold"], "_bold"),
+        (["light"], "_light"),
+        (["heavy", "extrabold"], "_heavy"),
+    ],
+    "ui": [
+        (["everywhere", "every"], "_every"),
+        (["book"], "_book"),
+        (["handwritten", "handwrite", "hand"], "_handwrite"),
+    ],
+    "condense": [
+        (["condensed", "condense", "cond"], "_condensed"),
+        (["skinny", "skin"], "_skinny"),
+    ],
+    "subset": [
+        (["skyrim", "lightweight"], "_lightweight"),
+    ],
 }

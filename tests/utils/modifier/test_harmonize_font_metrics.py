@@ -1,0 +1,90 @@
+import io
+
+from fontTools.pens.ttGlyphPen import TTGlyphPen
+from fontTools.ttLib import TTFont
+
+from src.utils.modifier.harmonize_font_metrics import harmonize_font_metrics
+
+
+def setup_kanji_mock_font(create_mock_font, upm, size, advance):
+    """get_average_sizeの計算対象となる『漢字(U+4E00)』を持つフォントを作成"""
+    font = create_mock_font()
+    font['head'].unitsPerEm = upm
+
+    # グリフ名とUnicodeの定義（漢字の範囲 U+4E00 を使用）
+    kanji_code = 0x4E00
+    kanji_name = "uni4E00"
+    font.setGlyphOrder(['.notdef', kanji_name])
+    font['cmap'].getcmap(3, 1).cmap[kanji_code] = kanji_name
+
+    # 漢字グリフにサイズを持たせる
+    glyph_set = font.getGlyphSet()
+    pen = TTGlyphPen(glyph_set)
+    pen.moveTo((0, 0))
+    pen.lineTo((0, size))
+    pen.lineTo((size, size))
+    pen.lineTo((size, 0))
+    pen.closePath()
+
+    font['glyf'].glyphs = {}
+    font['glyf'].glyphs['.notdef'] = TTGlyphPen(None).glyph()
+    font['glyf'].glyphs[kanji_name] = pen.glyph()
+
+    # メトリクスの設定
+    font['hmtx'].metrics = {}
+    font['hmtx'].metrics['.notdef'] = (0, 0)
+    font['hmtx'].metrics[kanji_name] = (advance, 0)
+
+    # バイナリ保存で境界ボックスを確定
+    buf = io.BytesIO()
+    font.save(buf)
+    buf.seek(0)
+    return TTFont(buf)
+
+
+def test_harmonize_font_metrics_scaling(create_mock_font):
+    """UPMと漢字グリフサイズに基づき、正しくスケーリングされるかテスト"""
+    # ベース: UPM 2000, 200x200の漢字, 送り300
+    base_font = setup_kanji_mock_font(create_mock_font, 2000, 200, 300)
+    # ターゲット: UPM 1000, 100x100の漢字, 送り150
+    target_font = setup_kanji_mock_font(create_mock_font, 1000, 100, 150)
+
+    result = harmonize_font_metrics(
+        target_font_obj=target_font,
+        base_font_obj=base_font,
+        scale_width_manual=1.0,
+        scale_height_manual=1.0,
+        offset_width=0,
+        offset_height=0,
+        debug=True,
+    )
+
+    h_font = result.font_obj
+    assert h_font['head'].unitsPerEm == 2000
+    # スケーリング計算: (200/100) / (2000/1000) = 1.0倍。送り幅150が維持される
+    assert h_font['hmtx'].metrics['uni4E00'][0] == 150
+
+
+def test_harmonize_font_metrics_offset(create_mock_font):
+    """オフセットが正しく適用されるかテスト"""
+    base_font = setup_kanji_mock_font(create_mock_font, 1000, 100, 100)
+    target_font = setup_kanji_mock_font(create_mock_font, 1000, 100, 100)
+
+    result = harmonize_font_metrics(
+        target_font_obj=target_font,
+        base_font_obj=base_font,
+        scale_width_manual=1.0,
+        scale_height_manual=1.0,
+        offset_width=50,
+        offset_height=30,
+    )
+
+    h_font = result.font_obj
+    h_glyph = h_font['glyf']['uni4E00']
+    h_glyph.recalcBounds(h_font['glyf'])
+
+    # 座標が正しく移動しているか
+    assert h_glyph.xMin == 50
+    assert h_glyph.yMin == 30
+    # hmtxのLSBも同期しているか
+    assert h_font['hmtx'].metrics['uni4E00'][1] == 50

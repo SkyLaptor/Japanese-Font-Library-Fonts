@@ -4,6 +4,7 @@ import sys
 from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
 
+from const import EXCLUDE_CHARS
 from utils.common.load_text import load_text
 from utils.common.reload_font import reload_font
 from utils.common.save_font import save_font
@@ -52,7 +53,7 @@ def action_create_subset(
     **_,
 ):
     font_obj = TTFont(input_path)
-    font_obj = create_subset(font_obj, load_text(subset_path), debug)
+    font_obj = create_subset(font_obj, load_text(subset_path, EXCLUDE_CHARS), debug)
     if output_path is not None:
         saved_output_path = save_font(font_obj, input_path, output_path, "_subsetted")
         print(f"フォントを保存しました: {saved_output_path}")

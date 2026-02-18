@@ -70,53 +70,14 @@ https://github.com/jindrapetrik/jpexs-decompiler
 
 
 ## 開発手順
-### 新規フォントの場合
-1. 非商用にて無償利用可能なフォントを入手する。その場合は入手元、使用許諾情報も併せて取得すること。
-
-2. フォントにてサブセット検証を行う。
-
-```
-$ cd scripts
-$ fontforge --quiet --script ./check_fontcoverage.py -t <TTF> -s < subset_jp_full.txt | subset_jp_skyrim.txt >
-```
-
-スカイリムサブセット(`subset_jp_skyrim.txt`)による検証にて、不足グリフがあった場合は原則的にプルリクエストは却下となります。似たフォントで補間するものとしてください。
-
-3. サブセット検証が完了したフォントに対し、スカイリム専用変換を行う。
-
-```
-$ cd scripts
-$ fontforge --quiet --script ./convert_for_skyrim.py -i <TTF> -s <subset> -m <ui_mode> -w <width_mode>
-```
-
-4. テンプレートSWFにフォントを埋め込む。
-
-```
-$ cd scripts
-$ ffdec-cli -replace fonts_template.swf <SWF> 1 <TTF>
-```
-
-5. フォントを埋め込んだSWFをFFDecで開き、フォント名、ExportAssetsを次のルールに従って書き換える。
-
-```
-フォントファイル名:
-fonts_<フォントファミリー>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight].swf
-
-フォント名:
-<フォント名>[太さ: _light | _bold]<UIタイプ: _every | _book | _handwrite>[長形: _condensed | _skinny][サブセット: _lightweight]
-```
-
-7. テスト用のfontconfig.txtを用いて、ゲーム内にて表示を確認する。
-
-
 
 
 ## テスト項目
-
 * [ ] pytestを通過するか。`$ uv run -m pytest`
-* [ ] サブセット検証にてスカイリムサブセットをパスしていること。
+  * [ ] 追加した関数であれば、セットでpytest項目を追加してパスすること。
+* [ ] 変更した関数がコマンドライン起動できる場合、正常性確認を行うこと。
 * [ ] ゲーム起動直後にCTDが起きないこと。
-* [ ] メインメニューで豆腐化が起きないこと。
+* [ ] ゲーム内の各UIにて全豆腐化が起きないこと。
 
 
 

@@ -7,6 +7,8 @@
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)
 フォントファイルをSWFへ埋め込むために必要です。`ffdec-cli` がパスに通っている必要があります。 
 
+
+
 * [UV](https://docs.astral.sh/uv/)
 スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。
  
@@ -82,7 +84,7 @@ $ uv run build_skyrim_fonts --action run_batch_swf_export --work_dir build
 ### オフセット調整ファイルが無い場合
 フォントの上下位置をバニラの基準に合わせるための数値を算出します。
 
-1. まず `*-premerge.ttf` を作成します（`$ uv run build_skyrim_fonts --action run_batch_premerge_export --work_dir build` を実行）。
+1. まず `*-premerge.ttf` を作成します（`$ uv run builder --action run_batch_premerge_export --work_dir build` を実行）。
 2. 生成されたファイルに対し、以下のコマンドでオフセット値を取得します。
 
 ```powershell:

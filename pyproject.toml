@@ -14,13 +14,8 @@ dependencies = [
 package = true
 
 [project.scripts]
-common = "utils.common:main"
-inspector = "utils.inspector:main"
-optimizer = "utils.optimizer:main"
-modifier = "utils.modifier:main"
-reconstructor = "utils.reconstructor:main"
-convert_for_skyrim = "convert_for_skyrim:main"
-build_skyrim_fonts = "build_skyrim_fonts:main"
+create_subset = "utils.subsetter.create_subset:main"
+builder = "apps.skyrim.builder:main"
 
 [dependency-groups]
 dev = [

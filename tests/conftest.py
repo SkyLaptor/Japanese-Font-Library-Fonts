@@ -40,6 +40,9 @@ def create_mock_font():
         head.fontDirectionHint = 2
         head.indexToLocFormat = 0
         head.glyphDataFormat = 0
+        # locaテーブルの形式（0: short, 1: long）を指定。
+        # これがないとsave時にlocaが正しく書き込まれず、グリフが消失します。
+        head.indexToLocFormat = 0
 
         # --- OS/2: ベンダーIDや詳細なメトリクス ---
         font['OS/2'] = newTable('OS/2')
@@ -142,6 +145,20 @@ def create_mock_font():
         subtable.language = 0
         subtable.cmap = mapping if mapping is not None else {}
         cmap.tables = [subtable]
+
+        # --- hmtx テーブル ※送り幅や左サイドベアリングを保持 ---
+        font['hmtx'] = newTable('hmtx')
+        hmtx = font['hmtx']
+        # 最初から入っている .notdef 分のメトリクスを用意
+        hmtx.metrics = {".notdef": (500, 0)}
+
+        # --- maxp テーブル ※グリフ数などを保持 ---
+        font['maxp'] = newTable('maxp')
+        font['maxp'].tableVersion = 0x00005000  # TTF用のバージョン
+        font['maxp'].numGlyphs = len(font.getGlyphOrder())
+
+        # --- loca テーブル ※グリフの位置情報を保持 ---
+        font['loca'] = newTable('loca')
 
         return font
 
