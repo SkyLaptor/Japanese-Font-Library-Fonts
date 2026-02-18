@@ -33,7 +33,7 @@ $ uv sync
 グリフを補完するためにフォント同士をマージする前の事前調整（UPM変更や空白グリフ削除）を一括で行います。
 
 1. 作業ディレクトリ (`build`) 内にフォント名ごとのフォルダを作成します。
-2. その中に処理対象のフォントファイル(`.ttf`)と、オフセット調整ファイル(`offset_height_everywhere.txt`)を配置します。
+2. その中に処理対象のフォントファイル(`.ttf`)と、オフセット調整ファイル(`offset_height_every.txt`)を配置します。
 オフセット値が不明な場合は、後述の[備考](#オフセット調整ファイルが無い場合)を参照してください。
 3. 以下のコマンドを実行します。
 
@@ -41,17 +41,17 @@ $ uv sync
 $ uv run builder --action run_batch_premerge_export --work_dir build
 ```
 
-実行後、フォルダ内にあるすべてのフォントに対して `*-premerge.ttf` が生成されます。
+実行後、フォルダ内にあるすべてのフォントに対して `*_premerge.ttf` が生成されます。
 
 ### 4. フォントのマージ
 以下のコマンドを実行します。
 
 ```powershell:
-$ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント-premere.ttf 補間フォント-premerge.ttf -o build\フォント名-merged.ttf
+$ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premere.ttf 補間フォント_premerge.ttf -o build\任意のフォント名_merged.ttf
 ```
 
 > [!NOTE]
-> 単一フォントで使用し、マージが不要な場合は `*-premerge.ttf` をコピーして `*-merged.ttf` にリネームしてください。
+> 単一フォントで使用し、マージが不要な場合は `*_premerge.ttf` をコピーまたはそのまま `*_merged.ttf` にリネームしてください。
 
 ### 5. フォントバリエーション作成
 スカイリムの各用途（全般、本、手書き）に合わせたサブセットと、長体（Condense）モデルを一括生成します。
@@ -60,7 +60,7 @@ $ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント-premere.
 $ uv run builder --action run_batch_variant_export --work_dir build
 ```
 
-実行後、`*-full.ttf` や `*-lightweight.ttf` などのバリエーションファイルが生成されます。
+実行後、`フォント名_every.ttf` や `フォント名_book_lightweight.ttf` などのバリエーションファイルが生成されます。
 
 ### 6. フォントSWFの作成
 生成されたTTFをゲームが読み込み可能なSWF形式へ変換します。
@@ -84,11 +84,11 @@ $ uv run builder --action run_batch_swf_export --work_dir build
 ### オフセット調整ファイルが無い場合
 フォントの上下位置をバニラの基準に合わせるための数値を算出します。
 
-1. まず `*-premerge.ttf` を作成します（`$ uv run builder --action run_batch_premerge_export --work_dir build` を実行）。
-2. 生成された `*-premerge.ttf` ファイルに対し、以下のコマンドでオフセット値を取得します。
+1. まず `*_premerge.ttf` を作成します（`$ uv run builder --action run_batch_premerge_export --work_dir build` を実行）。
+2. 生成された `*_premerge.ttf` ファイルに対し、以下のコマンドでオフセット値を取得します。
 
 ```powershell:
 $ uv run get_offset_to_align_bottom build\フォント名\フォントファイル-premerge.ttf -o build\フォント名\offset_height_everywhere.txt
 ```
 
-3. この時点で生成された `*-premerge.ttf` ファイルはオフセット値が適用されていないため不要なファイルとなります。削除してからもう一度[マージ前処理](#3-マージ前処理)を実施して下さい。
+3. この時点で生成された `*_premerge.ttf` ファイルはオフセット値が適用されていないため不要なファイルとなります。削除してからもう一度[マージ前処理](#3-マージ前処理)を実施して下さい。

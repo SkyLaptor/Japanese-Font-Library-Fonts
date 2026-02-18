@@ -21,7 +21,7 @@ desktop.ini
 *.otc
 
 # ベースフォント例外許可
-!data/base_fonts/skyrim/everywhere.ttf
+!data/base_fonts/skyrim/every.ttf
 !data/base_fonts/skyrim/book.ttf
 !data/base_fonts/skyrim/handwrite.ttf
 

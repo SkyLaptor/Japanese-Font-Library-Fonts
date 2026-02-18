@@ -30,10 +30,10 @@ def test_swf_internal_name_consistency(test_workspace):
     """
     SWFが生成され、内部名が期待通り(fonts_抜き)になっているかの結合テスト
     """
-    # 1. 疑似マージ（テストフォントを merged という名前にリネームして準備）
+    # 1. 疑似マージ（テストフォントの末尾に _merged をつけて）
     font_dir = test_workspace / "test-font"
     for ttf in font_dir.glob("*-bold.ttf"):
-        shutil.copy(ttf, font_dir / "test-font-bold-merged.ttf")
+        shutil.copy(ttf, font_dir / "test-font-bold_merged.ttf")
 
     # 2. Variant展開を実行
     run_batch_variant_export(str(test_workspace))
@@ -41,9 +41,9 @@ def test_swf_internal_name_consistency(test_workspace):
     # 3. SWFエクスポートを実行
     run_batch_swf_export(str(test_workspace))
 
-    # 4. 検証の準備：新しい命名ルール（medium, normal, full を削る）に合わせる
-    # 元が "test-font-bold-merged" で、ここから "-merged" が消え、
-    # さらに他も省略されると、期待値はこうなります。
+    # 4. 検証の準備：
+    # 命名ルール（medium, normal, full を削る、フォント名以外の-は_に置換する、ベース情報(every,book,handwrite)がつく など）に合わせる。
+    # 元が "test-font-bold_merged" で、ここから "_merged" が消え、さらに他も省略されると、期待値はこうなります。
     variant_name = "test-font_bold_every"
 
     font_dir = test_workspace / "test-font"

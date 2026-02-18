@@ -8,16 +8,18 @@ DATA_DIR = BASE_DIR / "data"
 BUILD_DIR = BASE_DIR / "build"
 SUBSETS_DIR = DATA_DIR / "subsets"
 # === キー名は不整合が起きないように注意 ===
+# Skyrim用ベースキー名
+SKYRIM_BASE_KEYNAME = ["every", "book", "handwrite"]
 # Skyrim用ベースフォントマップ
 SKYRIM_BASE_FONT_DIR = DATA_DIR / "base_fonts" / "skyrim"
 SKYRIM_BASE_FONT_CONFIGS = {
-    "everywhere": SKYRIM_BASE_FONT_DIR / "everywhere.ttf",
+    "every": SKYRIM_BASE_FONT_DIR / "every.ttf",
     "book": SKYRIM_BASE_FONT_DIR / "book.ttf",
     "handwrite": SKYRIM_BASE_FONT_DIR / "handwrite.ttf",
 }
 # Skyrim用のベースフォント毎の長体バリエーション
 SKYRIM_MODE_VARIANTS = {
-    "everywhere": ["normal", "condensed", "skinny"],
+    "every": ["normal", "condensed", "skinny"],
     "book": ["normal"],
     "handwrite": ["normal"],
 }

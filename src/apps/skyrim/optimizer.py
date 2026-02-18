@@ -20,12 +20,13 @@ from utils.subsetter.remove_empty_glyphs import remove_empty_glyphs
 def convert(
     target_font_path: str,
     output_font_path: str,
-    subset_file_path: str,
-    base_type: str,
-    condense_type: str,
-    offset_height: int,
+    subset_file_path: str = "",
+    base_type: str = "every",
+    condense_type: str = "normal",
+    offset_height: int = 0,
     mode_monospace: bool = False,
     anonymize: bool = False,
+    output_font_info: bool = False,
     debug: bool = False,
 ):
     """
@@ -96,7 +97,7 @@ def convert(
 
     # 6. 結果の出力
     suffix = f"_{base_type}_{condense_type}"
-    print(f"フォントを出力しています... (suffix: {suffix})")
+    print("フォントを出力しています...")
 
     save_font(
         font_obj=target_font_obj,
@@ -105,7 +106,7 @@ def convert(
         suffix=suffix,
     )
 
-    if output_font_path:
+    if output_font_path and output_font_info:
         # フォントと同じパスで拡張子だけ .txt に変えたものを作成
         info_output_path = Path(output_font_path).with_suffix(".txt")
 
@@ -117,11 +118,12 @@ def convert(
         )
     else:
         # CLIから直接実行された場合などのフォールバック
-        save_text(
-            content=str(get_info(target_font_obj)),
-            input_path=str(target_path),
-            suffix=suffix,
-        )
+        if output_font_info:
+            save_text(
+                content=str(get_info(target_font_obj)),
+                input_path=str(target_path),
+                suffix=suffix,
+            )
 
     print("処理が完了しました！")
 
