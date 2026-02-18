@@ -8,9 +8,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Windows のロングパス対策
-          config: core.longpaths=true
+
+      - name: Enable long paths
+        run: git config --global core.longpaths true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,11 +33,11 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "ffdec")) { mkdir ffdec }
-          # バージョンを 25.1.0 に統一（必要に応じて変更してください）
+          # 画像で確認できた 25.1.0 を使用
           Invoke-WebRequest -Uri "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.0/ffdec_25.1.0.zip" -OutFile "ffdec.zip"
           Expand-Archive -Path "ffdec.zip" -DestinationPath "ffdec" -Force
           
-          # GitHub Actions の PATH に追加
+          # 解凍したフォルダ（ffdec-cli.exe がある場所）を PATH に追加
           echo "${{ github.workspace }}\ffdec" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Run pytest
