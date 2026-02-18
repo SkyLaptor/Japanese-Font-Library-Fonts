@@ -54,17 +54,17 @@ def action_change_weight(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    weight_changed_font_obj = change_weight(font_obj, offset_weight, debug)
-    print(f"文字の太さを変更しました: 変更量: {offset_weight}")
-    if output_path is not None:
-        saved_output_path = save_font(
-            weight_changed_font_obj,
-            input_path,
-            output_path,
-            "_weight_changed",
-        )
-        print(f"太さを変更したフォントを保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        weight_changed_font_obj = change_weight(input_font_obj, offset_weight, debug)
+        print(f"文字の太さを変更しました: 変更量: {offset_weight}")
+        if output_path is not None:
+            saved_output_path = save_font(
+                weight_changed_font_obj,
+                input_path,
+                output_path,
+                "_weight_changed",
+            )
+            print(f"太さを変更したフォントを保存しました: {saved_output_path}")
 
 
 def change_weight(font_obj: TTFont, offset_weight: int, debug: bool = False) -> TTFont:

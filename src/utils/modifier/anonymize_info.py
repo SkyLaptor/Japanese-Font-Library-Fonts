@@ -60,17 +60,16 @@ def action_anonymize_info(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    anonymized_font_obj = anonymize_info(font_obj, font_name, debug)
-    print("匿名化後のフォント情報")
-    if output_path is not None:
-        saved_output_path = save_font(
-            font_obj=anonymized_font_obj,
-            input_path=input_path,
-            output_path=output_path,
-            suffix="_anonymized",
-        )
-        print(f"フォントを保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        anonymized_font_obj = anonymize_info(input_font_obj, font_name, debug)
+        if output_path is not None:
+            saved_output_path = save_font(
+                font_obj=anonymized_font_obj,
+                input_path=input_path,
+                output_path=output_path,
+                suffix="_anonymized",
+            )
+            print(f"フォントを保存しました: {saved_output_path}")
 
 
 def anonymize_info(font_obj: TTFont, font_name: str, debug: bool = False) -> TTFont:

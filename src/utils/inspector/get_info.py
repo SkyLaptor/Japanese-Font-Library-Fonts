@@ -104,17 +104,17 @@ def main():
 
 
 def action_get_info(input_path: str, output_path: str, debug: bool = False, **_):
-    font_obj = TTFont(input_path)
-    info = get_info(font_obj, debug)
-    print(info)
-    if output_path is not None:
-        output_path = save_text(
-            str(info),
-            input_path,
-            output_path,
-            suffix="_info",
-        )
-        print(f"フォント情報を保存しました: {output_path}")
+    with TTFont(input_path) as input_font_obj:
+        info = get_info(input_font_obj, debug)
+        print(info)
+        if output_path is not None:
+            output_path = save_text(
+                str(info),
+                input_path,
+                output_path,
+                suffix="_info",
+            )
+            print(f"フォント情報を保存しました: {output_path}")
 
 
 def get_info(font_obj: TTFont, debug: bool = False) -> Result:

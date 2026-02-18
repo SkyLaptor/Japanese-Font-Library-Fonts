@@ -44,16 +44,16 @@ def main():
 def action_remove_empty_glyphs(
     input_path: str, output_path: str, debug: bool = False, **_
 ):
-    font_obj = TTFont(input_path)
-    font_obj = remove_empty_glyphs(font_obj, debug)
-    if output_path is not None:
-        saved_output_path = save_font(
-            font_obj,
-            input_path,
-            output_path,
-            suffix="_emptyglyphs_removed",
-        )
-        print(f"フォントを保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        input_font_obj = remove_empty_glyphs(input_font_obj, debug)
+        if output_path is not None:
+            saved_output_path = save_font(
+                input_font_obj,
+                input_path,
+                output_path,
+                suffix="_emptyglyphs_removed",
+            )
+            print(f"フォントを保存しました: {saved_output_path}")
 
 
 def remove_empty_glyphs(font_obj: TTFont, debug: bool = False) -> TTFont:

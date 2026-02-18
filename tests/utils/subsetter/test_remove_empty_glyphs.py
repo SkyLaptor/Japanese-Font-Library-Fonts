@@ -1,8 +1,13 @@
+from pathlib import Path
+
 import pytest
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
-from utils.subsetter.remove_empty_glyphs import remove_empty_glyphs
+from utils.subsetter.remove_empty_glyphs import (
+    action_remove_empty_glyphs,
+    remove_empty_glyphs,
+)
 
 
 @pytest.fixture
@@ -50,6 +55,25 @@ def test_font_for_cleaning():
     fb.setupOS2()
     fb.setupPost()
     return fb.font
+
+
+def test_action_remove_empty_glyphs_output(tmp_path):
+    """
+    フォント空白削除アクションが正常に走り、ファイルが書き出されるかテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_file = Path("tests/data/test-font/test-font-medium.ttf")
+    output_file = tmp_path / "test_font.ttf"
+
+    # 実行: アクションを直接叩く
+    action_remove_empty_glyphs(
+        input_path=input_file,
+        output_path=output_file,
+        debug=True,
+    )
+
+    # ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
 
 
 def test_remove_empty_glyphs_logic(test_font_for_cleaning):

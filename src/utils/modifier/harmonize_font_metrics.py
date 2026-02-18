@@ -98,56 +98,54 @@ def action_harmonize_font_metrics(
     debug: bool = False,
     **_,
 ):
-    base_font_obj = TTFont(base_path)
-    target_font_obj = TTFont(input_path)
+    with TTFont(base_path) as base_font_obj, TTFont(input_path) as input_font_obj:
+        print("=== 変形前のターゲットフォントの情報")
+        input_font_info = get_info(input_font_obj, debug)
+        print(str(input_font_info))
 
-    base_font_info = get_info(base_font_obj, debug)
+        result = harmonize_font_metrics(
+            target_font_obj=input_font_obj,
+            base_font_obj=base_font_obj,
+            scale_width_manual=scale_width,
+            scale_height_manual=scale_height,
+            offset_width=offset_width,
+            offset_height=offset_height,
+            debug=debug,
+        )
+        harmonized_input_font_obj = result.font_obj
 
-    base_avg_size_result = get_average_size(base_font_obj)
-    target_avg_size_result = get_average_size(target_font_obj)
+        print("=== 変形後のターゲットフォントの情報")
+        harmonized_input_font_info = get_info(harmonized_input_font_obj)
+        print(str(harmonized_input_font_info))
 
-    harmonized_fixed_target_result = harmonize_font_metrics(
-        target_font_obj=target_font_obj,
-        base_font_obj=base_font_obj,
-        scale_width_manual=scale_width,
-        scale_height_manual=scale_height,
-        offset_width=offset_width,
-        offset_height=offset_height,
-        debug=debug,
-    )
+        scale_for_upm = 1.0
+        if result.is_upm_change:
+            scale_for_upm = (
+                harmonized_input_font_info.upm / input_font_info.upm
+            )  # 例: 1000 → 1024になったのであれば、1024 / 1000 = 1.024になるはず。
+            print(
+                f"ターゲットフォントのUPMが変更されました: 元:{input_font_info.upm}, 現在:{harmonized_input_font_info.upm}"
+            )
 
-    harmonized_target_font_obj = harmonized_fixed_target_result.font_obj
-    dprint("=== 現在のターゲットフォントの情報", debug)
-    dprint(get_info(harmonized_target_font_obj), debug)
-    scale_for_upm = 1.0
-    if harmonized_fixed_target_result.is_upm_change:
-        metrics_fixed_target_font_info = get_info(harmonized_target_font_obj, debug)
-        scale_for_upm = (
-            metrics_fixed_target_font_info.upm / target_font_info.upm
-        )  # 例: 1000 → 1024になったのであれば、1024 / 1000 = 1.024になるはず。
         print(
-            f"ターゲットフォントのUPMが変更されました: 元:{target_font_info.upm}, 現在:{metrics_fixed_target_font_info.upm}"
+            f"UPMによる拡大縮小率: x{scale_for_upm}, 手動横拡大縮小率: x{scale_width:.3f}, 手動縦拡大縮小率: x{scale_height}"
+        )
+        print(
+            f"実際に処理された拡大縮小率: 横:x{result.final_scale_width:.3f}, 縦:x{result.final_scale_height:.3f}"
+        )
+        harmonized_input_avg_size_result = get_average_size(harmonized_input_font_obj)
+        print(
+            f"処理後のターゲットフォントのグリフ平均サイズ: 横: {harmonized_input_avg_size_result.avg_w:.1f}, 縦: {harmonized_input_avg_size_result.avg_h:.1f}"
         )
 
-    print(
-        f"UPMによる拡大縮小率: x{scale_for_upm}, 手動横拡大縮小率: x{scale_width:.3f}, 手動縦拡大縮小率: x{scale_height}"
-    )
-    print(
-        f"実際に処理された拡大縮小率: 横:x{harmonized_fixed_target_result.final_scale_width:.3f}, 縦:x{harmonized_fixed_target_result.final_scale_height:.3f}"
-    )
-    harmonized_target_avg_size_result = get_average_size(harmonized_target_font_obj)
-    print(
-        f"処理後のターゲットフォントのグリフ平均サイズ: 横: {harmonized_target_avg_size_result.avg_w:.1f}, 縦: {harmonized_target_avg_size_result.avg_h:.1f}"
-    )
-
-    if output_path is not None:
-        saved_output_path = save_font(
-            font_obj=harmonized_target_font_obj.font_obj,
-            input_path=input_path,
-            output_path=output_path,
-            suffix="_harmonized",
-        )
-        print(f"フォントを保存しました: {saved_output_path}")
+        if output_path is not None:
+            saved_output_path = save_font(
+                font_obj=harmonized_input_font_obj,
+                input_path=input_path,
+                output_path=output_path,
+                suffix="_harmonized",
+            )
+            print(f"フォントを保存しました: {saved_output_path}")
 
 
 def harmonize_font_metrics(

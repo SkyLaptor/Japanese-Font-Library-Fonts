@@ -53,17 +53,17 @@ def main():
 def action_get_average_size(
     input_path: str, output_path: str, debug: bool = False, **_
 ):
-    font_obj = TTFont(input_path)
-    result = get_average_size(font_obj, debug)
-    print(result)
-    if output_path is not None:
-        output_path = save_text(
-            str(result),
-            input_path,
-            output_path,
-            "_average_size",
-        )
-        print(f"平均値計算結果を保存しました: {output_path}")
+    with TTFont(input_path) as input_font_obj:
+        result = get_average_size(input_font_obj, debug)
+        print(result)
+        if output_path is not None:
+            output_path = save_text(
+                str(result),
+                input_path,
+                output_path,
+                "_average_size",
+            )
+            print(f"平均値計算結果を保存しました: {output_path}")
 
 
 def get_average_size(font_obj: TTFont, debug: bool = False) -> Result:

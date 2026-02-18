@@ -1,4 +1,32 @@
-from utils.subsetter.merge_text import merge_text
+from pathlib import Path
+
+from utils.subsetter.merge_text import action_merge_text, merge_text
+
+
+def test_action_merge_text_output(tmp_path):
+    """
+    文字列結合アクションが正常に走り、ファイルが書き出されるかのテスト
+    """
+    # 1. 準備: 入力元、出力先
+    input_dir = Path("tests/data/test-text")
+    output_file = tmp_path / "test.txt"
+
+    # 2. 実行: アクションを直接叩く
+    action_merge_text(
+        input_dir=input_dir,
+        output_path=str(output_file),
+        validnamechars_escape=True,
+        debug=True,
+    )
+
+    # 3. 検証: ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
+
+    content = output_file.read_text(encoding="utf-8")
+    assert len(content) > 0, "生成されたファイルが空です"
+
+    # デバッグ用に最初の数文字を表示（pytest -s で確認可能）
+    print(f"\nGenerated content preview: {content[:20]}...")
 
 
 def test_merge_text_basic(tmp_path):

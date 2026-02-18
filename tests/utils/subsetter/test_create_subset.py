@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import pytest
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
-from utils.subsetter.create_subset import create_subset
+from utils.subsetter.create_subset import action_create_subset, create_subset
 
 
 @pytest.fixture
@@ -33,6 +35,27 @@ def real_minimal_font():
     fb.setupPost()
 
     return fb.font
+
+
+def test_action_create_subset_output(tmp_path):
+    """
+    フォントサブセット化アクションが正常に走り、ファイルが書き出されるかテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_path = Path("tests/data/test-font/test-font-medium.ttf")
+    output_path = tmp_path / "test_font.ttf"
+    subset_path = Path("data/subsets/skyrim/subset_jp_test.txt")
+
+    # 実行: アクションを直接叩く
+    action_create_subset(
+        input_path=input_path,
+        output_path=output_path,
+        subset_path=subset_path,
+        debug=True,
+    )
+
+    # ファイルが物理的に存在し、中身が空でないか
+    assert output_path.exists(), "ファイルが生成されていません"
 
 
 def test_create_subset_functionality(real_minimal_font):

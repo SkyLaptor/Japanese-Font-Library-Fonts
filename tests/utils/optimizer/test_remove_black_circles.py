@@ -1,8 +1,13 @@
+from pathlib import Path
+
 import pytest
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
-from utils.optimizer.remove_black_circles import remove_black_circles
+from utils.optimizer.remove_black_circles import (
+    action_remove_black_circles,
+    remove_black_circles,
+)
 
 
 @pytest.fixture
@@ -72,6 +77,26 @@ def black_circle_font():
     fb.setupOS2()
     fb.setupPost()
     return fb.font
+
+
+def test_action_remove_black_circles_output(tmp_path):
+    """
+    フォントから黒丸を除去するアクションが正常に走り、ファイルが書き出されるかのテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_file = Path("tests/data/test-font/test-font-medium.ttf")
+    output_file = tmp_path / "test_font.ttf"
+
+    # 実行: アクションを直接叩く
+    action_remove_black_circles(
+        input_path=input_file,
+        output_path=output_file,
+        target_size=90,
+        debug=True,
+    )
+
+    # ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
 
 
 def test_remove_black_circles_logic(black_circle_font):

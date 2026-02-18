@@ -43,12 +43,12 @@ def action_get_glyphs(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    glyphs = get_glyphs(font_obj, debug)
-    print(f"文字数: {len(glyphs)}")
-    if output_path is not None:
-        saved_output_path = save_text(glyphs, input_path, output_path, "_glyphs")
-        print(f"フォントに含まれる文字を保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        glyphs = get_glyphs(input_font_obj, debug)
+        print(f"文字数: {len(glyphs)}")
+        if output_path is not None:
+            saved_output_path = save_text(glyphs, input_path, output_path, "_glyphs")
+            print(f"フォントに含まれる文字を保存しました: {saved_output_path}")
 
 
 def get_glyphs(font_obj: TTFont, debug: bool = False) -> str:

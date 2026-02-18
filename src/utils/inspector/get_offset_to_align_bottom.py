@@ -51,12 +51,14 @@ def action_get_offset_to_align_bottom(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    offset = get_offset_to_align_bottom(font_obj, base_line, debug)
-    print(f"ベースライン: {base_line}, オフセット値: {offset:.1f}")
-    if output_path is not None:
-        output_path = save_text(str(offset), input_path, output_path, "_bottom_offset")
-        print(f"オフセット値を保存しました: {output_path}")
+    with TTFont(input_path) as input_font_obj:
+        offset = get_offset_to_align_bottom(input_font_obj, base_line, debug)
+        print(f"ベースライン: {base_line}, オフセット値: {offset:.1f}")
+        if output_path is not None:
+            output_path = save_text(
+                str(offset), input_path, output_path, "_bottom_offset"
+            )
+            print(f"オフセット値を保存しました: {output_path}")
 
 
 def get_offset_to_align_bottom(

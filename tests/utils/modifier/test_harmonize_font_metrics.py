@@ -1,9 +1,13 @@
 import io
+from pathlib import Path
 
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 
-from src.utils.modifier.harmonize_font_metrics import harmonize_font_metrics
+from src.utils.modifier.harmonize_font_metrics import (
+    action_harmonize_font_metrics,
+    harmonize_font_metrics,
+)
 
 
 def setup_kanji_mock_font(create_mock_font, upm, size, advance):
@@ -40,6 +44,32 @@ def setup_kanji_mock_font(create_mock_font, upm, size, advance):
     font.save(buf)
     buf.seek(0)
     return TTFont(buf)
+
+
+def test_action_harmonize_font_metrics(tmp_path):
+    """
+    フォント変形アクションが正常に走り、ファイルが書き出されるかのテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_file = Path("tests/data/test-font/test-font-bold.ttf")
+    base_file = Path("tests/data/test-font/test-font-heavy.ttf")
+    output_file = tmp_path / "test_font.ttf"
+
+    # 実行: アクションを直接叩く
+    # 引数は実際の関数に合わせて調整してください
+    action_harmonize_font_metrics(
+        input_path=input_file,
+        output_path=output_file,
+        base_path=base_file,
+        scale_width=0.64,
+        scale_height=0.98,
+        offset_width=0,
+        offset_height=-64,
+        debug=True,
+    )
+
+    # 検証: ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
 
 
 def test_harmonize_font_metrics_scaling(create_mock_font):

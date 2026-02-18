@@ -52,11 +52,15 @@ def action_create_subset(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    font_obj = create_subset(font_obj, load_text(subset_path, EXCLUDE_CHARS), debug)
-    if output_path is not None:
-        saved_output_path = save_font(font_obj, input_path, output_path, "_subsetted")
-        print(f"フォントを保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        subsetted_input_font_obj = create_subset(
+            input_font_obj, load_text(subset_path, EXCLUDE_CHARS), debug
+        )
+        if output_path is not None:
+            saved_output_path = save_font(
+                subsetted_input_font_obj, input_path, output_path, "_subsetted"
+            )
+            print(f"フォントを保存しました: {saved_output_path}")
 
 
 def create_subset(font_obj: TTFont, subset_text: str, debug: bool = False) -> TTFont:

@@ -1,10 +1,42 @@
 import time
+from pathlib import Path
 
 import pytest
+from fontTools.ttLib import TTFont
 
-from src.utils.modifier.anonymize_info import EPOCH_DIFF, anonymize_info
+from src.utils.modifier.anonymize_info import (
+    EPOCH_DIFF,
+    action_anonymize_info,
+    anonymize_info,
+)
 
-# あなたの提示した create_mock_font フィクスチャがここにある前提です
+
+def test_action_anonymize_info_output(tmp_path):
+    """
+    フォント匿名化アクションが正常に走り、ファイルが書き出されるか、匿名化されているかのテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_file = Path("tests/data/test-font/test-font-medium.ttf")
+    output_file = tmp_path / "test_font.ttf"
+    font_name = "TestAnonymous"
+
+    # 実行: アクションを直接叩く
+    action_anonymize_info(
+        input_path=input_file,
+        output_path=output_file,
+        font_name="TestAnonymous",
+        debug=True,
+    )
+
+    # ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
+
+    # 入力フォント、書き出しフォントを検証
+    with TTFont(input_file) as input_font, TTFont(output_file) as output_font:
+        # フォント名が書き換わっているか
+        assert font_name in str(output_font['name'].getDebugName(1))
+        # ベンダーIDが変更されているか
+        assert input_font['OS/2'].achVendID != output_font['OS/2'].achVendID
 
 
 def test_anonymize_info_logic(create_mock_font):

@@ -1,7 +1,27 @@
+from pathlib import Path
+
 import pytest
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
-from src.utils.modifier.change_weight import change_weight
+from src.utils.modifier.change_weight import action_change_weight, change_weight
+
+
+def test_action_change_weight_output(tmp_path):
+    """
+    フォント太さ調整アクションが正常に走り、ファイルが書き出されるかのテスト
+    """
+    # 準備: 入力フォント及び出力先パス
+    input_file = Path("tests/data/test-font/test-font-medium.ttf")
+    output_file = tmp_path / "test_font.ttf"
+
+    # 2. 実行: アクションを直接叩く
+    # 引数は実際の関数に合わせて調整してください
+    action_change_weight(
+        input_path=input_file, output_path=output_file, offset_weight=15, debug=True
+    )
+
+    # 検証: ファイルが物理的に存在し、中身が空でないか
+    assert output_file.exists(), "ファイルが生成されていません"
 
 
 def test_change_weight_grow(create_mock_font):

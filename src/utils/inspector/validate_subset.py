@@ -53,21 +53,21 @@ def action_validate_subset(
     debug: bool = False,
     **_,
 ):
-    font_obj = TTFont(input_path)
-    subset_text = load_text(subset_path, EXCLUDE_CHARS)
-    missing_glyphs = validate_subset(font_obj, subset_text, debug)
-    missing_glyphs_count = len(missing_glyphs)
-    print(f"サブセットにあってフォントに無い文字数: {missing_glyphs_count}")
-    if output_path is not None:
-        saved_output_path = save_text(
-            missing_glyphs,
-            input_path,
-            output_path,
-            suffix="_missing_glyphs",
-        )
-        print(
-            f"サブセットにあってフォントに無い文字を出力しました: {saved_output_path}"
-        )
+    with TTFont(input_path) as input_font_obj:
+        subset_text = load_text(subset_path, EXCLUDE_CHARS)
+        missing_glyphs = validate_subset(input_font_obj, subset_text, debug)
+        missing_glyphs_count = len(missing_glyphs)
+        print(f"サブセットにあってフォントに無い文字数: {missing_glyphs_count}")
+        if output_path is not None:
+            saved_output_path = save_text(
+                missing_glyphs,
+                input_path,
+                output_path,
+                suffix="_missing_glyphs",
+            )
+            print(
+                f"サブセットにあってフォントに無い文字を出力しました: {saved_output_path}"
+            )
 
 
 def validate_subset(font_obj: TTFont, subset_text: str, debug: bool = False) -> str:

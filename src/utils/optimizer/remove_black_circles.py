@@ -49,17 +49,16 @@ def main():
 def action_remove_black_circles(
     input_path: str, output_path: str, target_size: int, debug: bool = False, **_
 ):
-    font_obj = TTFont(input_path)
-    removed_font_obj = remove_black_circles(font_obj, target_size, debug)
-
-    if output_path is not None:
-        saved_output_path = save_font(
-            removed_font_obj,
-            input_path,
-            output_path,
-            suffix="_black_circles_removed",
-        )
-        print(f"フォントを保存しました: {saved_output_path}")
+    with TTFont(input_path) as input_font_obj:
+        removed_font_obj = remove_black_circles(input_font_obj, target_size, debug)
+        if output_path is not None:
+            saved_output_path = save_font(
+                removed_font_obj,
+                input_path,
+                output_path,
+                suffix="_black_circles_removed",
+            )
+            print(f"フォントを保存しました: {saved_output_path}")
 
 
 def remove_black_circles(
