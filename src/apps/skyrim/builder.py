@@ -306,11 +306,11 @@ def run_batch_swf_export(work_dir: str, debug: bool = False) -> None:
             swf_filename = get_swf_name(font_name, stem_name)
             output_swf_path = font_dir / swf_filename
 
-            #  SWF内のフォント名をファイル名と一致させる
+            # SWF内のフォント名をファイル名と一致させる
             # 例: fonts_noto-sans_bold_every.swf -> noto-sans_bold_every
             internal_font_name = swf_filename.replace("fonts_", "").replace(".swf", "")
-
-            print(f"  -> 処理中: {swf_filename} (内部フォント名: {internal_font_name})")
+            print(f"  -> 変換元: {ttf_path.name}")
+            print(f"  -> 処理後: {swf_filename} (内部フォント名: {internal_font_name})")
 
             # 結構な高負荷処理で失敗することがあるため、リトライを実施します。
             max_retries = 3
