@@ -57,15 +57,22 @@ def replace_glyph_in_swf(template_path: Path, output_path: Path, ttf_path: Path)
 
 def get_swf_name(font_name: str, font_file_name: str) -> str:
     """ファイル名からスカイリムの命名規則に従ったSWF名を生成する。"""
-
+    # 1. フォント名部分を取り除き、残った特徴部分（例: _light_every_lightweight）を取得
     features_part = font_file_name.lower().replace(font_name.lower(), "")
+
+    # 2. アンダースコアで分割して、個別の単語リストにする
+    # これにより "lightweight" を "light" と "weight" に誤認するのを防ぐ
+    feature_parts_list = features_part.split("_")
+
     results = []
 
     # 各カテゴリごとにルールを適用
     for category in ["weight", "ui", "condense", "subset"]:
         rules = SWF_NAME_RULES.get(category, [])
         for keywords, suffix in rules:
-            if any(kw in features_part for kw in keywords):
+            # 【修正点】単語として完全に一致するかをチェックする
+            # if any(kw in features_part for kw in keywords):  # ←これが誤爆の原因
+            if any(kw in feature_parts_list for kw in keywords):
                 results.append(suffix)
                 break
 

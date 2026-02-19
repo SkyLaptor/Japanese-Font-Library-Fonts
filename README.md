@@ -1,98 +1,123 @@
+[![Python Tests (Windows)](https://github.com/SkyLaptor/Japanese-Font-Library-Fonts/actions/workflows/python-tests.yml/badge.svg?branch=main)](https://github.com/SkyLaptor/Japanese-Font-Library-Fonts/actions/workflows/python-tests.yml)
+
 # Japanese Font Library - Fonts
-[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のフォント関連サブプロジェクトです。  
-お好みのフォントを用意するだけで、スカイリムのUI表示に最適化されたフォントファイルを一括生成できます。
+[Japanese Font Library](https://github.com/SkyLaptor/Japanese-Font-Library) のサブプロジェクトです。  
+お好みの日本語フォント（TTF）から、スカイリムのUI表示に最適化されたフォントファイル（SWF）を一括生成します。
 
 
 ## 動作環境
-* [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)  
-フォントファイルをSWFへ埋め込むために必要です。パスに `ffdec-cli` を通しておく必要があります。 
+以下のツールをインストールし、コマンドラインから呼び出せるように設定してください。
 
 * [UV](https://docs.astral.sh/uv/)  
-スクリプトの実行環境です。OSに合わせて[インストール](https://docs.astral.sh/uv/getting-started/installation/)を完了させてください。
- 
+Python実行環境。
+
+* [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)  
+SWF埋め込み用。`ffdec-cli` にパスを通してください。
+
 * [FontForge](https://fontforge.org/en-US/)  
-フォントの目視検査、破損したフォントの修復、およびマージの際に使用します。パスに `fontforge` が通っている必要があります。 
+フォント修復・マージ用。`fontforge` にパスを通してください。
 
 > [!NOTE]
-> 「パスに通す」とは？
-> 通常であれば `"C:\Program Files\FFdec\ffdec-cli.exe" ほにゃらら` と入力しなければならないところ、`ffdec-cli.exe ほにゃらら` で実行できるようにすることを指します。
-> Windowsであれば、環境変数にある `Path` というところに途中のフォルダ名(`C:\Program Files\FFdec\` など)を登録すればOKです。
+> **「パスを通す」とは？**
+> ターミナルで `ffdec-cli` と打つだけでプログラムが起動するように、Windowsの環境変数 `Path` に実行ファイルの場所を登録することです。
+
+![Windows環境変数-Path](https://github.com/user-attachments/assets/2ed25f9e-f138-46c0-be95-1caff284045d)
+
+![Windows環境変数-Path-FontForge-FFDec](https://github.com/user-attachments/assets/71e5e2f9-2731-4b55-a248-c64858352045)
 
 ## 使い方
 ### 1. 準備
-本リポジトリを任意の場所にクローンまたはダウンロードします。
+1. 本リポジトリをクローンまたはダウンロードします。
 
-### 2. フォントファイルの用意
-使用したいTTFフォントを用意します。  
+2. 使用したいフォント（`.ttf`）を用意します。
 
 > [!TIP]
-> OTFフォントは使用できませんが、`$ uv run otf2ttf フォントファイル.otf` を利用してTTFに変換可能です。
-> フォント製作者よりTTF版が提供されている場合は、変換による不具合防止のため可能な限りそちらを使用してください。
+> OTF形式の場合は、`uv run otf2ttf sample.otf` で変換可能です。
 
-### 3. マージ前処理
-グリフを補完するためにフォント同士をマージする前の事前調整（UPM変更や空白グリフ削除）を一括で行います。
+### 2. 作業ディレクトリの配置
+`build` フォルダ内にフォント名ごとのフォルダを作成し、フォントファイルを配置します。
 
-1. 作業フォルダ (`build`) 内にフォント名ごとにフォルダを作成します。
+* **配置例**: build/YourFontName/YourFont.ttf
 
-2. フォント名フォルダの中に処理対象のフォントファイル(`.ttf`)と、オフセット調整ファイル(`offset_height_every.txt`)を配置します。
-オフセット値が不明な場合は、後述の[オフセット調整ファイルが無い場合](#オフセット調整ファイルが無い場合)を参照してください。
+![作業ディレクトリの配置-フォントフォルダ](https://github.com/user-attachments/assets/47ce4637-fe40-4a72-96f7-b73096842166)
 
-1. 以下のコマンドを実行します。
+![作業ディレクトリの配置-フォントとオフセット配置](https://github.com/user-attachments/assets/f86a738c-4d8c-4963-98ad-d3edd8aed12d)
 
-```powershell:
-$ uv run builder --action run_batch_premerge_export --work_dir build
-```
-
-実行後、フォルダ内にあるすべてのフォントに対して `*_premerge.ttf` が生成されます。
-
-### 4. フォントのマージ
-以下のコマンドを実行します。
+> [!IMPORTANT]
+> オフセット調整ファイル（`offset_height_every.txt`）について  
+> フォントの上下位置をバニラに合わせるための設定ファイルです。持っていない場合は、以下のコマンドで生成してください。
 
 ```powershell:
-$ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premere.ttf 補間フォント_premerge.ttf -o build\任意のフォント名_merged.ttf
+# 一度仮のプリマージを行い、オフセット値を算出する例
+uv run builder --action run_batch_premerge_export --work_dir build
+uv run get_offset_to_align_bottom build/YourFontName/YourFont_premerge.ttf -o build/YourFontName/offset_height_every.txt
+# 生成後、一度 *_premerge.ttf は削除してください
 ```
 
-> [!NOTE]
-> 単一フォントで使用し、マージが不要な場合は `*_premerge.ttf` をコピーしてから、またはそのまま `*_merged.ttf` にリネームしてください。
-
-### 5. フォントバリエーション作成
-スカイリムの各用途（全般、本、手書き）に合わせたサブセットと、長体（Condense）モデルを一括生成します。
+### 3. プリマージ処理（最適化）
+UPMの変更や空白グリフの削除など、スカイリム向けの事前調整を行います。
 
 ```powershell:
-$ uv run builder --action run_batch_variant_export --work_dir build
+uv run builder --action run_batch_premerge_export --work_dir build
 ```
 
-実行後、`フォント名_every.ttf` や `フォント名_book_lightweight.ttf` などのバリエーションファイルが生成されます。
+実行後、 `*_premerge.ttf` が生成されます。
 
-### 6. フォントSWFの作成
-生成されたTTFをゲームが読み込み可能なSWF形式へ変換します。
+![プリマージ処理（最適化）-完了](https://github.com/user-attachments/assets/4101eb65-7ad6-45fd-8a6e-b8d6286d18fb)
+
+### 4. フォントのマージ（任意）
+不足している文字を別のフォントで補完したい場合、FontForgeを使用してマージします。  
+※ マージが不要な場合は、`*_premerge.ttf` を `*_merged.ttf` にリネームして進めてください。
 
 ```powershell:
-$ uv run builder --action run_batch_swf_export --work_dir build
+fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.ttf 補間フォント_premerge.ttf -o build\任意のフォント名_merged.ttf
 ```
 
-実行後、スカイリム用フォントSWF（`fonts_*.swf`）が作成されます。  
-内部のフォント名は、フォントSWFファイル名から`fonts_`を抜いたものになります。例: `fonts_example_bold_every_condensed_lightweight.swf` なら `example_bold_every_condensed_lightweight` が内部フォント名です。
+![フォントのマージ（任意）-完了](https://github.com/user-attachments/assets/83151bc7-8d5f-4905-809f-e3aa520d655e)
 
 
-> [!NOTE]
-> 非常に重い処理です。場合により処理に失敗することがあります。
+### 5. バリエーション生成
+用途別（本、手書き、長体モデルなど）のサブセットを一括生成します。
+
+```powershell:
+uv run builder --action run_batch_variant_export --work_dir build
+```
+
+![バリエーション生成](https://github.com/user-attachments/assets/c05f928a-4aea-4942-9ce2-492dfc1a6927)
+
+### 6. SWFファイルの作成
+ゲームが読み込める形式へ変換します。**※非常に重い処理です**
+
+```powershell:
+uv run builder --action run_batch_swf_export --work_dir build
+```
+
+![SWFファイルの作成-完了](https://github.com/user-attachments/assets/e4acade3-1432-473a-9888-36567f7b8b62)
+
+* **注意**: 作業ドライブに1GB以上の空き容量を確保してください。
+* 生成された `fonts_*.swf` の「内部フォント名」は、ファイル名から `fonts_` を除いたものになります。
 
 ### 7. スカイリムへの適用
-1. 作成されたSWFファイルを `Skyrim/Data/Interface` フォルダへ配置します。
-2. 同フォルダの `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
-   * **読み込み設定**: 上部に `fontlib "Interface\作成したファイル名.swf"` を追記。
-   * **割り当て設定**: 各 `map` 行の右側を、[手順6](#6-フォントswfの作成)で設定された内部フォント名に書き換えます。
+1. 作成されたSWFを `Skyrim/Data/Interface` に配置します。
 
-## 備考
-### オフセット調整ファイルが無い場合
-フォントの上下位置をバニラの基準に合わせるための数値を算出します。
+![スカイリムへの適用-フォントSWF配置](https://github.com/user-attachments/assets/60210728-718b-40bc-a259-930dddcc4721)
 
-1. まず `*_premerge.ttf` を作成します（`$ uv run builder --action run_batch_premerge_export --work_dir build` を実行）。
-2. 生成された `*_premerge.ttf` ファイルに対し、以下のコマンドでオフセット値を取得します。
+2. `fontconfig.txt`（または `fontconfig_ja.txt`）を編集します。
+
+   * **fontlib**: `fontlib "Interface\作成したファイル名.swf"` を追記。
+
+![スカイリムへの適用-fontlib記述](https://github.com/user-attachments/assets/bff386ee-96a6-4751-859a-5d5571e53bdd)
+
+   * **map**: 各行のフォント指定を、[手順6](#6-swfファイルの作成)で設定された内部フォント名に書き換えます。
+
+![スカイリムへの適用-map変更](https://github.com/user-attachments/assets/d76f43e0-b28a-4a19-8db4-2726c4b9f15c)
+
+
+## 💡Tips & トラブルシューティング
+* **処理が失敗する**: メモリ不足やディスク容量不足を確認してください。
+
+* **文字が「豆腐（□）」になる**: 使用したフォントがそのグリフを保持していない可能性があります。以下のコマンドで保持グリフを確認できます。
 
 ```powershell:
-$ uv run get_offset_to_align_bottom build\フォント名\フォントファイル_premerge.ttf -o build\フォント名\offset_height_every.txt
+uv run get_glyphs build/YourFontName/YourFont_every.ttf -o build/YourFontName/YourFont_every_glyphs.txt
 ```
-
-3. この時点で生成された `*_premerge.ttf` ファイルはオフセット値が適用されていないため使用できません。削除してからもう一度[マージ前処理](#3-マージ前処理)を実施して下さい。
