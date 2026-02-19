@@ -25,46 +25,37 @@
 * src: プログラムソースコードを配置します。
 * tests: pytestなどのテスト用コードを配置します。
 
-## テスト環境
-* 対象のゲーム: Skyrim, SkyrimSE(SkyrimAE), SkyrimVR
-* 対象のModマネージャー: [Vortex](https://www.nexusmods.com/about/vortex), [ModOrganizer2](https://www.nexusmods.com/about/vortex) ※公式そのままの状態でカスタムを加えていないものであること。
+## 適用対象
+* 対象ゲーム: Skyrim, SkyrimSE(SkyrimAE), SkyrimVR の英語版/日本語版 全てのバージョン。
+* 対象Modマネージャー: [Vortex](https://www.nexusmods.com/about/vortex), [ModOrganizer2](https://www.nexusmods.com/about/vortex) ※公式そのままの状態でカスタムを加えていないものであること。
 * Mod: [SKSE](https://skse.silverlock.org/), [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) ※フォント周りに影響を及ぼす場合はIssueで提案すること。
 
 ## 大まかな開発手順
 1. リポジトリから `main` ブランチをクローン/チェックアウトします。
 2. 開発ツール類、テスト環境をセットアップします。
-3. コンテンツを修正し、テストを実行する。`$ uv run -m pytest`
+3. コンテンツを修正し、テストを実行します。`$ uv run -m pytest`
 4. `main` ブランチに対してプルリクエストを作成します。
 
 ## 開発及びテスト時に使用するツール
 ### Visual Studio Code (VSCode)
-軽量、強力なIDEです。
+軽量、強力なIDEです。  
 https://code.visualstudio.com/
 
-### BSA Browser
-ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使います。
-https://www.nexusmods.com/skyrimspecialedition/mods/1756
-
-### xTranslator
-プラグインやスクリプトを翻訳します。
-https://www.nexusmods.com/starfield/mods/313
-
 ### UV
-OSを汚さずにPython実行環境を準備するために使用します。
+OSを汚さずにPython実行環境を準備するために使用します。  
 https://docs.astral.sh/uv/getting-started/installation/
 
-初回や更新があった場合は以下のコマンドを実行して下さい。
-```
-$ uv sync
-```
-
 ### FontForge
-作成したフォントの確認やマージにて使用します。`fontforge.exe` にパスを通してください。
+作成したフォントの確認やマージにて使用します。パスを `fontforge.exe` に通してください。  
 https://fontforge.org/en-US/
 
 ### JPEXS Free Flash Decompiler - FFDec
-SWFを作成加工するために使用します。`ffdec-cli.exe` にパスを通してください。
+SWFを作成加工するために使用します。パスを `ffdec-cli.exe` に通してください。  
 https://github.com/jindrapetrik/jpexs-decompiler
+
+### BSA Browser
+ベセスダアーカイブ(.bsa)を展開するツール。バニラのフォントや設定ファイルを取り出すために使います。  
+https://www.nexusmods.com/skyrimspecialedition/mods/1756
 
 
 ## ゲームデフォルトの日本語フォントの取り出し方
@@ -86,7 +77,7 @@ https://github.com/jindrapetrik/jpexs-decompiler
 
 4. エクスポートした `.swf` を[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)で開き、**[フォント]** セクションから以下の3種類のフォントを取り出します。
 
-   * **Everywhere** : `1_Skyrim_JP_EveryFont_0805`
+   * **Every** : `1_Skyrim_JP_EveryFont_0805`
    * **Book** : `22_Skyrim_JP_BookFont_0805`
    * **Handwrite** : `5_Skyrim_JP_HandWriteFont_0805`
 
@@ -97,7 +88,7 @@ https://github.com/jindrapetrik/jpexs-decompiler
 以下のコマンドで空白が除去されます。
 
 ```powershell:
-$ uv run remove_empty_glyphs build\1_Skyrim_JP_EveryFont_0805.ttf -o data\base_fonts\skyrim\everywhere.ttf
+$ uv run remove_empty_glyphs build\1_Skyrim_JP_EveryFont_0805.ttf -o data\base_fonts\skyrim\every.ttf
 $ uv run remove_empty_glyphs build\22_Skyrim_JP_BookFont_0805.ttf -o data\base_fonts\skyrim\book.ttf
 $ uv run remove_empty_glyphs build\5_Skyrim_JP_HandWriteFont_0805.ttf -o data\base_fonts\skyrim\handwrite.ttf
 ```
@@ -220,7 +211,7 @@ $ uv run generate_subset_jp_jisx0208 data\fontconfigs\skyrim\validNameChars.txt 
 以下のコマンドを実行します。
 
 ```powershell:
-$ uv run get_glyphs data\base_fonts\skyrim\everywhere.ttf -o build\everywhere_glyphs.txt
+$ uv run get_glyphs data\base_fonts\skyrim\every.ttf -o build\every_glyphs.txt
 $ uv run get_glyphs data\base_fonts\skyrim\book.ttf -o build\book_glyphs.txt
 $ uv run get_glyphs data\base_fonts\skyrim\handwrite.ttf -o build\handwrite_glyphs.txt
 ```
@@ -259,76 +250,7 @@ $ uv run generate_subset_jp_full data\subsets\skyrim\subset_jp_full.txt
 ```
 
 > [!NOTE]
-> 可能な限り日本語圏で表示しうる文字列を生成していますが、> もし不足が出た場合には `src\const.py` の `EXTRA_UNICODES` にUnicode指定で追加することを検討して下さい。
-
-
-
-## 不要なデータの掃除
-Skyrimをプレイするとあちこちにファイルが出来上がります。完全リセットする場合は以下を消去して下さい。必要に応じてバックアップするのを忘れずに。
-
-* ロードオーダーなど
-    * `C:\Users\{USERNAME}\Appdata\Local\Skyrim`
-    * `C:\Users\{USERNAME}\Appdata\Local\Skyrim Special Edition`
-* ゲーム設定、セーブデータ、SKSEログ類
-    * `C:\Users\{USERNAME}\Documents\My Games\Skyrim`
-    * `C:\Users\{USERNAME}\Documents\My Games\Skyrim Special Edition`
-* WryeBash Modディレクトリ ※WryeBashを使用していた場合
-    * `{SteamLibrary}\steamapps\common\Skyrim Mods`
-    * `{SteamLibrary}\steamapps\common\Skyrim Special Edition Mods`
-* Vortexディレクトリ ※Vortexを使用していた場合
-    * `C:\Users\{USERNAME}\Appdata\Roaming\Vortex` もしくは自身で設定したパス
-* ModOrganizer2ディレクトリ ※ModOrganizerを使用していた場合
-    * `C:\Modding\MO2` もしくは自身で設定したパス
-
-## SkyrimSE v1.6.629～v1.6.1170(現在)
-v1.6.629以降、SkyrimSE無料AEアップデートということで構造がSkyrimAEとほぼ同等となった？模様です。
-英語版と日本語版の差がほぼ無くなり、英語版ファイル群に対し日本語版音声ファイルが追加され、Skyrim.iniが日本語版用にチューニングされただけとなりました。
-
-```:差分
-Skyrim.ini(SSEゲームディレクトリ\Skyrim_Default.ini)の差分
-●言語設定
-sLanguage=ENGLISH
-↓
-sLanguage=JAPANESE
-
-●フォント設定
-※追加
-[Fonts]
-sFontConfigFile=Interface\FontConfig_ja.txt
-
-●音声ファイル読込
-sResourceArchiveList2=Skyrim - Voices_en0.bsa, 省略
-↓
-sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
-```
-
-まずは普通に英語版SkyrimSEをインストールし、`SkyrimSELauncher.exe`を起動してそのまま終了します。
-これにより、ロードオーダー情報及びゲーム設定ファイルがユーザープロファイルの各所に生成されます。
-
-BSA Browserを使用して以下のファイルを開き、対象の日本語StringsとTranslateをエクスポートします。`japanese`で検索すると見つけやすいです。
-
-* _ResourcePack.bsa
-* ccBGSSSE001-Fish.bsa
-* ccBGSSSE025-AdvDSGS.bsa
-* ccBGSSSE037-Curios.bsa
-* ccQDRSSE001-SurvivalMode.bsa
-* Skyrim - Interface.bsa
-
-
-**英語音声のままでよければ、この作業はスキップしてOK**
-日本語音声データをダウンロードします。
-Webブラウザを開き、`steam://open/console`と入力するとSteamコンソールが開くので、以下のコマンドを入力して下さい。
-`download_depot 489830 544861 3494476046078906882`
-ダウンロードが完了したら、`C:\Program Files (x86)\Steam\steamapps\content\app_489830\depot_544861\Data`を開き、`skyrim - voices_ja0.bsa`をゲームディレクトリの`Data`直下にコピーします。
-
-ゲーム設定ファイル(`C:\Users\{USERNAME}\Documents\My Games\Skyrim Special Edition\Skyrim.ini`)を開き、以下を編集する。
-
-```
-編集
-sResourceArchiveList2=Skyrim - Voices_en0.bsa, 省略
-↓
-sResourceArchiveList2=Skyrim - Voices_ja0.bsa, 省略
-```
+> 可能な限り日本語圏で表示しうる文字列を生成していますが、もし不足が出た場合には `src\const.py` の `EXTRA_UNICODES` にUnicode指定で追加することを検討して下さい。
 
 
  ## バニラバグフィックスパッチの作り方
@@ -351,9 +273,6 @@ FFdecを使用して、該当部品のyminを増やして文字の位置を変�
 MCMを実現しているUIは SkyUI LE/SE共に`Interface/skyui/configpanel.swf`です。FFDecを使用してフォントマップを指定している箇所を検索して書き換えます。
 
 
-
-
-
-## 参考
-FontForge Scripting: https://fontforge.org/docs/scripting/scripting.html
-
+## 開発の参考に
+* fontTools Documentation: https://fonttools.readthedocs.io/en/latest/
+* FontForge Scripting: https://fontforge.org/docs/scripting/scripting.html
