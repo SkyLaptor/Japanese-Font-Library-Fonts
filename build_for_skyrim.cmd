@@ -6,8 +6,6 @@ set work_dir=build
 set merge_cmd=merge.cmd
 
 echo %work_dir%ディレクトリにあるフォントファイルをスカイリム用フォントに変換します。
-echo 各フォントディレクトリにはoffset_height_every.txtを配置するのを忘れないように注意して下さい。
-echo offset_height_every.txtの作成手順はREADME.mdを参照して下さい。
 pause
 
 echo.

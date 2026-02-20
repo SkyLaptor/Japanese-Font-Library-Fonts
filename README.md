@@ -41,18 +41,7 @@ SWF埋め込み用。`ffdec-cli` にパスを通してください。
 
 ![作業ディレクトリの配置-フォントフォルダ](https://github.com/user-attachments/assets/47ce4637-fe40-4a72-96f7-b73096842166)
 
-![作業ディレクトリの配置-フォントとオフセット配置](https://github.com/user-attachments/assets/f86a738c-4d8c-4963-98ad-d3edd8aed12d)
-
-> [!IMPORTANT]
-> オフセット調整ファイル（`offset_height_every.txt`）について  
-> フォントの上下位置をバニラに合わせるための設定ファイルです。持っていない場合は、以下のコマンドで生成してください。
-
-```powershell:
-# 一度仮のプリマージを行い、オフセット値を算出する例
-uv run builder --action run_batch_premerge_export --work_dir build
-uv run get_offset_to_align_bottom build/YourFontName/YourFont_premerge.ttf -o build/YourFontName/offset_height_every.txt
-# 生成後、一度 *_premerge.ttf は削除してください
-```
+![作業ディレクトリの配置-フォント配置](https://github.com/user-attachments/assets/2314e0ba-9794-4a24-94ec-330bb331397b)
 
 ### 3. プリマージ処理（最適化）
 UPMの変更や空白グリフの削除など、スカイリム向けの事前調整を行います。

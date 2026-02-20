@@ -3,6 +3,7 @@ import sys
 
 from fontTools.ttLib import TTFont
 
+from const import BASE_LINE_TARGET
 from utils.common.dprint import dprint
 from utils.common.save_text import save_text
 
@@ -27,8 +28,8 @@ def main():
         "-b",
         "--base_line",
         type=int,
-        default=0,
-        help="基準となるY座標 デフォルト:0",
+        default=BASE_LINE_TARGET,
+        help=f"基準となるY座標 デフォルト:{BASE_LINE_TARGET}",
     )
     parser.add_argument(
         "--debug",
@@ -63,7 +64,7 @@ def action_get_offset_to_align_bottom(
 
 
 def get_offset_to_align_bottom(
-    font_obj: TTFont, base_line: int, debug: bool = False
+    font_obj: TTFont, base_line: int = BASE_LINE_TARGET, debug: bool = False
 ) -> int:
     """
     フォント内のグリフの底面位置が基準値からどれだけ異なるか計算する
