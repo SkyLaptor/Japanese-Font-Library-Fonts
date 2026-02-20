@@ -4,6 +4,8 @@ import sys
 import time
 from pathlib import Path
 
+from fontTools.ttLib import TTFont
+
 from apps.skyrim.optimizer import convert
 from apps.skyrim.swf_patcher import (
     get_swf_name,
@@ -11,13 +13,14 @@ from apps.skyrim.swf_patcher import (
     replace_glyph_in_swf,
 )
 from const import (
+    BASE_LINE_TARGET,
     BUILD_DIR,
-    ENCODE,
     SKYRIM_BASE_KEYNAME,
     SKYRIM_EXPORT_MATRIX,
     TEMPLATE_FONTSWF_PATH,
 )
 from utils.common.dprint import dprint
+from utils.inspector.get_offset_to_align_bottom import get_offset_to_align_bottom
 
 
 def main():
@@ -36,6 +39,12 @@ def main():
         type=str,
         default=BUILD_DIR,
         help="作業対象ディレクトリ",
+    )
+    parser.add_argument(
+        "--base_line",
+        type=int,
+        default=BASE_LINE_TARGET,
+        help=f"オフセット位置決めのためのベースライン デフォルト:{BASE_LINE_TARGET}",
     )
     parser.add_argument(
         "--anonymize",
@@ -71,10 +80,16 @@ def dispatch_action(action, **kwargs):
 
 
 def action_run_batch_premerge_export(
-    work_dir: str, anonymize: bool, output_font_info: bool, debug: bool = False, **_
+    work_dir: str,
+    base_line: int,
+    anonymize: bool,
+    output_font_info: bool,
+    debug: bool = False,
+    **_,
 ) -> None:
     run_batch_premerge_export(
         work_dir=work_dir,
+        base_line=base_line,
         anonymize=anonymize,
         output_font_info=output_font_info,
         debug=debug,
@@ -83,6 +98,7 @@ def action_run_batch_premerge_export(
 
 def run_batch_premerge_export(
     work_dir: str,
+    base_line: int = BASE_LINE_TARGET,
     anonymize: bool = False,
     output_font_info: bool = False,
     debug: bool = False,
@@ -106,20 +122,21 @@ def run_batch_premerge_export(
             # bookおよびhandwriteは使用されるUIの特性上、ズレを感じないためです
             base = "every"
 
+            # オフセット値を自動計算
             offset_height = 0
-            offset_config_file = font_dir / f"offset_height_{base}.txt"
-
-            if offset_config_file.exists():
-                try:
-                    content = offset_config_file.read_text(encoding=ENCODE).strip()
-                    offset_height = int(content) if content else 0
-                    print(
-                        f"  [設定]: オフセット設定ファイルから取得したオフセット値を適用します: {offset_height}"
+            try:
+                with TTFont(str(font_path)) as tmp_font:
+                    offset_height = get_offset_to_align_bottom(
+                        tmp_font, base_line, debug
                     )
-                except Exception:
-                    print(
-                        "  [設定]: オフセット設定ファイルが存在しない/読み取れないため、オフセット0で実行します"
-                    )
+                print(
+                    f"  [オフセット計算]: ベースライン値: {base_line}, このフォントのオフセット値: {offset_height}"
+                )
+            except Exception as e:
+                print(
+                    f"  [警告]: 自動計算に失敗しました。オフセット0で進めます。詳細: {e}"
+                )
+                offset_height = 0
 
             # 1. まず小文字にする
             stem_lower = font_path.stem.lower()

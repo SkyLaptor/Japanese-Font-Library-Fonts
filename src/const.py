@@ -122,3 +122,5 @@ SWF_NAME_RULES = {
         (["skyrim", "lightweight"], "_lightweight"),
     ],
 }
+# グリフの位置を調整する際の基準値
+BASE_LINE_TARGET = 0
