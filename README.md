@@ -79,7 +79,7 @@ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.t
 
 ![スカイリムへの適用-fontlib記述](https://github.com/user-attachments/assets/bff386ee-96a6-4751-859a-5d5571e53bdd)
 
-   * **map**: 各行のフォント指定を、[手順6](#6-swfファイルの作成)で設定された内部フォント名に書き換えます。
+   * **map**: 各行のフォント指定を、[手順5](#5-スカイリムへの適用)で設定された内部フォント名に書き換えます。
 
 ![スカイリムへの適用-map変更](https://github.com/user-attachments/assets/d76f43e0-b28a-4a19-8db4-2726c4b9f15c)
 
