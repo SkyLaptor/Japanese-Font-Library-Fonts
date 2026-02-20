@@ -51,7 +51,7 @@ cmd /c build_fon_skyrim.cmd
 ```
 
 
-### 3. フォントのマージ（任意）
+### 4. フォントのマージ（任意）
 変換処理を実行ししばらくすると、マージ待ち状態になります。  
 変換処理はそのままにし、マージを行ってください。
 
@@ -68,7 +68,7 @@ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.t
 
 マージが完了しましたら、変換処理を再開して下さい。
 
-### 4. スカイリムへの適用
+### 5. スカイリムへの適用
 1. 作成されたSWFを `Skyrim/Data/Interface` に配置します。
 
 ![スカイリムへの適用-フォントSWF配置](https://github.com/user-attachments/assets/60210728-718b-40bc-a259-930dddcc4721)
