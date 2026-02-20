@@ -47,7 +47,7 @@ SWF埋め込み用。`ffdec-cli` にパスを通してください。
 作業ディレクトリに配置したフォントをスカイリム向けのフォントに変換します。
 
 ```powershell:
-cmd /c build_fon_skyrim.cmd
+cmd /c build_for_skyrim.cmd
 ```
 
 
