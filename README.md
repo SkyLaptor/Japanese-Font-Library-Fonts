@@ -43,19 +43,18 @@ SWF埋め込み用。`ffdec-cli` にパスを通してください。
 
 ![作業ディレクトリの配置-フォント配置](https://github.com/user-attachments/assets/2314e0ba-9794-4a24-94ec-330bb331397b)
 
-### 3. プリマージ処理（最適化）
-UPMの変更や空白グリフの削除など、スカイリム向けの事前調整を行います。
+### 3. 変換実行
+作業ディレクトリに配置したフォントをスカイリム向けのフォントに変換します。
 
 ```powershell:
-uv run builder --action run_batch_premerge_export --work_dir build
+cmd /c build_fon_skyrim.cmd
 ```
 
-実行後、 `*_premerge.ttf` が生成されます。
 
-![プリマージ処理（最適化）-完了](https://github.com/user-attachments/assets/4101eb65-7ad6-45fd-8a6e-b8d6286d18fb)
+### 3. フォントのマージ（任意）
+変換処理を実行ししばらくすると、マージ待ち状態になります。  
+変換処理はそのままにし、マージを行ってください。
 
-### 4. フォントのマージ（任意）
-不足している文字を別のフォントで補完したい場合、FontForgeを使用してマージします。  
 ※ マージが不要な場合は、`*_premerge.ttf` を `*_merged.ttf` にリネームして進めてください。
 
 ```powershell:
@@ -64,29 +63,12 @@ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.t
 
 ![フォントのマージ（任意）-完了](https://github.com/user-attachments/assets/83151bc7-8d5f-4905-809f-e3aa520d655e)
 
+> [!NOTE]
+> 既にマージパターンが決まっているのであれば、merge.cmd内にそれを記載することで、都度手動でマージする必要がなくなります。
 
-### 5. バリエーション生成
-用途別（本、手書き、長体モデルなど）のサブセットを一括生成します。
+マージが完了しましたら、変換処理を再開して下さい。
 
-```powershell:
-uv run builder --action run_batch_variant_export --work_dir build
-```
-
-![バリエーション生成](https://github.com/user-attachments/assets/c05f928a-4aea-4942-9ce2-492dfc1a6927)
-
-### 6. SWFファイルの作成
-ゲームが読み込める形式へ変換します。**※非常に重い処理です**
-
-```powershell:
-uv run builder --action run_batch_swf_export --work_dir build
-```
-
-![SWFファイルの作成-完了](https://github.com/user-attachments/assets/e4acade3-1432-473a-9888-36567f7b8b62)
-
-* **注意**: 作業ドライブに1GB以上の空き容量を確保してください。
-* 生成された `fonts_*.swf` の「内部フォント名」は、ファイル名から `fonts_` を除いたものになります。
-
-### 7. スカイリムへの適用
+### 4. スカイリムへの適用
 1. 作成されたSWFを `Skyrim/Data/Interface` に配置します。
 
 ![スカイリムへの適用-フォントSWF配置](https://github.com/user-attachments/assets/60210728-718b-40bc-a259-930dddcc4721)
