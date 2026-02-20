@@ -12,18 +12,11 @@
 Python実行環境。
 
 * [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)  
-SWF埋め込み用。`ffdec-cli` にパスを通してください。
+TTFをSWFに埋め込む処理を行う際に必要です。
 
 * [FontForge](https://fontforge.org/en-US/)  
-フォント修復・マージ用。`fontforge` にパスを通してください。
+TTFをマージする処理を行う際に必要です。
 
-> [!NOTE]
-> **「パスを通す」とは？**
-> ターミナルで `ffdec-cli` と打つだけでプログラムが起動するように、Windowsの環境変数 `Path` に実行ファイルの場所を登録することです。
-
-![Windows環境変数-Path](https://github.com/user-attachments/assets/2ed25f9e-f138-46c0-be95-1caff284045d)
-
-![Windows環境変数-Path-FontForge-FFDec](https://github.com/user-attachments/assets/71e5e2f9-2731-4b55-a248-c64858352045)
 
 ## 使い方
 ### 1. 準備
@@ -53,18 +46,14 @@ cmd /c build_for_skyrim.cmd
 
 ### 4. フォントのマージ（任意）
 変換処理を実行ししばらくすると、マージ待ち状態になります。  
-変換処理はそのままにし、マージを行ってください。
+変換処理はそのままにし、マージ設定ファイルを作成してください。
 
-※ マージが不要な場合は、`*_premerge.ttf` を `*_merged.ttf` にリネームして進めてください。
+**マージ設定ファイルの作成**  
+`merge_conf.csv` を開き、以下の様に設定して下さい。
 
-```powershell:
-fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.ttf 補間フォント_premerge.ttf -o build\任意のフォント名_merged.ttf
-```
-
-![フォントのマージ（任意）-完了](https://github.com/user-attachments/assets/83151bc7-8d5f-4905-809f-e3aa520d655e)
-
-> [!NOTE]
-> 既にマージパターンが決まっているのであれば、merge.cmd内にそれを記載することで、都度手動でマージする必要がなくなります。
+* **1列目(ベースフォント)**: `build\` を**除いた**ファイルパス
+* **2列目(補間フォント)**: `build\` を**除いた**ファイルパス
+* **3列目(出力先)**: `build\` を**除いた**出力先。末尾に `_merged` とつけるのを忘れないようにしてください。
 
 マージが完了しましたら、変換処理を再開して下さい。
 
@@ -85,7 +74,9 @@ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.t
 
 
 ## 💡Tips & トラブルシューティング
-* **処理が失敗する**: メモリ不足やディスク容量不足を確認してください。
+* **SWF変換時に失敗する**: FFDecのインストール場所が、本ツールが想定する場所に無いのかもしれません。`.env` ファイルを開き、 `FFDEC_PATH` を実際の場所に修正してください。※注意: 区切り文字は ￥マーク(`\`)ではなく、バックスラッシュ(`/`)としてください。
+
+* **処理がたまに失敗する**: メモリ不足やディスク容量不足を確認してください。
 
 * **文字が「豆腐（□）」になる**: 使用したフォントがそのグリフを保持していない可能性があります。以下のコマンドで保持グリフを確認できます。
 

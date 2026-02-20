@@ -1,6 +1,24 @@
-# 出力テキストファイルのエンコード
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# .envファイルのパラメーターを読み込み
+load_dotenv()
+
+# 外部ツールのパス（.envになければシステムパスを使用） ---
+FFDEC_PATH_RAW = os.getenv("FFDEC_PATH", "ffdec-cli")
+FFDEC_PATH = (
+    Path(FFDEC_PATH_RAW).resolve() if os.path.isabs(FFDEC_PATH_RAW) else FFDEC_PATH_RAW
+)
+FONTFORGE_PATH_RAW = os.getenv("FONTFORGE_PATH", "fontforge")
+FONTFORGE_PATH = (
+    Path(FONTFORGE_PATH_RAW).resolve()
+    if os.path.isabs(FONTFORGE_PATH_RAW)
+    else FONTFORGE_PATH_RAW
+)
+
+# 出力テキストファイルのエンコード
 ENCODE = "utf-8"
 # 各種ディレクトリ
 BASE_DIR = Path(__file__).parent.parent
@@ -124,3 +142,10 @@ SWF_NAME_RULES = {
 }
 # グリフの位置を調整する際の基準値
 BASE_LINE_TARGET = 0
+# マージ用定義ファイルパス
+MERGE_CONF_PATH = BASE_DIR / "merge_conf.csv"
+# FontForgeスクリプト
+# フォントマージ
+MERGE_FONT_FF_PATH = BASE_DIR / "src" / "utils" / "modifier" / "merge_font_ff.py"
+# フォント上書き保存
+MERGE_FONT_FF_PATH = BASE_DIR / "src" / "utils" / "modifier" / "rewrite_font_ff.py"

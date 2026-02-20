@@ -1,7 +1,13 @@
 import subprocess
 from pathlib import Path
 
-from const import DUMMY_FONT_NAME_IN_SWF, ENCODE, FONTFILE_NAME_PREFIX, SWF_NAME_RULES
+from const import (
+    DUMMY_FONT_NAME_IN_SWF,
+    ENCODE,
+    FFDEC_PATH,
+    FONTFILE_NAME_PREFIX,
+    SWF_NAME_RULES,
+)
 
 
 def patch_swf_internal_fontname(swf_path: Path, font_name: str) -> bool:
@@ -13,9 +19,10 @@ def patch_swf_internal_fontname(swf_path: Path, font_name: str) -> bool:
     try:
         # SWF -> XML
         subprocess.run(
-            ["ffdec-cli", "-swf2xml", str(swf_path), str(xml_path)],
+            [str(FFDEC_PATH), "-swf2xml", str(swf_path), str(xml_path)],
             check=True,
             capture_output=True,
+            text=True,
         )
 
         # 置換
@@ -26,13 +33,14 @@ def patch_swf_internal_fontname(swf_path: Path, font_name: str) -> bool:
 
         # XML -> SWF
         subprocess.run(
-            ["ffdec-cli", "-xml2swf", str(xml_path), str(swf_path)],
+            [str(FFDEC_PATH), "-xml2swf", str(xml_path), str(swf_path)],
             check=True,
             capture_output=True,
+            text=True,
         )
         return True
     except Exception as e:
-        print(f"  [ERROR] XML Patch failed: {e}")
+        print(f"  [エラー] XML パッチPatch failed: {e}")
         return False
     finally:
         if xml_path.exists():
@@ -44,15 +52,14 @@ def replace_glyph_in_swf(template_path: Path, output_path: Path, ttf_path: Path)
     FFDecを使用してTTFファイルをSWFファイル内のフォント定義と差し替えます。
     """
     cmd = [
-        "ffdec-cli",
+        str(FFDEC_PATH),
         "-replace",
         str(template_path),
         str(output_path),
         "1",
         str(ttf_path),
     ]
-    # shell=TrueはWindows環境でのffdec-cli(バッチファイル)呼び出しに必要
-    subprocess.run(cmd, check=True, capture_output=True, text=True, shell=True)
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
 def get_swf_name(font_name: str, font_file_name: str) -> str:

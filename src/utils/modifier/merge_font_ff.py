@@ -3,17 +3,26 @@ import argparse
 import os
 import sys
 
-# プロジェクトのルート（srcディレクトリ）を探索パスに追加
-# スクリプトの場所から相対的に src の位置を特定します
+# プロジェクトのルートを特定
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# merge_font_ff.py は src/utils/modifier にあるので、2つ上の階層が src
-project_root = os.path.dirname(os.path.dirname(current_dir))
-if project_root not in sys.path:
-    sys.path.append(project_root)
+# merge_font_ff.py は src/utils/modifier にあるので、3つ上の階層がリポジトリルート
+repo_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+src_dir = os.path.join(repo_root, "src")
 
-import fontforge
+# 1. 仮想環境（.venv）のライブラリパスを追加
+# Windowsの場合、通常は .venv/Lib/site-packages にあります
+venv_site_packages = os.path.join(repo_root, ".venv", "Lib", "site-packages")
 
-from utils.common.save_font_ff import save_font_ff
+if venv_site_packages not in sys.path and os.path.exists(venv_site_packages):
+    sys.path.append(venv_site_packages)
+
+# 2. プロジェクトのソースパスを追加
+if src_dir not in sys.path:
+    sys.path.append(src_dir)
+
+import fontforge  # type: ignore # noqa: E402
+
+from utils.common.save_font_ff import save_font_ff  # noqa: E402
 
 os.environ["LANG"] = "C"
 os.environ["LC_ALL"] = "C"
