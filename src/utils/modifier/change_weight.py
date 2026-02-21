@@ -160,7 +160,7 @@ def change_weight(font_obj: TTFont, offset_weight: int, debug: bool = False) -> 
         path.draw(tt_pen)
         # font_obj['glyf'][name] = tt_pen.glyph()
         # .glyphs 辞書を直接叩くことで、お節介なバリデーションを回避する
-    font_obj['glyf'].glyphs[name] = tt_pen.glyph()
+        font_obj['glyf'].glyphs[name] = tt_pen.glyph()
 
     return reload_font(font_obj)
 
