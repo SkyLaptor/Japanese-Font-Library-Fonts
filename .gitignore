@@ -17,6 +17,8 @@ desktop.ini
 # 生ゲームデータなど
 assets/hidden_fonts/
 assets/gamedata/
+assets/fonts/**/*.ttf
+assets/fonts/**/*.swf
 
 # フォントファイル
 *.ttf
@@ -40,3 +42,8 @@ assets/gamedata/
 *.lzh
 *.7z
 *.rar
+
+# 一般的に無視
+*.bak
+*.tmp
+*.temp

@@ -1,0 +1,46 @@
+﻿ベースフォント,補間フォント,出力先フォント,備考（自由欄）
+acgyosyo\acgyosyo_premerge.ttf,source-han-serif\source-han-serif_medium_premerge.ttf,acgyosyo\acgyosyo_merged.ttf,英椎行書
+apricot\apricot_premerge.ttf,genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,apricot\apricot_merged.ttf,あんずもじ
+apricot-mono\apricot-mono_premerge.ttf,genjyuu-gothic-mono\genjyuu-gothic-mono_medium_premerge.ttf,apricot-mono\apricot-mono_merged.ttf,あんずもじ等幅
+cinecaption\cinecaption_premerge.ttf,genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,cinecaption\cinecaption_merged.ttf,しねきゃぷしょん
+genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,,genjyuu-gothic\genjyuu-gothic_medium_merged.ttf,源柔ゴシック Medium
+genjyuu-gothic\genjyuu-gothic_bold_premerge.ttf,,genjyuu-gothic\genjyuu-gothic_bold_merged.ttf,源柔ゴシック Bold
+genjyuu-gothic\genjyuu-gothic_heavy_premerge.ttf,,genjyuu-gothic\genjyuu-gothic_heavy_merged.ttf,源柔ゴシック Heavy
+genjyuu-gothic-mono\genjyuu-gothic-mono_medium_premerge.ttf,,genjyuu-gothic-mono\genjyuu-gothic-mono_medium_merged.ttf,源柔ゴシック等幅 Medium
+genjyuu-gothic-mono\genjyuu-gothic-mono_bold_premerge.ttf,,genjyuu-gothic-mono\genjyuu-gothic-mono_bold_merged.ttf,源柔ゴシック等幅 Bold
+genjyuu-gothic-mono\genjyuu-gothic-mono_heavy_premerge.ttf,,genjyuu-gothic-mono\genjyuu-gothic-mono_heavy_merged.ttf,源柔ゴシック等幅 Heavy
+genshin-gothic\genshin-gothic_medium_premerge.ttf,,genshin-gothic\genshin-gothic_medium_merged.ttf,源真ゴシック Medium
+genshin-gothic\genshin-gothic_bold_premerge.ttf,,genshin-gothic\genshin-gothic_bold_merged.ttf,源真ゴシック Bold
+genshin-gothic\genshin-gothic_heavy_premerge.ttf,,genshin-gothic\genshin-gothic_heavy_merged.ttf,源真ゴシック Heavy
+genshin-gothic-mono\genshin-gothic-mono_medium_premerge.ttf,,genshin-gothic-mono\genshin-gothic-mono_medium_merged.ttf,源真ゴシック等幅 Medium
+genshin-gothic-mono\genshin-gothic-mono_bold_premerge.ttf,,genshin-gothic-mono\genshin-gothic-mono_bold_merged.ttf,源真ゴシック等幅 Bold
+genshin-gothic-mono\genshin-gothic-mono_heavy_premerge.ttf,,genshin-gothic-mono\genshin-gothic-mono_heavy_merged.ttf,源真ゴシック等幅 Heavy
+hackgen-mono\hackgen-mono_regular_premerge.ttf,,hackgen-mono\hackgen-mono_regular_merged.ttf,白源等幅 Medium
+hackgen-mono\hackgen-mono_bold_premerge.ttf,,hackgen-mono\hackgen-mono_bold_merged.ttf,白源等幅 Bold
+jiyucho\jiyucho_premerge.ttf,genjyuu-gothic\genjyuu-gothic_heavy_premerge.ttf,jiyucho\jiyucho_merged.ttf,じゆうちょう
+lore-friendly-every\lore-friendly-every_premerge.ttf,dfp-kakutaihi\dfp-kakutaihi_premerge.ttf,lore-friendly-every\lore-friendly-every_premerge2.ttf,ロアフレンドリーEvery temp
+lore-friendly-every\lore-friendly-every_premerge2.ttf,genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,lore-friendly-every\lore-friendly-every_merged.ttf,ロアフレンドリーEvery
+lore-friendly-handwrite\lore-friendly-handwrite_premerge.ttf,dfp-gyosho\dfp-gyosho_premerge.ttf,lore-friendly-handwrite\lore-friendly-handwrite_premerge2.ttf,ロアフレンドリーHandwrite temp
+lore-friendly-handwrite\lore-friendly-handwrite_premerge2.ttf,source-han-serif\source-han-serif_medium_premerge.ttf,lore-friendly-handwrite\lore-friendly-handwrite_premerge2.ttf,ロアフレンドリーHandwrite
+mplus\mplus_medium_premerge.ttf,genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,mplus\mplus_medium_merged.ttf,MPLUS Medium
+mplus\mplus_bold_premerge.ttf,genjyuu-gothic\genjyuu-gothic_bold_premerge.ttf,mplus\mplus_bold_merged.ttf,MPLUS Bold
+mplus\mplus_extrabold_premerge.ttf,genjyuu-gothic\genjyuu-gothic_heavy_premerge.ttf,mplus\mplus_extrabold_merged.ttf,MPLUS ExtraBold
+noto-sans\noto-sans_medium_premerge.ttf,,noto-sans\noto-sans_medium_merged.ttf,Noto-Sans Medium
+noto-sans\noto-sans_bold_premerge.ttf,,noto-sans\noto-sans_bold_merged.ttf,Noto-Sans Bold
+noto-sans\noto-sans_extrabold_premerge.ttf,,noto-sans\noto-sans_extrabold_merged.ttf,Noto-Sans ExtraBold
+nyashi-kai2\nyashi-kai2_premerge.ttf,genjyuu-gothic\genjyuu-gothic_medium_premerge.ttf,nyashi-kai2\nyashi-kai2_merged.ttf,にゃしいフォント改二
+shippori-mincho\shippori-mincho_medium_premerge.ttf,,shippori-mincho\shippori-mincho_medium_merged.ttf,しっぽり明朝 Medium
+shippori-mincho\shippori-mincho_bold_premerge.ttf,,shippori-mincho\shippori-mincho_bold_merged.ttf,しっぽり明朝 Bold
+shippori-mincho\shippori-mincho_extrabold_premerge.ttf,,shippori-mincho\shippori-mincho_extrabold_merged.ttf,しっぽり明朝 ExtraBold
+skyrim-jp-book\skyrim-jp-book_premerge.ttf,dfp-gihi\dfp-gihi_premerge.ttf,skyrim-jp-book\skyrim-jp-book_premerge2.ttf,バニラ日本語Bookフォント temp
+skyrim-jp-book\skyrim-jp-book_premerge2.ttf,source-han-serif\source-han-serif_medium_premerge.ttf,skyrim-jp-book\skyrim-jp-book_merged.ttf,バニラ日本語Bookフォント
+skyrim-jp-every\skyrim-jp-every_premerge.ttf,noto-sans\noto-sans_medium_premerge.ttf,skyrim-jp-every\skyrim-jp-every_merged.ttf,バニラ日本語Everywhereフォント
+skyrim-jp-handwrite\skyrim-jp-handwrite_premerge.ttf,dfp-gyosho\dfp-gyosho_premerge.ttf,skyrim-jp-handwrite\skyrim-jp-handwrite_premerge2.ttf,バニラ日本語Handwriteフォント temp
+skyrim-jp-handwrite\skyrim-jp-handwrite_premerge2.ttf,source-han-serif\source-han-serif_medium_premerge.ttf,skyrim-jp-handwrite\skyrim-jp-handwrite_merged.ttf,バニラ日本語Handwriteフォント
+source-han-sans\source-han-sans_medium_premerge.ttf,,source-han-sans\source-han-sans_medium_merged.ttf,源ノ角ゴシック Medium
+source-han-sans\source-han-sans_bold_premerge.ttf,,source-han-sans\source-han-sans_bold_merged.ttf,源ノ角ゴシック Bold
+source-han-sans\source-han-sans_heavy_premerge.ttf,,source-han-sans\source-han-sans_heavy_merged.ttf,源ノ角ゴシック Heavy
+source-han-serif\source-han-serif_medium_premerge.ttf,,source-han-serif\source-han-serif_medium_merged.ttf,源ノ明朝 Medium
+source-han-serif\source-han-serif_bold_premerge.ttf,,source-han-serif\source-han-serif_bold_merged.ttf,源ノ明朝 Bold
+source-han-serif\source-han-serif_heavy_premerge.ttf,,source-han-serif\source-han-serif_heavy_merged.ttf,源ノ明朝 Heavy
+tfont-kaisho\tfont-kaisho_premerge.ttf,source-han-serif\source-han-serif_medium_premerge.ttf,tfont-kaisho\tfont-kaisho_merged.ttf,Tフォント楷書
