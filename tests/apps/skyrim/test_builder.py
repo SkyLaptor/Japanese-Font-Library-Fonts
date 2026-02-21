@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from apps.skyrim.builder import run_batch_swf_export, run_batch_variant_export
+from apps.skyrim.builder import (
+    run_batch_swf_export,
+    run_batch_variant_export,
+)
 
 
 # テスト実行前に、毎回 build/test-env という作業用フォルダを作って実験する設定
@@ -65,3 +68,45 @@ def test_swf_internal_name_consistency(test_workspace):
         assert (
             variant_name.encode("ascii") in content
         ), f"SWF内部のフォント名が {variant_name} に更新されていない可能性があります"
+
+
+# @pytest.mark.skipif(
+#     os.environ.get("GITHUB_ACTIONS") == "true",
+#     reason="FontForgeを使用する結合テストは重いためCIでは実行しません",
+# )
+# def test_run_merge_font_consistency(test_workspace):
+#     """
+#     マージが実行され、意図した形になっているか
+#     """
+#     # 1. 疑似的な事前最適化（テストフォントの末尾に _premerged をつける）
+#     src_csv = Path("tests/data/test_merge_conf.csv")
+#     merge_conf = test_workspace / "test_merge_conf.csv"
+#     shutil.copy(src_csv, merge_conf)
+#     font_dir1 = test_workspace / "test-font"
+#     font_dir2 = test_workspace / "test-font2"
+#     for ttf1 in font_dir1.glob("*-medium.ttf"):
+#         shutil.copy(ttf1, font_dir1 / "test-font_premerge.ttf")
+#     for ttf2 in font_dir2.glob("*.ttf"):
+#         shutil.copy(ttf2, font_dir2 / "test-font2_premerge.ttf")
+
+#     # 2. マージを実行
+#     run_batch_merge_font(str(test_workspace), merge_conf=merge_conf, debug=True)
+
+#     # 3. 検証の準備：
+#     marged_name1 = (
+#         "test-font_merged.ttf"  # font1とfont2をマージしてこれに出力するとCSVに記載。
+#     )
+#     marged_name2 = (
+#         "test-font2_merged.ttf"  # font2をコピーしてこれに出力するとCSVに記載。
+#     )
+
+#     expected_ttf1 = font_dir1 / marged_name1
+#     expected_ttf2 = font_dir2 / marged_name2
+
+#     # 6. 検証: ファイルが存在するか
+#     assert (
+#         expected_ttf1.exists()
+#     ), f"マージ済TTFファイルが見つかりません。期待値: {expected_ttf1.name} / フォルダの中: {[f.name for f in font_dir1.iterdir()]}"
+#     assert (
+#         expected_ttf2.exists()
+#     ), f"コピー済TTFファイルが見つかりません。期待値: {expected_ttf2.name} / フォルダの中: {[f.name for f in font_dir2.iterdir()]}"

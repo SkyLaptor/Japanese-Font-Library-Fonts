@@ -375,8 +375,14 @@ def run_batch_swf_export(work_dir: str, debug: bool = False) -> None:
     print("\n--- 全ての対象フォントのSWF化が完了しました ---")
 
 
-def action_run_merge_font(
+def action_run_batch_merge_font(
     work_dir: str, merge_conf: str = MERGE_CONF_PATH, debug: bool = False, **_
+):
+    run_batch_merge_font(work_dir=work_dir, merge_conf=merge_conf, debug=debug)
+
+
+def run_batch_merge_font(
+    work_dir: str, merge_conf: str = MERGE_CONF_PATH, debug: bool = False
 ):
     if not Path(merge_conf).exists():
         print(f"[エラー] CSVファイルが見つかりません: {merge_conf}")
@@ -475,7 +481,7 @@ ACTION_MAP = {
     "run_batch_premerge_export": action_run_batch_premerge_export,
     "run_batch_variant_export": action_run_batch_variant_export,
     "run_batch_swf_export": action_run_batch_swf_export,
-    "run_merge_font": action_run_merge_font,
+    "run_batch_merge_font": action_run_batch_merge_font,
 }
 
 if __name__ == "__main__":
