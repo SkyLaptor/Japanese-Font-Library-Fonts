@@ -55,21 +55,25 @@ def main():
     parser.add_argument(
         "--scale_width",
         type=float,
+        default=1.0,
         help="横幅の拡大率",
     )
     parser.add_argument(
         "--scale_height",
         type=float,
+        default=1.0,
         help="縦幅の拡大率",
     )
     parser.add_argument(
         "--offset_width",
         type=int,
+        default=0,
         help="横方向の移動量",
     )
     parser.add_argument(
         "--offset_height",
         type=int,
+        default=0,
         help="縦方向の移動量",
     )
     parser.add_argument(
@@ -99,9 +103,9 @@ def action_harmonize_font_metrics(
     **_,
 ):
     with TTFont(base_path) as base_font_obj, TTFont(input_path) as input_font_obj:
-        print("=== 変形前のターゲットフォントの情報")
+        dprint("=== 変形前のターゲットフォントの情報"), debug
         input_font_info = get_info(input_font_obj, debug)
-        print(str(input_font_info))
+        dprint(str(input_font_info), debug)
 
         result = harmonize_font_metrics(
             target_font_obj=input_font_obj,
@@ -151,10 +155,10 @@ def action_harmonize_font_metrics(
 def harmonize_font_metrics(
     target_font_obj: TTFont,
     base_font_obj: TTFont,
-    scale_width_manual: float,
-    scale_height_manual: float,
-    offset_width: int,
-    offset_height: int,
+    scale_width_manual: float = 1.0,
+    scale_height_manual: float = 1.0,
+    offset_width: int = 0,
+    offset_height: int = 0,
     debug: bool = False,
 ) -> Result:
     """

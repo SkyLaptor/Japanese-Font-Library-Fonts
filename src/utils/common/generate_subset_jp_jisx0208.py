@@ -40,9 +40,10 @@ def main():
 def action_generate_subset_jp_jisx0208(
     output_path: str, validnamechars_escape: bool, debug: bool = False, **_
 ):
-    subset_text = generate_subset_jp_jisx0208(debug)
-    if validnamechars_escape:
-        subset_text = escape_for_validnamechars(subset_text)
+    subset_text = generate_subset_jp_jisx0208(
+        validnamechars_escape=validnamechars_escape, debug=debug
+    )
+
     dprint(subset_text, debug)
     if output_path is not None:
         saved_output_path = save_text(
@@ -52,10 +53,14 @@ def action_generate_subset_jp_jisx0208(
         print(f"生成したサブセットを出力しました。: {saved_output_path}")
 
 
-def generate_subset_jp_jisx0208(debug: bool = False) -> str:
+def generate_subset_jp_jisx0208(
+    validnamechars_escape: bool = False, debug: bool = False
+) -> str:
     """
     JIS第二基準(JISX0208)サブセットテキストを生成する
 
+    :param validnamechars_escape: validNameChars向けエスケープ
+    :type validnamechars_escape: bool
     :param debug: デバッグモード
     :type debug: bool
     :return: JIS第二基準(JISX0208)サブセットテキスト
@@ -91,6 +96,9 @@ def generate_subset_jp_jisx0208(debug: bool = False) -> str:
 
     # 生成された文字列をソートして返す
     subset_text = "".join(sorted(target_chars))
+
+    if validnamechars_escape:
+        subset_text = escape_for_validnamechars(subset_text)
 
     return subset_text
 

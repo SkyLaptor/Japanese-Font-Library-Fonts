@@ -30,6 +30,7 @@ def main():
         "-w",
         "--offset_weight",
         type=int,
+        default=0,
         help="太さ変更量",
     )
     parser.add_argument(
@@ -67,7 +68,9 @@ def action_change_weight(
             print(f"太さを変更したフォントを保存しました: {saved_output_path}")
 
 
-def change_weight(font_obj: TTFont, offset_weight: int, debug: bool = False) -> TTFont:
+def change_weight(
+    font_obj: TTFont, offset_weight: int = 0, debug: bool = False
+) -> TTFont:
     """
     文字の太さを変更する
 
