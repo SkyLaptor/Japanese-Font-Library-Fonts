@@ -72,7 +72,9 @@ def action_anonymize_info(
             print(f"フォントを保存しました: {saved_output_path}")
 
 
-def anonymize_info(font_obj: TTFont, font_name: str, debug: bool = False) -> TTFont:
+def anonymize_info(
+    font_obj: TTFont, font_name: str = FONT_NAME, debug: bool = False
+) -> TTFont:
     """
     フォント情報から元フォントを特定できる情報を改変して匿名化する
 

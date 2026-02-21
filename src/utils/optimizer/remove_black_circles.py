@@ -29,6 +29,7 @@ def main():
         "-t",
         "--target_size",
         type=int,
+        default=REMOVE_TARGED_SIZE,
         help="削除対象とする黒丸の最大サイズ",
     )
     parser.add_argument(
