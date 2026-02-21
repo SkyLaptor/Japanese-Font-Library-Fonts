@@ -1,4 +1,5 @@
 ﻿ベースフォント,補間フォント,出力先フォント,備考（自由欄）
 #font1\font1_premerge.ttf,font2\font2_premerge.ttf,font1\font1_merged.ttf,一般的なマージの場合のサンプル。先頭に#を付けるとコメントアウトされ、無視されます。
+#font2\font2_premerge.ttf,,font2\font2_merged.ttf,マージが不要なフォントの場合のサンプル。
 #font1\font1_premerge.ttf,font2\font2_premerge.ttf,font1\font1_premerge2.ttf,2種類以上をマージする場合のサンプル1/2
 #font1\font1_premerge2.ttf,font3\font3_premerge.ttf,font1\font1_merged.ttf,2種類以上をマージする場合のサンプル2/2

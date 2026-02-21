@@ -73,7 +73,6 @@ def action_merge_font_ff(
             font_obj_ff=merged_font_obj_ff,
             input_path=base_path,
             output_path=output_path,
-            suffix="_merged",
             debug=debug,
         )
         print(f"フォントを保存しました: {saved_output_path}")
