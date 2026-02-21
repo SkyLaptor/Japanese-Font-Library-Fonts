@@ -207,7 +207,26 @@ def harmonize_font_metrics(
         debug,
     )
 
-    scale_height_pure = base_avg_size_result.avg_h / target_avg_size_result.avg_h
+    # ターゲットフォントの平均高さが 0 の場合、計算不能なので 1.0 (等倍) に強制する
+    if target_avg_size_result.avg_h == 0:
+        print(
+            f"ターゲットフォントの平均高さが {target_avg_size_result.avg_h:.1f} です。拡大率は 1.0 として計算します。",
+        )
+        scale_height_pure = 1.0
+    else:
+        scale_height_pure = base_avg_size_result.avg_h / target_avg_size_result.avg_h
+
+    # 横方向も同様にガード（もし get_average_size の仕様で avg_w も 0 になり得るなら）
+    if target_avg_size_result.avg_w == 0:
+        print(
+            f"ターゲットフォントの平均幅が {target_avg_size_result.avg_w:.1f} です。拡大率は 1.0 として計算します。",
+        )
+        scale_width_pure = scale_height_pure  # 高さの倍率を流用
+    else:
+        # もともとこのロジックは縦を基準にしているので、
+        # 基本的には上の scale_height_pure を使う形でOK
+        scale_width_pure = scale_height_pure
+
     # 横方向の拡大縮小率は縦方向を基準とします。（縦に伸びるとUI破綻を起こすが、横は伸びてもそこまで影響なし。）
     scale_width_pure = scale_height_pure
     dprint(

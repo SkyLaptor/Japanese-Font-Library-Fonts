@@ -24,6 +24,48 @@ from utils.subsetter.create_subset import create_subset
 from utils.subsetter.remove_empty_glyphs import remove_empty_glyphs
 
 
+def main():
+    """CLI用の受付窓口"""
+    parser = argparse.ArgumentParser(
+        description="渡されたフォントをスカイリムのUI向けに最適化します。"
+    )
+    parser.add_argument(
+        "input", type=str, help="最適化したいフォントの入力元ファイルパス"
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, default="", help="出力先ファイルパス"
+    )
+    parser.add_argument(
+        "--base", choices=list(SKYRIM_BASE_FONT_CONFIGS.keys()), default="everywhere"
+    )
+    parser.add_argument("--subset", type=str, default="", help="サブセットファイルパス")
+    parser.add_argument(
+        "--condense", choices=list(CONDENSE_RATIO_CONFIGS.keys()), default="normal"
+    )
+    parser.add_argument("--monospace", action="store_true", help="等幅モード")
+    parser.add_argument("--offset_height", type=int, default=0, help="上下位置調整")
+    parser.add_argument("--anonymize", action="store_true", help="匿名化")
+    parser.add_argument("--debug", action="store_true", help="デバッグモード")
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    convert(
+        target_font_path=args.input,
+        output_font_path=args.output,
+        subset_file_path=args.subset,
+        base_type=args.base,
+        condense_type=args.condense,
+        mode_monospace=args.monospace,
+        offset_height=args.offset_height,
+        anonymize=args.anonymize,
+        debug=args.debug,
+    )
+
+
 def convert(
     target_font_path: str,
     output_font_path: str,
@@ -107,25 +149,20 @@ def convert(
     if not mode_monospace:
         scale_width = CONDENSE_RATIO_CONFIGS.get(condense_type, 1.0)
 
-    # 【修正ポイント】
-    # 倍率が 1.0 かつ オフセットが 0 なら、変形処理を通す必要がない
-    if scale_width == 1.0 and offset_height == 0:
-        print("変形・移動の必要がないため、メトリクス調整をスキップします。")
-    else:
-        print("グリフを変形・移動しています...")
-        result = harmonize_font_metrics(
-            target_font_obj=target_font_obj,
-            base_font_obj=base_font_obj,
-            scale_width_manual=scale_width,
-            scale_height_manual=1.0,
-            offset_width=0,
-            offset_height=offset_height,
-        )
-        target_font_obj = result.font_obj
-        dprint(
-            f"最終的な拡大縮小率: 横:x{result.final_scale_width:.3f}, 縦:x{result.final_scale_height:.3f}",
-            debug,
-        )
+    print("グリフを変形・移動しています...")
+    result = harmonize_font_metrics(
+        target_font_obj=target_font_obj,
+        base_font_obj=base_font_obj,
+        scale_width_manual=scale_width,
+        scale_height_manual=1.0,
+        offset_width=0,
+        offset_height=offset_height,
+    )
+    target_font_obj = result.font_obj
+    dprint(
+        f"最終的な拡大縮小率: 横:x{result.final_scale_width:.3f}, 縦:x{result.final_scale_height:.3f}",
+        debug,
+    )
 
     # 4. サブセット作成
     if subset_file_path:
@@ -172,48 +209,6 @@ def convert(
             )
 
     print("処理が完了しました！")
-
-
-def main():
-    """CLI用の受付窓口"""
-    parser = argparse.ArgumentParser(
-        description="渡されたフォントをスカイリムのUI向けに最適化します。"
-    )
-    parser.add_argument(
-        "input", type=str, help="最適化したいフォントの入力元ファイルパス"
-    )
-    parser.add_argument(
-        "-o", "--output", type=str, default="", help="出力先ファイルパス"
-    )
-    parser.add_argument(
-        "--base", choices=list(SKYRIM_BASE_FONT_CONFIGS.keys()), default="everywhere"
-    )
-    parser.add_argument("--subset", type=str, default="", help="サブセットファイルパス")
-    parser.add_argument(
-        "--condense", choices=list(CONDENSE_RATIO_CONFIGS.keys()), default="normal"
-    )
-    parser.add_argument("--monospace", action="store_true", help="等幅モード")
-    parser.add_argument("--offset_height", type=int, default=0, help="上下位置調整")
-    parser.add_argument("--anonymize", action="store_true", help="匿名化")
-    parser.add_argument("--debug", action="store_true", help="デバッグモード")
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
-    args = parser.parse_args()
-
-    convert(
-        target_font_path=args.input,
-        output_font_path=args.output,
-        subset_file_path=args.subset,
-        base_type=args.base,
-        condense_type=args.condense,
-        mode_monospace=args.monospace,
-        offset_height=args.offset_height,
-        anonymize=args.anonymize,
-        debug=args.debug,
-    )
 
 
 if __name__ == "__main__":
