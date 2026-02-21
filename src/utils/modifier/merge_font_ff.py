@@ -22,6 +22,7 @@ if src_dir not in sys.path:
 
 import fontforge  # type: ignore # noqa: E402
 
+# fontforege内包モジュール以外はこれ以降でimportすること。
 from utils.common.save_font_ff import save_font_ff  # noqa: E402
 
 os.environ["LANG"] = "C"

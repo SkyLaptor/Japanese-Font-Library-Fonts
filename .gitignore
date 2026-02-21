@@ -29,6 +29,7 @@ desktop.ini
 !tests/data/test-font/test-font-medium.ttf
 !tests/data/test-font/test-font-bold.ttf
 !tests/data/test-font/test-font-heavy.ttf
+!tests/data/test-font2/test-font2.ttf
 
 # 圧縮ファイル
 *.zip

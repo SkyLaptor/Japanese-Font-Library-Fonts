@@ -148,4 +148,4 @@ MERGE_CONF_PATH = BASE_DIR / "merge_conf.csv"
 # フォントマージ
 MERGE_FONT_FF_PATH = BASE_DIR / "src" / "utils" / "modifier" / "merge_font_ff.py"
 # フォント上書き保存
-MERGE_FONT_FF_PATH = BASE_DIR / "src" / "utils" / "modifier" / "rewrite_font_ff.py"
+REWRITE_FONT_FF_PATH = BASE_DIR / "src" / "utils" / "modifier" / "rewrite_font_ff.py"

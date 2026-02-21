@@ -394,11 +394,18 @@ def action_run_merge_font(
             return  # 空ファイルの場合
 
         for row in reader:
-            # コメント行や空行をスキップ
-            if not row or row[0].startswith("#"):
+            # コメント行や空行、または列が足りない行をスキップ
+            if not row or row[0].startswith("#") or len(row) < 3:
                 continue
 
-            base, sub, out = [s.strip() for s in row]
+            # 最初の3列をストリップして取得
+            vals = [s.strip() for s in row[:3]]
+            # 必須項目が空ならスキップ
+            if not all(vals):
+                continue
+
+            # 最初の3列だけを取り出す（4列目以降は無視する）
+            base, sub, out = [s.strip() for s in row[:3]]
 
             # 2. Pathオブジェクトに変換し、work_dirと結合した上で「絶対パス」にする
             # ここで resolve() を使うことで、'str' ではなく 'Path' として扱えます
