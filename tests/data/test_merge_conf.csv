@@ -1,0 +1,3 @@
+﻿ベースフォント,補間フォント,出力先フォント,備考（自由欄）
+test-font\test-font_premerge.ttf,test-font2\test-font2_premerge.ttf,test-font\test-font_merged.ttf,
+test-font2\test-font2_premerge.ttf,,test-font2\test-font2_merged.ttf,

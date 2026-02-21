@@ -1,6 +1,7 @@
 import argparse
 import csv
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -374,8 +375,14 @@ def run_batch_swf_export(work_dir: str, debug: bool = False) -> None:
     print("\n--- 全ての対象フォントのSWF化が完了しました ---")
 
 
-def action_run_merge_font(
+def action_run_batch_merge_font(
     work_dir: str, merge_conf: str = MERGE_CONF_PATH, debug: bool = False, **_
+):
+    run_batch_merge_font(work_dir=work_dir, merge_conf=merge_conf, debug=debug)
+
+
+def run_batch_merge_font(
+    work_dir: str, merge_conf: str = MERGE_CONF_PATH, debug: bool = False
 ):
     if not Path(merge_conf).exists():
         print(f"[エラー] CSVファイルが見つかりません: {merge_conf}")
@@ -400,20 +407,37 @@ def action_run_merge_font(
 
             # 最初の3列をストリップして取得
             vals = [s.strip() for s in row[:3]]
-            # 必須項目が空ならスキップ
-            if not all(vals):
+            base, sub, out = vals
+
+            # [修正箇所] sub(補間)は空でもいいが、baseとoutは必須
+            if not base or not out:
                 continue
 
-            # 最初の3列だけを取り出す（4列目以降は無視する）
-            base, sub, out = [s.strip() for s in row[:3]]
+            # 1. パス変換の前に「補間フォント」の指定があるかチェック
+            is_copy_only = not sub
 
             # 2. Pathオブジェクトに変換し、work_dirと結合した上で「絶対パス」にする
             # ここで resolve() を使うことで、'str' ではなく 'Path' として扱えます
             base_path = (Path(work_dir) / base.lstrip("/\\")).resolve()
-            sub_path = (Path(work_dir) / sub.lstrip("/\\")).resolve()
+            # 補間フォントがある場合だけsub_pathを生成
+            sub_path = None
+            if not is_copy_only:
+                sub_path = (Path(work_dir) / sub.lstrip("/\\")).resolve()
             out_path = (Path(work_dir) / out.lstrip("/\\")).resolve()
 
-            print(f"\n処理中: {base_path.name} <- {sub_path.name}")
+            # もし補間フォント(sub)が空なら、ベースフォント(base)そのまま出力する。
+            if is_copy_only:
+                try:
+                    print(f"\nコピー処理中: {base_path.name}")
+                    shutil.copy2(str(base_path), str(out_path))
+                    print(f">>  コピー先: {out_path.name}")
+                    print("   [成功]")
+                    continue
+                except Exception as e:
+                    print(f"   [失敗] {e}")
+                    continue  # 無視して続けます
+
+            print(f"\nマージ処理中: {base_path.name} <- {sub_path.name}")
             print(f">>  出力先: {out_path.name}")
 
             # # 3. FontForge用にスラッシュ区切りの文字列に変換
@@ -457,7 +481,7 @@ ACTION_MAP = {
     "run_batch_premerge_export": action_run_batch_premerge_export,
     "run_batch_variant_export": action_run_batch_variant_export,
     "run_batch_swf_export": action_run_batch_swf_export,
-    "run_merge_font": action_run_merge_font,
+    "run_batch_merge_font": action_run_batch_merge_font,
 }
 
 if __name__ == "__main__":

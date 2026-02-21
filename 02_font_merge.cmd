@@ -20,7 +20,7 @@ pause
 
 echo.
 echo [Step 2] Font Merging...
-uv run builder --action run_merge_font --work_dir "%work_dir%"
+uv run builder --action run_batch_merge_font --work_dir "%work_dir%"
 echo.
 echo Done.
 echo Next step: 03_gen_variant_proccess.cmd
