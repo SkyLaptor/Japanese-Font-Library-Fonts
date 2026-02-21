@@ -6,24 +6,19 @@
 
 
 ## 動作環境
-以下のツールをインストールし、コマンドラインから呼び出せるように設定してください。
+以下のツールをインストールして下さい。
 
-* [UV](https://docs.astral.sh/uv/)  
+* **[UV](https://docs.astral.sh/uv/)**  
 Python実行環境。
 
-* [JPEXS Free Flash Decompiler - FFDec](https://github.com/jindrapetrik/jpexs-decompiler)  
-SWF埋め込み用。`ffdec-cli` にパスを通してください。
+```powershell:uvインストール
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
-* [FontForge](https://fontforge.org/en-US/)  
-フォント修復・マージ用。`fontforge` にパスを通してください。
 
-> [!NOTE]
-> **「パスを通す」とは？**
-> ターミナルで `ffdec-cli` と打つだけでプログラムが起動するように、Windowsの環境変数 `Path` に実行ファイルの場所を登録することです。
+* **[FontForge](https://fontforge.org/en-US/)** / **[FFDec](https://github.com/jindrapetrik/jpexs-decompiler)**  
+インストールするだけでOKです（本ツールが自動で実行ファイルを探します。見つからない場合は `.env` で指定可能です）。
 
-![Windows環境変数-Path](https://github.com/user-attachments/assets/2ed25f9e-f138-46c0-be95-1caff284045d)
-
-![Windows環境変数-Path-FontForge-FFDec](https://github.com/user-attachments/assets/71e5e2f9-2731-4b55-a248-c64858352045)
 
 ## 使い方
 ### 1. 準備
@@ -44,31 +39,19 @@ SWF埋め込み用。`ffdec-cli` にパスを通してください。
 ![作業ディレクトリの配置-フォント配置](https://github.com/user-attachments/assets/2314e0ba-9794-4a24-94ec-330bb331397b)
 
 ### 3. 変換実行
-作業ディレクトリに配置したフォントをスカイリム向けのフォントに変換します。
+作業ディレクトリに配置したフォントをスカイリム向けのフォントに変換します。  
+`build.cmd` をダブルクリックで実行して下さい。
 
-```powershell:
-cmd /c build_for_skyrim.cmd
-```
+#### フォントのマージ
+`build.cmd` を実行してしばらくするとマージ待ちによる一時停止状態になります。  
+`build.cmd` の画面はそのままにし、マージ設定ファイルを設定してください。
 
+**マージ設定ファイルの作成**  
+`build.cmd` と同じ場所にある `merge_conf.csv` を開き、サンプル値やコメントを参考に設定して下さい。
 
-### 4. フォントのマージ（任意）
-変換処理を実行ししばらくすると、マージ待ち状態になります。  
-変換処理はそのままにし、マージを行ってください。
+マージ設定ファイルの準備が完了しましたら、`build.cmd` を再開して下さい。
 
-※ マージが不要な場合は、`*_premerge.ttf` を `*_merged.ttf` にリネームして進めてください。
-
-```powershell:
-fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.ttf 補間フォント_premerge.ttf -o build\任意のフォント名_merged.ttf
-```
-
-![フォントのマージ（任意）-完了](https://github.com/user-attachments/assets/83151bc7-8d5f-4905-809f-e3aa520d655e)
-
-> [!NOTE]
-> 既にマージパターンが決まっているのであれば、merge.cmd内にそれを記載することで、都度手動でマージする必要がなくなります。
-
-マージが完了しましたら、変換処理を再開して下さい。
-
-### 5. スカイリムへの適用
+### 4. スカイリムへの適用
 1. 作成されたSWFを `Skyrim/Data/Interface` に配置します。
 
 ![スカイリムへの適用-フォントSWF配置](https://github.com/user-attachments/assets/60210728-718b-40bc-a259-930dddcc4721)
@@ -85,7 +68,15 @@ fontforge .\src\utils\modifier\merge_font_ff.py ベースフォント_premerge.t
 
 
 ## 💡Tips & トラブルシューティング
-* **処理が失敗する**: メモリ不足やディスク容量不足を確認してください。
+* **特定の処理だけやり直したい**: 各ステップごとの処理バッチが用意されています。
+   * `01_font_optimize.cmd` : フォントの事前最適化処理
+   * `02_font_merge.cmd` : フォントのマージ処理 ※事前にマージ設定 (`merge_conf.csv`) の準備が必要です。
+   * `03_generate_variant.cmd` : フォントのバリエーション生成処理
+   * `04_create_swf.cmd` : フォントSWFの作成処理
+
+* **SWF変換時に失敗する**: FFDecのインストール場所が、本ツールが想定する場所に無いのかもしれません。`.env` ファイルを開き、 `FFDEC_PATH` を実際の場所に修正してください。※注意: 区切り文字は ￥マーク(`\`)ではなく、バックスラッシュ(`/`)としてください。
+
+* **処理がたまに失敗する**: メモリ不足やディスク容量不足を確認してください。
 
 * **文字が「豆腐（□）」になる**: 使用したフォントがそのグリフを保持していない可能性があります。以下のコマンドで保持グリフを確認できます。
 

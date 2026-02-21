@@ -1,5 +1,7 @@
 import argparse
+import csv
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -15,6 +17,9 @@ from apps.skyrim.swf_patcher import (
 from const import (
     BASE_LINE_TARGET,
     BUILD_DIR,
+    FONTFORGE_PATH,
+    MERGE_CONF_PATH,
+    MERGE_FONT_FF_PATH,
     SKYRIM_BASE_KEYNAME,
     SKYRIM_EXPORT_MATRIX,
     TEMPLATE_FONTSWF_PATH,
@@ -44,6 +49,12 @@ def main():
         "--base_line",
         type=int,
         default=BASE_LINE_TARGET,
+        help=f"オフセット位置決めのためのベースライン デフォルト:{BASE_LINE_TARGET}",
+    )
+    parser.add_argument(
+        "--merge_conf",
+        type=str,
+        default=MERGE_CONF_PATH,
         help=f"オフセット位置決めのためのベースライン デフォルト:{BASE_LINE_TARGET}",
     )
     parser.add_argument(
@@ -363,10 +374,90 @@ def run_batch_swf_export(work_dir: str, debug: bool = False) -> None:
     print("\n--- 全ての対象フォントのSWF化が完了しました ---")
 
 
+def action_run_merge_font(
+    work_dir: str, merge_conf: str = MERGE_CONF_PATH, debug: bool = False, **_
+):
+    if not Path(merge_conf).exists():
+        print(f"[エラー] CSVファイルが見つかりません: {merge_conf}")
+        return
+
+    print(f"\n[マージ一括処理開始]: {merge_conf}")
+
+    # UTF8(BOM付)にしないと、Excelで編集時に文字化けしてしまう。
+    with open(merge_conf, "r", encoding="utf_8_sig") as f:
+        reader = csv.reader(f)
+
+        try:
+            header = next(reader)
+            dprint(f"ヘッダー '{header}' をスキップしました", debug)
+        except StopIteration:
+            return  # 空ファイルの場合
+
+        for row in reader:
+            # コメント行や空行、または列が足りない行をスキップ
+            if not row or row[0].startswith("#") or len(row) < 3:
+                continue
+
+            # 最初の3列をストリップして取得
+            vals = [s.strip() for s in row[:3]]
+            # 必須項目が空ならスキップ
+            if not all(vals):
+                continue
+
+            # 最初の3列だけを取り出す（4列目以降は無視する）
+            base, sub, out = [s.strip() for s in row[:3]]
+
+            # 2. Pathオブジェクトに変換し、work_dirと結合した上で「絶対パス」にする
+            # ここで resolve() を使うことで、'str' ではなく 'Path' として扱えます
+            base_path = (Path(work_dir) / base.lstrip("/\\")).resolve()
+            sub_path = (Path(work_dir) / sub.lstrip("/\\")).resolve()
+            out_path = (Path(work_dir) / out.lstrip("/\\")).resolve()
+
+            print(f"\n処理中: {base_path.name} <- {sub_path.name}")
+            print(f">>  出力先: {out_path.name}")
+
+            # # 3. FontForge用にスラッシュ区切りの文字列に変換
+            # script_ptr = MERGE_FONT_FF_PATH.resolve().as_posix()
+            # base_ptr = base_path.as_posix()
+            # sub_ptr = sub_path.as_posix()
+            # out_ptr = out_path.as_posix()
+
+            # FontForge呼び出し
+            cmd = [
+                str(FONTFORGE_PATH),
+                "-quiet",
+                "-script",
+                str(MERGE_FONT_FF_PATH),
+                # build/font1/font1_every_premerge.ttf
+                str(base_path),
+                # build/font2/font2_every_premerge.ttf
+                str(sub_path),
+                "-o",
+                str(out_path),
+            ]
+
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                print("   [成功]")
+            except Exception as e:
+                # print(f"   [失敗] ステータスコード: {e.returncode}")
+                # print(f"   [FontForgeの生の声]:\n{e.stderr}")
+                # print(f"   [標準出力]:\n{e.stdout}")
+                print(f"   [失敗] {e}")
+
+    print("\n--- 全てのマージ処理が完了しました ---")
+
+
 ACTION_MAP = {
     "run_batch_premerge_export": action_run_batch_premerge_export,
     "run_batch_variant_export": action_run_batch_variant_export,
     "run_batch_swf_export": action_run_batch_swf_export,
+    "run_merge_font": action_run_merge_font,
 }
 
 if __name__ == "__main__":

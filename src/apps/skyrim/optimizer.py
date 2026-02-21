@@ -1,11 +1,18 @@
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
 # 自前モジュールのインポート
-from const import CONDENSE_RATIO_CONFIGS, EXCLUDE_CHARS, SKYRIM_BASE_FONT_CONFIGS
+from const import (
+    CONDENSE_RATIO_CONFIGS,
+    EXCLUDE_CHARS,
+    FONTFORGE_PATH,
+    REWRITE_FONT_FF_PATH,
+    SKYRIM_BASE_FONT_CONFIGS,
+)
 from utils.common.dprint import dprint
 from utils.common.load_text import load_text
 from utils.common.save_font import save_font
@@ -54,7 +61,46 @@ def convert(
 
     # 2. 空白グリフの消去
     print("空白グリフを消去しています...")
-    target_font_obj = remove_empty_glyphs(font_obj=target_font_obj, debug=debug)
+    # フォントによってはFontforgeによる上書きが必要である模様です。
+    max_retries = 3
+    for i in range(max_retries):
+        try:
+            target_font_obj = remove_empty_glyphs(font_obj=target_font_obj, debug=debug)
+            break  # 正常に完了した場合はループを抜ける。
+        except Exception as e:
+            if i < max_retries - 1:
+                print(e)
+                print(
+                    f"空白グリフの消去に失敗しました。フォントの上書きを試行します: {target_path.name}"
+                )
+                rewrite_cmd = [
+                    str(FONTFORGE_PATH),
+                    "-quiet",
+                    "-script",
+                    str(REWRITE_FONT_FF_PATH),
+                    str(target_path.resolve()),
+                    "--backup_ext",
+                    ".bak",
+                ]
+                try:
+                    print(f"上書き中...: {target_path.name}")
+                    subprocess.run(
+                        rewrite_cmd,
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                    )
+                    print(
+                        "上書きに成功しました。上書き後のフォントを使用して空白グリフ消去処理を再度実行します。"
+                    )
+                    target_font_obj = TTFont(str(target_path.resolve()))
+                except subprocess.CalledProcessError as e_retry:
+                    print(e_retry.stderr)
+                    print("[失敗]: 上書き処理時にエラーが発生しました")
+            else:
+                print("[失敗]: 規定回数内に処理できませんでした。")
+                return False
 
     # 3. グリフの変形（メトリクス調整）
     scale_width = 1.0
