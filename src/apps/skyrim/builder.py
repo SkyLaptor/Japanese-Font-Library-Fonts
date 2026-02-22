@@ -18,6 +18,7 @@ from apps.skyrim.swf_patcher import (
 from const import (
     BASE_LINE_TARGET,
     BUILD_DIR,
+    ENCODE,
     FONTFORGE_PATH,
     MERGE_CONF_PATH,
     MERGE_FONT_FF_PATH,
@@ -27,6 +28,8 @@ from const import (
 )
 from utils.common.dprint import dprint
 from utils.inspector.get_offset_to_align_bottom import get_offset_to_align_bottom
+
+OFFSET_HEIGHT_FILENAME = "offset_height.txt"
 
 
 def main():
@@ -137,25 +140,47 @@ def run_batch_premerge_export(
         print(f"\n[事前調整フォント出力]: {font_dir.name}")
 
         for font_path in font_files:
-            # ループを回さず、基本となる every 用の設定で1回だけ書き出します
-            # bookおよびhandwriteは使用されるUIの特性上、ズレを感じないためです
-            base = "every"
-
-            # オフセット値を自動計算
+            # --- オフセット値の決定ロジック ---
             offset_height = 0
-            try:
-                with TTFont(str(font_path)) as tmp_font:
-                    offset_height = get_offset_to_align_bottom(
-                        tmp_font, base_line, debug
+            offset_file = font_dir / OFFSET_HEIGHT_FILENAME
+
+            if offset_file.exists():
+                # 1. 設定ファイルがある場合は読み込みを優先
+                try:
+                    content = offset_file.read_text(encoding=ENCODE).strip()
+                    offset_height = int(content)
+                    print(
+                        f"  [オフセット読込]: 設定ファイルから '{offset_height}' を採用します。"
                     )
-                print(
-                    f"  [オフセット計算]: ベースライン値: {base_line}, このフォントのオフセット値: {offset_height}"
-                )
-            except Exception as e:
-                print(
-                    f"  [警告]: 自動計算に失敗しました。オフセット0で進めます。詳細: {e}"
-                )
-                offset_height = 0
+                except ValueError:
+                    print(
+                        f"  [警告]: {offset_file.name} の内容が数値ではありません。自動計算に切り替えます。"
+                    )
+                    # 数値変換に失敗した場合は下の自動計算へ流れるように設定
+                    offset_file_invalid = True
+                else:
+                    offset_file_invalid = False
+            else:
+                offset_file_invalid = True
+
+            # 2. 設定ファイルがない（または無効な）場合は自動計算
+            if offset_file_invalid:
+                try:
+                    with TTFont(str(font_path)) as tmp_font:
+                        offset_height = get_offset_to_align_bottom(
+                            tmp_font, base_line, debug
+                        )
+                    print(
+                        f"  [オフセット自動計算]: ベースライン値: {base_line}, 計算結果: {offset_height}"
+                    )
+                except Exception as e:
+                    print(
+                        f"  [警告]: 自動計算に失敗しました。オフセット0で進めます。詳細: {e}"
+                    )
+                    offset_height = 0
+
+            # 最適化処理ではeveryをベースにするだけでよいため、明記します。
+            base = "every"
 
             # 1. まず小文字にする
             stem_lower = font_path.stem.lower()
@@ -165,7 +190,7 @@ def run_batch_premerge_export(
             # 例: "noto-sans-bold" -> "noto-sans_bold"
             # 正規表現を使って、特定のウェイトキーワードの前のハイフンを置換します
             clean_stem = re.sub(
-                r'-(bold|medium|thin|light|regular|black|heavy|semibold|extrabold|extralight)',
+                r'-(bold|medium|normal|thin|light|regular|black|heavy|semibold|extrabold|extralight)',
                 r'_\1',
                 stem_lower,
             )
