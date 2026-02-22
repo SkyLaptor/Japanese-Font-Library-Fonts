@@ -123,7 +123,14 @@ def run_batch_premerge_export(
         if not font_dir.is_dir():
             continue
 
-        font_files = [f for f in font_dir.glob("*.ttf") if suffix not in f.name]
+        # 走査中のフォルダで_premerge.ttfを除いた.ttfファイルの一覧を取得する。
+        font_files = [
+            f
+            for f in font_dir.glob("*.ttf")
+            if not f.name.lower().endswith(f"{suffix.lower()}.ttf")
+        ]
+
+        # なければ次のフォルダへ
         if not font_files:
             continue
 
