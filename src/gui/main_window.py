@@ -5,6 +5,7 @@ import io
 import os
 import re
 import shutil
+import tempfile
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Callable
 
 import yaml
 from fontTools.ttLib import TTFont
+from otf2ttf.cli import otf_to_ttf
 from PIL import Image, ImageDraw, ImageFont
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeyEvent, QPixmap
@@ -96,6 +98,7 @@ from modules.skyrim_swf_patcher import (
 from utils.file_io import load_text
 
 PREVIEW_SAMPLE_TEXT = "0Aa永あ"
+ACCEPTABLE_INPUT_FONT_SUFFIXES = {".ttf", ".otf"}
 
 
 @dataclass(slots=True)
@@ -187,7 +190,7 @@ class MergeFontsListWidget(QListWidget):
         }
 
         for path in paths:
-            if Path(path).suffix.lower() != ".ttf":
+            if Path(path).suffix.lower() not in ACCEPTABLE_INPUT_FONT_SUFFIXES:
                 continue
 
             key = self._normalized_path_key(path)
@@ -254,7 +257,7 @@ class SingleEmbedTableWidget(QTableWidget):
         }
 
         for path in paths:
-            if Path(path).suffix.lower() != ".ttf":
+            if Path(path).suffix.lower() not in ACCEPTABLE_INPUT_FONT_SUFFIXES:
                 continue
 
             key = self._normalized_path_key(path)
@@ -413,9 +416,9 @@ class SingleFontProcessingTab(QWidget):
         io_layout = QVBoxLayout(io_group)
         self.input_ttf_edit = QLineEdit()
         self.output_ttf_edit = QLineEdit()
-        input_label = QLabel("入力TTF")
-        output_label = QLabel("出力TTF")
-        btn_browse_input = QPushButton("入力TTFを選択")
+        input_label = QLabel("入力元")
+        output_label = QLabel("出力先")
+        btn_browse_input = QPushButton("入力元を選択")
         btn_browse_output = QPushButton("保存先を選択")
         btn_browse_input.clicked.connect(self._select_input_ttf)
         btn_browse_output.clicked.connect(self._select_output_ttf)
@@ -477,7 +480,7 @@ class SingleFontProcessingTab(QWidget):
         self.base_font_edit = QLineEdit()
         self.base_font_edit.setEnabled(False)
         self.base_font_edit.setToolTip(
-            "ベース基準モードで比較対象にするTTFを指定します。"
+            "ベース基準モードで比較対象にするフォントを指定します。"
         )
         self.base_font_edit.editingFinished.connect(
             self._update_metrics_display_from_base_font
@@ -554,7 +557,7 @@ class SingleFontProcessingTab(QWidget):
         self.glyph_weight_offset_spin.setRange(-5000, 5000)
         self.glyph_weight_offset_spin.setValue(0)
         self.glyph_weight_offset_spin.setToolTip(
-            "入力TTFのグリフ輪郭の太さを調整します。\n"
+            "入力元フォントのグリフ輪郭の太さを調整します。\n"
             "正の値で太く、負の値で細くなります。\n"
             "補完フォント（マージ対象）には適用されません。"
         )
@@ -825,7 +828,7 @@ class SingleFontProcessingTab(QWidget):
 
     def _select_input_ttf(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "加工対象TTFを選択", "", "TTF (*.ttf)"
+            self, "加工対象フォントを選択", "", "Font (*.ttf *.otf)"
         )
         if path:
             self.input_ttf_edit.setText(path)
@@ -833,16 +836,16 @@ class SingleFontProcessingTab(QWidget):
     def _select_output_ttf(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "保存先TTFを選択",
+            "保存先を選択",
             "",
-            "TTF (*.ttf)",
+            "フォント (*.ttf)",
         )
         if path:
             self.output_ttf_edit.setText(path)
 
     def _select_base_font(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "ベースフォントを選択", "", "TTF (*.ttf)"
+            self, "ベースフォントを選択", "", "Font (*.ttf *.otf)"
         )
         if path:
             self.base_font_edit.setText(path)
@@ -861,7 +864,8 @@ class SingleFontProcessingTab(QWidget):
             return
 
         try:
-            with TTFont(str(path_obj)) as base_font_obj:
+            base_font_obj = self._load_font_for_processing(path_obj, "ベースフォント")
+            with base_font_obj:
                 base_upm = int(base_font_obj['head'].unitsPerEm)
                 scale_for_1024 = 1.0
                 if base_upm > 0:
@@ -906,7 +910,7 @@ class SingleFontProcessingTab(QWidget):
             self,
             "補完用フォントを選択",
             "",
-            "TTF (*.ttf)",
+            "Font (*.ttf *.otf)",
         )
         self.merge_fonts_list.add_paths(paths)
 
@@ -1083,12 +1087,12 @@ class SingleSwfEmbedTab(QWidget):
         target_layout.addWidget(output_row)
         root_layout.addWidget(target_group)
 
-        table_group = QGroupBox("TTFリスト（内部名付き）")
+        table_group = QGroupBox("フォントリスト（内部名付き）")
         table_layout = QVBoxLayout(table_group)
         self.embed_table = SingleEmbedTableWidget()
-        self.embed_table.setHorizontalHeaderLabels(["TTFパス", "内部名"])
+        self.embed_table.setHorizontalHeaderLabels(["フォントパス", "内部名"])
         self.embed_table.setToolTip(
-            "埋め込むTTFと内部名の一覧です。内部名はSWF内の識別名です。"
+            "埋め込むフォントと内部名の一覧です。内部名はSWF内の識別名です。"
         )
         self.embed_table._apply_column_ratio()
         self.embed_table.setSelectionBehavior(
@@ -1099,7 +1103,7 @@ class SingleSwfEmbedTab(QWidget):
         )
 
         table_buttons = QHBoxLayout()
-        btn_add_row = QPushButton("TTF追加")
+        btn_add_row = QPushButton("フォント追加")
         btn_remove_row = QPushButton("選択行を削除")
         btn_add_row.clicked.connect(self._add_ttf_rows)
         btn_remove_row.clicked.connect(self._remove_selected_rows)
@@ -1122,7 +1126,7 @@ class SingleSwfEmbedTab(QWidget):
 
     def _add_ttf_rows(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
-            self, "埋め込みTTFを選択", "", "TTF (*.ttf)"
+            self, "埋め込みフォントを選択", "", "Font (*.ttf *.otf)"
         )
         self.embed_table.add_paths(paths)
 
@@ -1694,12 +1698,16 @@ class MainWindow(QMainWindow):
     def _generate_single_font_preview_pixmap(
         self, config: SingleFontTaskConfig
     ) -> QPixmap:
-        self._validate_path_required(config.input_ttf, "入力TTF")
+        self._validate_path_required(config.input_ttf, "入力元")
         input_ttf_path = self._resolve_user_path(config.input_ttf)
-        self._validate_file_exists(input_ttf_path, "入力TTF")
+        self._validate_file_exists(input_ttf_path, "入力元")
 
-        with TTFont(str(input_ttf_path)) as input_font_obj:
-            preview_font_obj = reopen_font(input_font_obj)
+        preview_font_obj = self._load_font_for_processing(
+            input_ttf_path,
+            "入力元",
+            log=self.append_log,
+            log_prefix="[個別:フォント加工][プレビュー][前処理]",
+        )
 
         preview_font_obj = create_subset(preview_font_obj, PREVIEW_SAMPLE_TEXT)
 
@@ -1719,7 +1727,13 @@ class MainWindow(QMainWindow):
             self._validate_path_required(config.base_font_path, "ベースフォント")
             base_font_path = self._resolve_user_path(config.base_font_path)
             self._validate_file_exists(base_font_path, "ベースフォント")
-            with TTFont(str(base_font_path)) as base_font_obj:
+            base_font_obj = self._load_font_for_processing(
+                base_font_path,
+                "ベースフォント",
+                log=self.append_log,
+                log_prefix="[個別:フォント加工][プレビュー][前処理]",
+            )
+            with base_font_obj:
                 result = harmonize_font_metrics(
                     target_font_obj=preview_font_obj,
                     base_font_obj=base_font_obj,
@@ -1876,12 +1890,12 @@ class MainWindow(QMainWindow):
         config: SingleFontTaskConfig,
         log: Callable[[str], None],
     ) -> None:
-        self._validate_path_required(config.input_ttf, "入力TTF")
-        self._validate_path_required(config.output_ttf, "出力TTF")
+        self._validate_path_required(config.input_ttf, "入力元")
+        self._validate_path_required(config.output_ttf, "出力先")
 
         input_ttf_path = self._resolve_user_path(config.input_ttf)
         output_ttf_path = self._resolve_user_path(config.output_ttf)
-        self._validate_file_exists(input_ttf_path, "入力TTF")
+        self._validate_file_exists(input_ttf_path, "入力元")
 
         subset_text: str | None = None
         if config.subset_text_path:
@@ -1895,12 +1909,15 @@ class MainWindow(QMainWindow):
         else:
             log("[個別:フォント加工][前処理] サブセット無効: サブセットテキスト未指定")
 
-        with TTFont(str(input_ttf_path)) as input_font_obj:
-            current_base_font_obj = reopen_font(input_font_obj)
+        current_base_font_obj = self._load_font_for_processing(
+            input_ttf_path,
+            "入力元",
+            log=log,
+        )
 
         if subset_text is not None:
             log(
-                "[個別:フォント加工][前処理] 入力TTFへサブセット適用 "
+                "[個別:フォント加工][前処理] 入力元へサブセット適用 "
                 f"（マージ前）: {input_ttf_path.name}"
             )
             current_base_font_obj = create_subset(current_base_font_obj, subset_text)
@@ -1912,7 +1929,7 @@ class MainWindow(QMainWindow):
         if config.glyph_weight_offset != 0:
             log(
                 "[個別:フォント加工] グリフ太さ調整を実行 "
-                f"(変更量={config.glyph_weight_offset}) [入力TTFのみ]"
+                f"(変更量={config.glyph_weight_offset}) [入力元のみ]"
             )
             current_base_font_obj = change_weight(
                 current_base_font_obj,
@@ -1929,7 +1946,12 @@ class MainWindow(QMainWindow):
             self._validate_path_required(config.base_font_path, "ベースフォント")
             base_font_path = self._resolve_user_path(config.base_font_path)
             self._validate_file_exists(base_font_path, "ベースフォント")
-            with TTFont(str(base_font_path)) as base_font_obj:
+            base_font_obj = self._load_font_for_processing(
+                base_font_path,
+                "ベースフォント",
+                log=log,
+            )
+            with base_font_obj:
                 result = harmonize_font_metrics(
                     target_font_obj=current_base_font_obj,
                     base_font_obj=base_font_obj,
@@ -1979,7 +2001,12 @@ class MainWindow(QMainWindow):
                 f"({merge_index}/{len(config.merge_fonts)}): {merge_font_path.name} "
                 "[前処理サブセット済み→自動サイズ適合→メトリクス同期→手動変形→浄化]"
             )
-            with TTFont(str(merge_font_path)) as merge_font_obj:
+            merge_font_obj = self._load_font_for_processing(
+                merge_font_path,
+                f"補完フォント[{merge_index}]",
+                log=log,
+            )
+            with merge_font_obj:
                 prepared_merge_font_obj = merge_font_obj
                 if subset_text is not None:
                     log(
@@ -2180,7 +2207,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         self._validate_path_required(config.output_swf, "出力SWF")
         if not config.items:
-            raise ValueError("埋め込み対象TTFが未指定です")
+            raise ValueError("埋め込み対象フォントが未指定です")
 
         target_swf = TEMPLATE_FONTSWF_PATH
         output_swf = self._resolve_user_path(config.output_swf)
@@ -2191,42 +2218,86 @@ class MainWindow(QMainWindow):
         resolved_items: list[tuple[Path, str]] = []
         for index, item in enumerate(config.items, start=1):
             ttf_path = self._resolve_user_path(item.ttf_path)
-            self._validate_file_exists(ttf_path, f"埋め込みTTF[{index}]")
+            self._validate_file_exists(ttf_path, f"埋め込みフォント[{index}]")
+            if ttf_path.suffix.lower() not in ACCEPTABLE_INPUT_FONT_SUFFIXES:
+                raise ValueError(
+                    f"埋め込みフォント[{index}] は .ttf または .otf を指定してください: {ttf_path}"
+                )
             internal_name = item.internal_name.strip() or ttf_path.stem
             resolved_items.append((ttf_path, internal_name))
 
-        if len(resolved_items) == 1:
-            ttf_path, internal_name = resolved_items[0]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            prepared_items: list[tuple[Path, str]] = []
+            for index, (font_path, internal_name) in enumerate(resolved_items, start=1):
+                if self._is_otf_path(font_path):
+                    converted_ttf_path = self._convert_otf_to_temporary_ttf(
+                        font_path,
+                        temp_root,
+                        index=index,
+                        label=f"埋め込みフォント[{index}]",
+                        log=log,
+                    )
+                    prepared_items.append((converted_ttf_path, internal_name))
+                else:
+                    prepared_items.append((font_path, internal_name))
+
+            if len(prepared_items) == 1:
+                ttf_path, internal_name = prepared_items[0]
+
+                self._capture_module_output(
+                    log,
+                    lambda: replace_glyph_in_swf(target_swf, output_swf, ttf_path),
+                )
+                self._capture_module_output(
+                    log,
+                    lambda: patch_swf_internal_fontname(output_swf, internal_name),
+                )
+                log(f"[個別:SWF埋め込み] 完了: {output_swf}")
+                return
+
+            ttf_paths = [ttf_path for ttf_path, _ in prepared_items]
+            internal_names_by_id = {
+                index: internal_name
+                for index, (_, internal_name) in enumerate(prepared_items, start=1)
+            }
 
             self._capture_module_output(
                 log,
-                lambda: replace_glyph_in_swf(target_swf, output_swf, ttf_path),
+                lambda: replace_glyphs_in_swf(target_swf, output_swf, ttf_paths),
             )
             self._capture_module_output(
                 log,
-                lambda: patch_swf_internal_fontname(output_swf, internal_name),
+                lambda: patch_swf_internal_fontnames(output_swf, internal_names_by_id),
             )
-            log(f"[個別:SWF埋め込み] 完了: {output_swf}")
-            return
+            log(
+                f"[個別:SWF埋め込み] 完了: {output_swf} "
+                f"(埋め込み数: {len(prepared_items)})"
+            )
 
-        ttf_paths = [ttf_path for ttf_path, _ in resolved_items]
-        internal_names_by_id = {
-            index: internal_name
-            for index, (_, internal_name) in enumerate(resolved_items, start=1)
-        }
-
-        self._capture_module_output(
-            log,
-            lambda: replace_glyphs_in_swf(target_swf, output_swf, ttf_paths),
+    def _convert_otf_to_temporary_ttf(
+        self,
+        font_path: Path,
+        temp_root: Path,
+        *,
+        index: int,
+        label: str,
+        log: Callable[[str], None],
+    ) -> Path:
+        converted_font_obj = self._load_font_for_processing(
+            font_path,
+            label,
+            log=log,
+            log_prefix="[個別:SWF埋め込み][前処理]",
         )
-        self._capture_module_output(
-            log,
-            lambda: patch_swf_internal_fontnames(output_swf, internal_names_by_id),
-        )
+        temp_ttf_path = temp_root / f"embed_{index:02d}_{font_path.stem}.ttf"
+        converted_font_obj.save(str(temp_ttf_path))
+        converted_font_obj.close()
         log(
-            f"[個別:SWF埋め込み] 完了: {output_swf} "
-            f"(埋め込み数: {len(resolved_items)})"
+            "[個別:SWF埋め込み][前処理] 変換済みフォントを一時生成: "
+            f"{font_path.name} -> {temp_ttf_path.name}"
         )
+        return temp_ttf_path
 
     def _run_recipe(
         self,
@@ -2288,6 +2359,29 @@ class MainWindow(QMainWindow):
             )
 
         log(f"[一括:バッチモード] 完了: {recipe_path}")
+
+    @staticmethod
+    def _is_otf_path(path: Path) -> bool:
+        return path.suffix.lower() == ".otf"
+
+    def _load_font_for_processing(
+        self,
+        font_path: Path,
+        label: str,
+        log: Callable[[str], None] | None = None,
+        log_prefix: str = "[個別:フォント加工][前処理]",
+    ) -> TTFont:
+        with TTFont(str(font_path)) as source_font_obj:
+            loaded_font_obj = reopen_font(source_font_obj)
+
+        if self._is_otf_path(font_path):
+            if loaded_font_obj.sfntVersion != "OTTO" or "CFF " not in loaded_font_obj:
+                raise ValueError(f"{label} がOTF形式として解釈できません: {font_path}")
+            otf_to_ttf(loaded_font_obj)
+            if log is not None:
+                log(f"{log_prefix} OTFをオンメモリでフォント変換: {font_path.name}")
+
+        return loaded_font_obj
 
     @staticmethod
     def _resolve_user_path(value: str) -> Path:

@@ -247,3 +247,7 @@ data/java/
 data/jdk/
 data/jre/
 data/ffdec/
+
+# Data
+!data/
+!tests/data/
