@@ -6,7 +6,6 @@ from core.font_processor import reopen_font
 from utils.file_io import save_font
 
 REMOVE_TARGET_SIZE = 90
-REMOVE_TARGED_SIZE = REMOVE_TARGET_SIZE
 
 
 def action_remove_black_circles(

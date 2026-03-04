@@ -10,9 +10,6 @@ from utils.file_io import save_text
 TIME_FORMAT = "%Y/%m/%d %H:%M:%S (UTC)"
 
 
-Result = FontInfoResult
-
-
 def action_get_info(input_path: str, output_path: str, debug: bool = False, **_):
     with TTFont(input_path) as input_font_obj:
         info = get_info(input_font_obj, debug)

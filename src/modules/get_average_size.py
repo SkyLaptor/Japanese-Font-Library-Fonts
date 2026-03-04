@@ -6,8 +6,6 @@ from fontTools.ttLib import TTFont
 from models.average_size_result import AverageSizeResult
 from utils.file_io import save_text
 
-Result = AverageSizeResult
-
 
 def _has_outline(glyph: object) -> bool:
     number_of_contours = getattr(glyph, "numberOfContours", 0)

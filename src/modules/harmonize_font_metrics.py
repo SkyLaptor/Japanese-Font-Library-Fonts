@@ -14,8 +14,6 @@ from modules.get_info import get_info
 from utils.dprint import dprint
 from utils.file_io import save_font
 
-Result = HarmonizeFontMetricsResult
-
 LOG_PREFIX = "[harmonize_font_metrics]"
 
 
@@ -310,7 +308,7 @@ def harmonize_with_base(
     offset_width: int = 0,
     offset_height: int = 0,
     debug: bool = False,
-) -> Result:
+) -> HarmonizeFontMetricsResult:
     if _is_cff_font(target_font_obj) or _is_cff_font(base_font_obj):
         raise ValueError("この関数はCFF/CFF2には対応していません。")
 
@@ -426,7 +424,7 @@ def harmonize_font_metrics(
     offset_width: int = 0,
     offset_height: int = 0,
     debug: bool = False,
-) -> Result:
+) -> HarmonizeFontMetricsResult:
     return harmonize_with_base(
         target_font_obj=target_font_obj,
         base_font_obj=base_font_obj,

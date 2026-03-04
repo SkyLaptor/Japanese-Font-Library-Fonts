@@ -3,9 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from const import FFDEC_ARCHIVE_URL, JAVA_ARCHIVE_URL
 from core.ffdec_wrapper import (
-    DEFAULT_FFDEC_ARCHIVE_URL,
-    DEFAULT_JAVA_ARCHIVE_URL,
     build_ffdec_command,
     detect_ffdec_jar,
     detect_java_executable,
@@ -145,7 +144,5 @@ def test_ensure_java_runtime_downloads_and_deploys(tmp_path, monkeypatch):
 
 
 def test_default_urls_are_loaded_from_const():
-    from const import FFDEC_ARCHIVE_URL, JAVA_ARCHIVE_URL
-
-    assert DEFAULT_FFDEC_ARCHIVE_URL == FFDEC_ARCHIVE_URL
-    assert DEFAULT_JAVA_ARCHIVE_URL == JAVA_ARCHIVE_URL
+    assert FFDEC_ARCHIVE_URL
+    assert JAVA_ARCHIVE_URL

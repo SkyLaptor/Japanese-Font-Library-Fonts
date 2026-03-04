@@ -7,8 +7,6 @@ from const import ENCODE
 from models.swf_tag_inspection_result import SwfTagInspectionResult
 from utils.file_io import save_text
 
-Result = SwfTagInspectionResult
-
 
 def _decompress_swf(raw_data: bytes) -> tuple[str, bytes]:
     signature = raw_data[:3]

@@ -9,9 +9,6 @@ from urllib import request
 
 from const import FFDEC_ARCHIVE_URL, JAVA_ARCHIVE_URL
 
-DEFAULT_FFDEC_ARCHIVE_URL = FFDEC_ARCHIVE_URL
-DEFAULT_JAVA_ARCHIVE_URL = JAVA_ARCHIVE_URL
-
 
 def _get_project_root(project_root: str | Path | None = None) -> Path:
     if project_root is not None:
@@ -201,7 +198,7 @@ def ensure_ffdec_runtime(
         return ffdec_root / "ffdec.jar"
 
     url = ffdec_archive_url or os.environ.get(
-        "JFL_FFDEC_ARCHIVE_URL", DEFAULT_FFDEC_ARCHIVE_URL
+        "JFL_FFDEC_ARCHIVE_URL", FFDEC_ARCHIVE_URL
     )
 
     if log is not None:
@@ -237,9 +234,7 @@ def ensure_java_runtime(
             if java_path.exists() and _is_java_executable_usable(str(java_path)):
                 return java_path
 
-    url = java_archive_url or os.environ.get(
-        "JFL_JAVA_ARCHIVE_URL", DEFAULT_JAVA_ARCHIVE_URL
-    )
+    url = java_archive_url or os.environ.get("JFL_JAVA_ARCHIVE_URL", JAVA_ARCHIVE_URL)
 
     if log is not None:
         log("[起動] 兵站確保中... Javaランタイムを自動調達します")
