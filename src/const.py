@@ -64,3 +64,56 @@ BLANK_GLYPHS = {
 TEMPLATE_FONTSWF_PATH = DATA_DIR / "template.swf"
 # グリフの位置を調整する際の基準値
 BASE_LINE_TARGET = 0
+# フォント処理で基準とするUPM
+NORMALIZED_UPM = 1024
+
+# プレビュー描画設定
+# サンプル文字列を描画するフォントサイズ（px）
+PREVIEW_FONT_SIZE = 120
+# プレビュー画像の四辺余白（px）
+PREVIEW_PADDING = 28
+# プレビュー画像の最小サイズ（px）
+PREVIEW_MIN_WIDTH = 520
+PREVIEW_MIN_HEIGHT = 180
+
+# Baseline補助線の色（RGBA）
+PREVIEW_BASELINE_COLOR = (80, 170, 255, 220)
+# Ascender/Descender/LineGap補助線の色（RGBA）
+PREVIEW_METRIC_COLOR = (255, 220, 120, 200)
+# Underline補助線の色（RGBA）
+PREVIEW_UNDERLINE_COLOR = (255, 120, 120, 220)
+
+# Baseline補助線の太さ（px）
+PREVIEW_BASELINE_WIDTH = 1
+# Ascender/Descender/LineGap補助線の太さ（px）
+PREVIEW_METRIC_WIDTH = 1
+# 破線の1セグメント長（px）
+PREVIEW_DASH_LENGTH = 8
+# 破線のセグメント間隔（px）
+PREVIEW_DASH_GAP = 6
+
+# 凡例描画設定
+# 凡例ボックスの背景色（RGBA）
+PREVIEW_LEGEND_BACKGROUND_COLOR = (0, 0, 0, 170)
+# 凡例テキストの色（RGBA）
+PREVIEW_LEGEND_TEXT_COLOR = (255, 255, 255, 230)
+# 凡例のX座標（左端からのオフセット、px）
+PREVIEW_LEGEND_MARGIN_X = 8
+# 凡例の下端余白（下端からのオフセット、px）
+PREVIEW_LEGEND_MARGIN_Y = 4
+# 凡例ボックス内部余白（px）
+PREVIEW_LEGEND_PADDING = 6
+# 凡例の行間（px）
+PREVIEW_LEGEND_ROW_GAP = 4
+# 凡例表示領域として画像下部に確保する高さ（px）
+PREVIEW_LEGEND_RESERVED_HEIGHT = 56
+
+# 凡例用フォント候補（上から優先）
+PREVIEW_LEGEND_FONT_CANDIDATES = (
+    DATA_DIR / "ui-fonts" / "system.otf",
+    BASE_DIR / "resources" / "ui-fonts" / "system.otf",
+    Path("C:/Windows/Fonts/msgothic.ttc"),
+    Path("C:/Windows/Fonts/meiryo.ttc"),
+)
+# 凡例フォントサイズ
+PREVIEW_LEGEND_FONT_SIZE = 12

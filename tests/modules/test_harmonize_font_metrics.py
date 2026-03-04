@@ -4,6 +4,7 @@ from pathlib import Path
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 
+from const import NORMALIZED_UPM
 from modules.harmonize_font_metrics import (
     action_harmonize_font_metrics,
     harmonize_font_metrics,
@@ -153,7 +154,82 @@ def test_action_harmonize_font_metrics_manual_derives_upm_from_metrics(
     )
 
     with TTFont(str(output_file)) as result_font:
-        assert result_font['head'].unitsPerEm == 1024
+        assert result_font['head'].unitsPerEm == NORMALIZED_UPM
+
+
+def test_action_harmonize_font_metrics_manual_applies_post_underline_metrics(tmp_path):
+    input_file = Path("tests/data/test-font/test-font-bold.ttf")
+    output_file = tmp_path / "manual_output_post.ttf"
+
+    action_harmonize_font_metrics(
+        input_path=str(input_file),
+        output_path=str(output_file),
+        base_path=None,
+        scale_width=1.0,
+        scale_height=1.0,
+        offset_width=0,
+        offset_height=0,
+        mode="manual",
+        new_upm=1024,
+        metrics_override={
+            "hhea": {
+                "ascent": 880,
+                "descent": -144,
+                "lineGap": 20,
+            },
+            "post": {
+                "underlinePosition": -180,
+                "underlineThickness": 72,
+            },
+        },
+    )
+
+    with TTFont(str(output_file)) as result_font:
+        assert result_font['post'].underlinePosition == -180
+        assert result_font['post'].underlineThickness == 72
+
+
+def test_action_harmonize_font_metrics_base_inherits_post_underline_metrics(tmp_path):
+    input_file = Path("tests/data/test-font/test-font-bold.ttf")
+    base_file = Path("tests/data/test-font/test-font-heavy.ttf")
+    output_file = tmp_path / "base_output_post.ttf"
+
+    with TTFont(str(base_file)) as base_font:
+        base_upm = int(base_font['head'].unitsPerEm)
+        scale = float(NORMALIZED_UPM) / float(base_upm)
+        base_typo_ascender = int(base_font['OS/2'].sTypoAscender)
+        base_typo_descender = int(base_font['OS/2'].sTypoDescender)
+        base_typo_line_gap = int(base_font['OS/2'].sTypoLineGap)
+        base_underline_position = int(base_font['post'].underlinePosition)
+        base_underline_thickness = int(base_font['post'].underlineThickness)
+        expected_ascent = int(round(base_typo_ascender * scale))
+        expected_descent = int(round(base_typo_descender * scale))
+        expected_line_gap = int(round(base_typo_line_gap * scale))
+        expected_underline_position = int(round(base_underline_position * scale))
+        expected_underline_thickness = int(round(base_underline_thickness * scale))
+
+    action_harmonize_font_metrics(
+        input_path=str(input_file),
+        output_path=str(output_file),
+        base_path=str(base_file),
+        scale_width=1.0,
+        scale_height=1.0,
+        offset_width=0,
+        offset_height=0,
+        mode="base",
+    )
+
+    with TTFont(str(output_file)) as result_font:
+        assert result_font['OS/2'].sTypoAscender == expected_ascent
+        assert result_font['OS/2'].sTypoDescender == expected_descent
+        assert result_font['OS/2'].sTypoLineGap == expected_line_gap
+        assert result_font['OS/2'].usWinAscent == expected_ascent
+        assert result_font['OS/2'].usWinDescent == abs(expected_descent)
+        assert result_font['hhea'].ascent == expected_ascent
+        assert result_font['hhea'].descent == expected_descent
+        assert result_font['hhea'].lineGap == expected_line_gap
+        assert result_font['post'].underlinePosition == expected_underline_position
+        assert result_font['post'].underlineThickness == expected_underline_thickness
 
 
 def test_harmonize_font_metrics_scaling(create_mock_font):
@@ -174,9 +250,9 @@ def test_harmonize_font_metrics_scaling(create_mock_font):
     )
 
     h_font = result.font_obj
-    assert h_font['head'].unitsPerEm == 2000
-    # スケーリング計算: (200/100) / (2000/1000) = 1.0倍。送り幅150が維持される
-    assert h_font['hmtx'].metrics['uni4E00'][0] == 150
+    assert h_font['head'].unitsPerEm == NORMALIZED_UPM
+    # スケーリング計算: (200/100) / (1024/1000) = 1.953125倍
+    assert h_font['hmtx'].metrics['uni4E00'][0] == 293
 
 
 def test_harmonize_font_metrics_offset(create_mock_font):

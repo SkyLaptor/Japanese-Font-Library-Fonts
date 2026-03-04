@@ -97,6 +97,11 @@ def test_prepare_interpolation_font_removes_empty_and_syncs_upm(tmp_path):
     )
 
     with TTFont(str(base_path)) as base_font_obj, TTFont(str(sub_path)) as sub_font_obj:
+        base_font_obj["post"].underlinePosition = -210
+        base_font_obj["post"].underlineThickness = 85
+        sub_font_obj["post"].underlinePosition = -40
+        sub_font_obj["post"].underlineThickness = 20
+
         prepared_font = _prepare_interpolation_font_for_merge(
             base_font_obj=base_font_obj,
             interpolation_font_obj=sub_font_obj,
@@ -104,6 +109,8 @@ def test_prepare_interpolation_font_removes_empty_and_syncs_upm(tmp_path):
         )
 
     assert prepared_font["head"].unitsPerEm == 1000
+    assert prepared_font["post"].underlinePosition == -210
+    assert prepared_font["post"].underlineThickness == 85
 
     prepared_cmap = prepared_font.getBestCmap()
     assert 0x41 not in prepared_cmap

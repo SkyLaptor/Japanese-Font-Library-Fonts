@@ -6,6 +6,7 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 
+from const import NORMALIZED_UPM
 from core.font_processor import reopen_font
 from models.harmonize_font_metrics_result import HarmonizeFontMetricsResult
 from modules.get_average_size import get_average_size
@@ -22,25 +23,53 @@ def _is_cff_font(font_obj: TTFont) -> bool:
     return 'CFF ' in font_obj or 'CFF2' in font_obj
 
 
-def _get_base_metrics_override(base_font_obj: TTFont) -> dict[str, dict[str, int]]:
-    metrics_override: dict[str, dict[str, int]] = {}
+def _build_consistent_base_metrics_override(
+    base_font_obj: TTFont,
+    target_upm: int,
+) -> dict[str, dict[str, int]]:
+    base_upm = int(base_font_obj['head'].unitsPerEm)
+    scale = 1.0
+    if base_upm > 0:
+        scale = float(target_upm) / float(base_upm)
 
-    base_os2 = base_font_obj.get('OS/2')
-    if base_os2 is not None:
+    os2_table = base_font_obj.get('OS/2')
+    hhea_table = base_font_obj.get('hhea')
+    post_table = base_font_obj.get('post')
+
+    ascent: int | None = None
+    descent: int | None = None
+    line_gap: int | None = None
+
+    if os2_table is not None:
+        ascent = int(round(int(os2_table.sTypoAscender) * scale))
+        descent = int(round(int(os2_table.sTypoDescender) * scale))
+        line_gap = int(round(int(os2_table.sTypoLineGap) * scale))
+    elif hhea_table is not None:
+        ascent = int(round(int(hhea_table.ascent) * scale))
+        descent = int(round(int(hhea_table.descent) * scale))
+        line_gap = int(round(int(hhea_table.lineGap) * scale))
+
+    metrics_override: dict[str, dict[str, int]] = {}
+    if ascent is not None and descent is not None and line_gap is not None:
         metrics_override["os2"] = {
-            "usWinAscent": base_os2.usWinAscent,
-            "usWinDescent": base_os2.usWinDescent,
-            "sTypoAscender": base_os2.sTypoAscender,
-            "sTypoDescender": base_os2.sTypoDescender,
-            "sTypoLineGap": base_os2.sTypoLineGap,
+            "usWinAscent": ascent,
+            "usWinDescent": abs(descent),
+            "sTypoAscender": ascent,
+            "sTypoDescender": descent,
+            "sTypoLineGap": line_gap,
+        }
+        metrics_override["hhea"] = {
+            "ascent": ascent,
+            "descent": descent,
+            "lineGap": line_gap,
         }
 
-    base_hhea = base_font_obj.get('hhea')
-    if base_hhea is not None:
-        metrics_override["hhea"] = {
-            "ascent": base_hhea.ascent,
-            "descent": base_hhea.descent,
-            "lineGap": base_hhea.lineGap,
+    if post_table is not None:
+        metrics_override["post"] = {
+            "underlinePosition": int(round(int(post_table.underlinePosition) * scale)),
+            "underlineThickness": int(
+                round(int(post_table.underlineThickness) * scale)
+            ),
         }
 
     return metrics_override
@@ -87,6 +116,18 @@ def _apply_metrics_override(
         for key in ("ascent", "descent", "lineGap"):
             if key in metrics_override:
                 setattr(hhea_table, key, int(metrics_override[key]))
+
+    post_table = target_font_obj.get('post')
+    if post_table is not None:
+        post_values = metrics_override.get("post")
+        if isinstance(post_values, Mapping):
+            for key in ("underlinePosition", "underlineThickness"):
+                if key in post_values:
+                    setattr(post_table, key, int(post_values[key]))
+
+        for key in ("underlinePosition", "underlineThickness"):
+            if key in metrics_override:
+                setattr(post_table, key, int(metrics_override[key]))
 
 
 def _derive_upm_from_metrics_override(
@@ -316,15 +357,20 @@ def harmonize_with_base(
     base_upm = base_font_info.upm
     target_upm = target_font_info.upm
 
-    scale_for_upm = base_upm / target_upm
-    is_upm_change = False
-    new_upm: int | None = None
-    if scale_for_upm != 1.0:
-        new_upm = base_upm
-        dprint(f"UPMを変更: {target_upm} -> {base_upm}", debug)
-        is_upm_change = True
+    new_upm = NORMALIZED_UPM
+    scale_for_upm = new_upm / target_upm
+    is_upm_change = int(target_upm) != int(new_upm)
+    if is_upm_change:
+        dprint(f"UPMを変更: {target_upm} -> {new_upm}", debug)
 
-    metrics_override = _get_base_metrics_override(base_font_obj)
+    metrics_override = _build_consistent_base_metrics_override(
+        base_font_obj=base_font_obj,
+        target_upm=int(new_upm),
+    )
+    dprint(
+        f"ベースメトリクスをUPM{NORMALIZED_UPM}へ正規化して適用します。",
+        debug,
+    )
 
     final_scale_width = scale_width_pure / scale_for_upm * scale_width_manual
     final_scale_height = scale_height_pure / scale_for_upm * scale_height_manual

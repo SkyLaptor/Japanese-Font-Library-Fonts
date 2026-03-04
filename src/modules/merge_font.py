@@ -39,6 +39,13 @@ def _get_base_metrics_override(base_font_obj: TTFont) -> dict[str, dict[str, int
             "lineGap": int(base_hhea.lineGap),
         }
 
+    base_post = base_font_obj.get('post')
+    if base_post is not None:
+        metrics_override["post"] = {
+            "underlinePosition": int(base_post.underlinePosition),
+            "underlineThickness": int(base_post.underlineThickness),
+        }
+
     return metrics_override
 
 
@@ -143,7 +150,7 @@ def _prepare_interpolation_font_for_merge(
         new_upm=None,
     )
 
-    # Step 2: メトリクス強制同期（Ascent/Descent/LineGap/UPM）
+    # Step 2: メトリクス強制同期（Ascent/Descent/LineGap/Underline/UPM）
     base_upm = int(base_font_obj['head'].unitsPerEm)
     metrics_override = _get_base_metrics_override(base_font_obj)
     prepared_font_obj = apply_font_transform(

@@ -45,7 +45,33 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from const import BLANK_GLYPHS, EXCLUDE_CHARS, SUBSETS_DIR, TEMPLATE_FONTSWF_PATH
+from const import (
+    BLANK_GLYPHS,
+    EXCLUDE_CHARS,
+    NORMALIZED_UPM,
+    PREVIEW_BASELINE_COLOR,
+    PREVIEW_BASELINE_WIDTH,
+    PREVIEW_DASH_GAP,
+    PREVIEW_DASH_LENGTH,
+    PREVIEW_FONT_SIZE,
+    PREVIEW_LEGEND_BACKGROUND_COLOR,
+    PREVIEW_LEGEND_FONT_CANDIDATES,
+    PREVIEW_LEGEND_FONT_SIZE,
+    PREVIEW_LEGEND_MARGIN_X,
+    PREVIEW_LEGEND_MARGIN_Y,
+    PREVIEW_LEGEND_PADDING,
+    PREVIEW_LEGEND_RESERVED_HEIGHT,
+    PREVIEW_LEGEND_ROW_GAP,
+    PREVIEW_LEGEND_TEXT_COLOR,
+    PREVIEW_METRIC_COLOR,
+    PREVIEW_METRIC_WIDTH,
+    PREVIEW_MIN_HEIGHT,
+    PREVIEW_MIN_WIDTH,
+    PREVIEW_PADDING,
+    PREVIEW_UNDERLINE_COLOR,
+    SUBSETS_DIR,
+    TEMPLATE_FONTSWF_PATH,
+)
 from core.ffdec_wrapper import (
     detect_java_executable,
     ensure_ffdec_runtime,
@@ -87,6 +113,8 @@ class SingleFontTaskConfig:
     metric_ascent: int | None
     metric_descent: int | None
     metric_line_gap: int | None
+    metric_underline_position: int | None
+    metric_underline_thickness: int | None
     base_font_path: str
     merge_fonts: list[str]
 
@@ -303,6 +331,9 @@ class SingleFontProcessingTab(QWidget):
         self.base_font_edit.setToolTip(
             "ベース基準モードで比較対象にするTTFを指定します。"
         )
+        self.base_font_edit.editingFinished.connect(
+            self._update_metrics_display_from_base_font
+        )
         btn_browse_base_font = QPushButton("ベースフォントを選択")
         btn_browse_base_font.setEnabled(False)
         btn_browse_base_font.clicked.connect(self._select_base_font)
@@ -404,10 +435,10 @@ class SingleFontProcessingTab(QWidget):
         )
         self.anonymize_check.toggled.connect(self.anonymize_font_name_edit.setEnabled)
 
-        self.manual_metrics_check = QCheckBox("Ascent/Descentを上書き")
+        self.manual_metrics_check = QCheckBox("メトリクス変更")
         self.manual_metrics_check.setChecked(False)
         self.manual_metrics_check.setToolTip(
-            "有効時は下のAscent/Descent/LineGapの値でメトリクスを上書きします。"
+            "有効時は下の上端/下端/行間/下線位置/下線太さの値でメトリクスを変更します。"
         )
 
         self.metric_ascent_spin = QSpinBox()
@@ -430,9 +461,29 @@ class SingleFontProcessingTab(QWidget):
         self.metric_line_gap_spin.setEnabled(False)
         self.metric_line_gap_spin.setToolTip("行間の追加メトリクス値です。")
 
+        self.metric_underline_position_spin = QSpinBox()
+        self.metric_underline_position_spin.setRange(-5000, 5000)
+        self.metric_underline_position_spin.setValue(-100)
+        self.metric_underline_position_spin.setEnabled(False)
+        self.metric_underline_position_spin.setToolTip(
+            "下線の位置メトリクス値です。通常は負の値です。"
+        )
+
+        self.metric_underline_thickness_spin = QSpinBox()
+        self.metric_underline_thickness_spin.setRange(-5000, 5000)
+        self.metric_underline_thickness_spin.setValue(50)
+        self.metric_underline_thickness_spin.setEnabled(False)
+        self.metric_underline_thickness_spin.setToolTip("下線の太さメトリクス値です。")
+
         self.manual_metrics_check.toggled.connect(self.metric_ascent_spin.setEnabled)
         self.manual_metrics_check.toggled.connect(self.metric_descent_spin.setEnabled)
         self.manual_metrics_check.toggled.connect(self.metric_line_gap_spin.setEnabled)
+        self.manual_metrics_check.toggled.connect(
+            self.metric_underline_position_spin.setEnabled
+        )
+        self.manual_metrics_check.toggled.connect(
+            self.metric_underline_thickness_spin.setEnabled
+        )
 
         self.subset_text_edit = QLineEdit()
         self.subset_text_edit.setText(
@@ -527,14 +578,20 @@ class SingleFontProcessingTab(QWidget):
         metrics_values_row = QWidget()
         metrics_values_row_layout = QHBoxLayout(metrics_values_row)
         metrics_values_row_layout.setContentsMargins(0, 0, 0, 0)
-        metrics_values_row_layout.addWidget(QLabel("Ascent"))
+        metrics_values_row_layout.addWidget(QLabel("上端"))
         metrics_values_row_layout.addWidget(self.metric_ascent_spin)
         metrics_values_row_layout.addSpacing(16)
-        metrics_values_row_layout.addWidget(QLabel("Descent"))
+        metrics_values_row_layout.addWidget(QLabel("下端"))
         metrics_values_row_layout.addWidget(self.metric_descent_spin)
         metrics_values_row_layout.addSpacing(16)
-        metrics_values_row_layout.addWidget(QLabel("LineGap"))
+        metrics_values_row_layout.addWidget(QLabel("行間"))
         metrics_values_row_layout.addWidget(self.metric_line_gap_spin)
+        metrics_values_row_layout.addSpacing(16)
+        metrics_values_row_layout.addWidget(QLabel("下線位置"))
+        metrics_values_row_layout.addWidget(self.metric_underline_position_spin)
+        metrics_values_row_layout.addSpacing(16)
+        metrics_values_row_layout.addWidget(QLabel("下線太さ"))
+        metrics_values_row_layout.addWidget(self.metric_underline_thickness_spin)
         metrics_values_row_layout.addStretch(1)
 
         subset_wrapper_row = QWidget()
@@ -598,6 +655,8 @@ class SingleFontProcessingTab(QWidget):
             return
         self.base_font_edit.setEnabled(checked)
         self.base_font_button.setEnabled(checked)
+        if checked:
+            self._update_metrics_display_from_base_font()
 
     def _select_input_ttf(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -622,6 +681,60 @@ class SingleFontProcessingTab(QWidget):
         )
         if path:
             self.base_font_edit.setText(path)
+            self._update_metrics_display_from_base_font()
+
+    def _update_metrics_display_from_base_font(self) -> None:
+        if not self.mode_base_radio.isChecked():
+            return
+
+        base_font_path = self.base_font_edit.text().strip()
+        if not base_font_path:
+            return
+
+        path_obj = Path(base_font_path)
+        if not path_obj.exists():
+            return
+
+        try:
+            with TTFont(str(path_obj)) as base_font_obj:
+                base_upm = int(base_font_obj['head'].unitsPerEm)
+                scale_for_1024 = 1.0
+                if base_upm > 0:
+                    scale_for_1024 = float(NORMALIZED_UPM) / float(base_upm)
+
+                def _to_1024(value: int) -> int:
+                    return int(round(int(value) * scale_for_1024))
+
+                hhea_table = base_font_obj.get('hhea')
+                os2_table = base_font_obj.get('OS/2')
+                post_table = base_font_obj.get('post')
+
+                if os2_table is not None:
+                    self.metric_ascent_spin.setValue(
+                        _to_1024(int(os2_table.sTypoAscender))
+                    )
+                    self.metric_descent_spin.setValue(
+                        _to_1024(int(os2_table.sTypoDescender))
+                    )
+                    self.metric_line_gap_spin.setValue(
+                        _to_1024(int(os2_table.sTypoLineGap))
+                    )
+                elif hhea_table is not None:
+                    self.metric_ascent_spin.setValue(_to_1024(int(hhea_table.ascent)))
+                    self.metric_descent_spin.setValue(_to_1024(int(hhea_table.descent)))
+                    self.metric_line_gap_spin.setValue(
+                        _to_1024(int(hhea_table.lineGap))
+                    )
+
+                if post_table is not None:
+                    self.metric_underline_position_spin.setValue(
+                        _to_1024(int(post_table.underlinePosition))
+                    )
+                    self.metric_underline_thickness_spin.setValue(
+                        _to_1024(int(post_table.underlineThickness))
+                    )
+        except Exception:
+            return
 
     def _add_merge_fonts(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
@@ -708,6 +821,8 @@ class SingleFontProcessingTab(QWidget):
         metric_ascent = None
         metric_descent = None
         metric_line_gap = None
+        metric_underline_position = None
+        metric_underline_thickness = None
         anonymize_font_name = self.anonymize_font_name_edit.text().strip()
         if self.anonymize_check.isChecked():
             if not anonymize_font_name:
@@ -731,13 +846,15 @@ class SingleFontProcessingTab(QWidget):
             metric_ascent = self.metric_ascent_spin.value()
             metric_descent = self.metric_descent_spin.value()
             metric_line_gap = self.metric_line_gap_spin.value()
+            metric_underline_position = self.metric_underline_position_spin.value()
+            metric_underline_thickness = self.metric_underline_thickness_spin.value()
             derived_upm = int(metric_ascent) + abs(int(metric_descent))
-            if derived_upm != 1024:
+            if derived_upm != NORMALIZED_UPM:
                 QMessageBox.warning(
                     self,
                     "UPM警告",
-                    "Ascent/Descent から算出される UPM が 1024 ではありません。\n"
-                    f"計算値: {derived_upm} (Ascent={metric_ascent}, Descent={metric_descent})",
+                    f"上端/下端 から算出される UPM が {NORMALIZED_UPM} ではありません。\n"
+                    f"計算値: {derived_upm} (上端={metric_ascent}, 下端={metric_descent})",
                 )
 
         config = SingleFontTaskConfig(
@@ -756,6 +873,8 @@ class SingleFontProcessingTab(QWidget):
             metric_ascent=metric_ascent,
             metric_descent=metric_descent,
             metric_line_gap=metric_line_gap,
+            metric_underline_position=metric_underline_position,
+            metric_underline_thickness=metric_underline_thickness,
             base_font_path=self.base_font_edit.text().strip(),
             merge_fonts=[
                 self.merge_fonts_list.item(index).text()
@@ -1279,6 +1398,139 @@ class MainWindow(QMainWindow):
             self._preview_window = PreviewWindow(None)
         return self._preview_window
 
+    @staticmethod
+    def _draw_dashed_horizontal_line(
+        draw: ImageDraw.ImageDraw,
+        *,
+        y: int,
+        x_start: int,
+        x_end: int,
+        color: tuple[int, int, int, int],
+        dash_length: int = PREVIEW_DASH_LENGTH,
+        gap_length: int = PREVIEW_DASH_GAP,
+        width: int = 1,
+    ) -> None:
+        x = x_start
+        while x <= x_end:
+            segment_end = min(x + dash_length, x_end)
+            draw.line([(x, y), (segment_end, y)], fill=color, width=width)
+            x += dash_length + gap_length
+
+    @staticmethod
+    def _get_preview_metrics_for_overlay(
+        font_obj: TTFont,
+    ) -> tuple[int, int, int, int, int]:
+        os2_table = font_obj.get('OS/2')
+        hhea_table = font_obj.get('hhea')
+        post_table = font_obj.get('post')
+
+        if os2_table is not None:
+            ascent = int(os2_table.sTypoAscender)
+            descent = int(os2_table.sTypoDescender)
+            line_gap = int(os2_table.sTypoLineGap)
+        elif hhea_table is not None:
+            ascent = int(hhea_table.ascent)
+            descent = int(hhea_table.descent)
+            line_gap = int(hhea_table.lineGap)
+        else:
+            ascent = 0
+            descent = 0
+            line_gap = 0
+
+        underline_position = 0
+        underline_thickness = 1
+        if post_table is not None:
+            underline_position = int(post_table.underlinePosition)
+            underline_thickness = int(post_table.underlineThickness)
+
+        return ascent, descent, line_gap, underline_position, underline_thickness
+
+    @staticmethod
+    def _draw_preview_legend(draw: ImageDraw.ImageDraw) -> None:
+        legend_font = None
+        for font_path in PREVIEW_LEGEND_FONT_CANDIDATES:
+            if not Path(font_path).exists():
+                continue
+            try:
+                legend_font = ImageFont.truetype(
+                    str(font_path),
+                    size=PREVIEW_LEGEND_FONT_SIZE,
+                )
+                break
+            except Exception:
+                continue
+
+        using_japanese_labels = legend_font is not None
+        if legend_font is None:
+            legend_font = ImageFont.load_default()
+
+        if using_japanese_labels:
+            legend_items = [
+                ("solid", PREVIEW_BASELINE_COLOR, "ベースライン"),
+                ("solid", PREVIEW_UNDERLINE_COLOR, "下線"),
+                ("dashed", PREVIEW_METRIC_COLOR, "上端/下端/行間"),
+            ]
+        else:
+            legend_items = [
+                ("solid", PREVIEW_BASELINE_COLOR, "Baseline"),
+                ("solid", PREVIEW_UNDERLINE_COLOR, "Underline"),
+                ("dashed", PREVIEW_METRIC_COLOR, "Asc/Desc/LineGap"),
+            ]
+
+        sample_width = 24
+        text_max_width = 0
+        text_heights: list[int] = []
+        for _, _, label in legend_items:
+            bbox = draw.textbbox((0, 0), label, font=legend_font)
+            text_max_width = max(text_max_width, max(1, bbox[2] - bbox[0]))
+            text_heights.append(max(1, bbox[3] - bbox[1]))
+
+        row_height = max(8, max(text_heights))
+        content_height = row_height * len(legend_items) + PREVIEW_LEGEND_ROW_GAP * (
+            len(legend_items) - 1
+        )
+        box_width = PREVIEW_LEGEND_PADDING * 2 + sample_width + 8 + text_max_width
+        box_height = PREVIEW_LEGEND_PADDING * 2 + content_height
+
+        image_width, image_height = draw.im.size
+        left = PREVIEW_LEGEND_MARGIN_X
+        top = max(
+            PREVIEW_LEGEND_MARGIN_Y,
+            image_height - PREVIEW_LEGEND_MARGIN_Y - box_height,
+        )
+        right = left + box_width
+        bottom = top + box_height
+        draw.rectangle(
+            [(left, top), (right, bottom)],
+            fill=PREVIEW_LEGEND_BACKGROUND_COLOR,
+        )
+
+        row_y = top + PREVIEW_LEGEND_PADDING
+        sample_left = left + PREVIEW_LEGEND_PADDING
+        text_x = sample_left + sample_width + 8
+
+        for line_type, color, label in legend_items:
+            line_y = row_y + row_height // 2
+            if line_type == "dashed":
+                x = sample_left
+                while x <= sample_left + sample_width:
+                    segment_end = min(
+                        x + PREVIEW_DASH_LENGTH, sample_left + sample_width
+                    )
+                    draw.line([(x, line_y), (segment_end, line_y)], fill=color, width=1)
+                    x += PREVIEW_DASH_LENGTH + PREVIEW_DASH_GAP
+            else:
+                draw.line(
+                    [(sample_left, line_y), (sample_left + sample_width, line_y)],
+                    fill=color,
+                    width=1,
+                )
+
+            draw.text(
+                (text_x, row_y), label, fill=PREVIEW_LEGEND_TEXT_COLOR, font=legend_font
+            )
+            row_y += row_height + PREVIEW_LEGEND_ROW_GAP
+
     def _generate_single_font_preview_pixmap(
         self, config: SingleFontTaskConfig
     ) -> QPixmap:
@@ -1339,7 +1591,7 @@ class MainWindow(QMainWindow):
         preview_font_obj.save(buffer)
         buffer.seek(0)
 
-        pil_font = ImageFont.truetype(buffer, size=120)
+        pil_font = ImageFont.truetype(buffer, size=PREVIEW_FONT_SIZE)
 
         measurement = Image.new("RGBA", (1, 1), (0, 0, 0, 255))
         measurement_draw = ImageDraw.Draw(measurement)
@@ -1349,17 +1601,91 @@ class MainWindow(QMainWindow):
         text_width = max(1, right - left)
         text_height = max(1, bottom - top)
 
-        padding = 28
-        image_width = max(520, text_width + padding * 2)
-        image_height = max(180, text_height + padding * 2)
+        padding = PREVIEW_PADDING
+        image_width = max(PREVIEW_MIN_WIDTH, text_width + padding * 2)
+        image_height = max(
+            PREVIEW_MIN_HEIGHT,
+            text_height + padding * 2 + PREVIEW_LEGEND_RESERVED_HEIGHT,
+        )
         image = Image.new("RGBA", (image_width, image_height), (0, 0, 0, 255))
         draw = ImageDraw.Draw(image)
+        text_x = padding - left
+        text_y = padding - top
         draw.text(
-            (padding - left, padding - top),
+            (text_x, text_y),
             PREVIEW_SAMPLE_TEXT,
             fill=(255, 255, 255, 255),
             font=pil_font,
         )
+
+        upm = (
+            int(preview_font_obj['head'].unitsPerEm)
+            if 'head' in preview_font_obj
+            else 0
+        )
+        if upm <= 0:
+            upm = NORMALIZED_UPM
+
+        pixel_per_unit = float(PREVIEW_FONT_SIZE) / float(upm)
+        ascent, descent, line_gap, underline_position, underline_thickness = (
+            self._get_preview_metrics_for_overlay(preview_font_obj)
+        )
+        pil_ascent, _pil_descent = pil_font.getmetrics()
+        baseline_y = int(round(text_y + pil_ascent))
+
+        x_start = padding
+        x_end = image_width - padding
+
+        draw.line(
+            [(x_start, baseline_y), (x_end, baseline_y)],
+            fill=PREVIEW_BASELINE_COLOR,
+            width=PREVIEW_BASELINE_WIDTH,
+        )
+
+        ascender_y = int(round(baseline_y - float(ascent) * pixel_per_unit))
+        descender_y = int(round(baseline_y - float(descent) * pixel_per_unit))
+        self._draw_dashed_horizontal_line(
+            draw,
+            y=ascender_y,
+            x_start=x_start,
+            x_end=x_end,
+            color=PREVIEW_METRIC_COLOR,
+            width=PREVIEW_METRIC_WIDTH,
+        )
+        self._draw_dashed_horizontal_line(
+            draw,
+            y=descender_y,
+            x_start=x_start,
+            x_end=x_end,
+            color=PREVIEW_METRIC_COLOR,
+            width=PREVIEW_METRIC_WIDTH,
+        )
+
+        line_gap_y = int(round(descender_y + float(line_gap) * pixel_per_unit))
+        self._draw_dashed_horizontal_line(
+            draw,
+            y=line_gap_y,
+            x_start=x_start,
+            x_end=x_end,
+            color=PREVIEW_METRIC_COLOR,
+            width=PREVIEW_METRIC_WIDTH,
+        )
+
+        underline_y = int(
+            round(baseline_y - float(underline_position) * pixel_per_unit)
+        )
+        underline_height = max(
+            1,
+            int(round(abs(float(underline_thickness) * pixel_per_unit))),
+        )
+        underline_top = underline_y - (underline_height // 2)
+        underline_bottom = underline_top + underline_height - 1
+        draw.rectangle(
+            [(x_start, underline_top), (x_end, underline_bottom)],
+            fill=PREVIEW_UNDERLINE_COLOR,
+        )
+
+        self._draw_preview_legend(draw)
 
         png_buffer = io.BytesIO()
         image.save(png_buffer, format="PNG")
@@ -1462,8 +1788,11 @@ class MainWindow(QMainWindow):
                 )
                 log(
                     "[単体:フォント加工] 手動メトリクスを適用: "
-                    f"Ascent={config.metric_ascent}, "
-                    f"Descent={config.metric_descent}, LineGap={config.metric_line_gap}"
+                    f"上端={config.metric_ascent}, "
+                    f"下端={config.metric_descent}, "
+                    f"行間={config.metric_line_gap}, "
+                    f"下線位置={config.metric_underline_position}, "
+                    f"下線太さ={config.metric_underline_thickness}"
                 )
                 log(
                     f"[単体:フォント加工] UPMをメトリクスから自動決定: {manual_new_upm}"
@@ -1654,12 +1983,16 @@ class MainWindow(QMainWindow):
             config.metric_ascent is None
             or config.metric_descent is None
             or config.metric_line_gap is None
+            or config.metric_underline_position is None
+            or config.metric_underline_thickness is None
         ):
             return None
 
         ascent = int(config.metric_ascent)
         descent = int(config.metric_descent)
         line_gap = int(config.metric_line_gap)
+        underline_position = int(config.metric_underline_position)
+        underline_thickness = int(config.metric_underline_thickness)
 
         return {
             "os2": {
@@ -1673,6 +2006,10 @@ class MainWindow(QMainWindow):
                 "ascent": ascent,
                 "descent": descent,
                 "lineGap": line_gap,
+            },
+            "post": {
+                "underlinePosition": underline_position,
+                "underlineThickness": underline_thickness,
             },
         }
 
