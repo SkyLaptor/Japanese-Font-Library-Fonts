@@ -100,7 +100,7 @@ BLANK_GLYPHS = {
     0x000A,
 }
 # テンプレートSWFパス
-TEMPLATE_FONTSWF_PATH = DATA_DIR / "font_swfs" / "fonts_template.swf"
+TEMPLATE_FONTSWF_PATH = DATA_DIR / "template.swf"
 # テンプレートSWF内のリプレース文字列
 DUMMY_FONT_NAME_IN_SWF = "REPLACE_ME_FONT_NAME_LENGTH_MAX_XXXXXXXXXXXXXXX"
 # フォントSWFのファイル名の頭に付ける文字列（慣例的につけてるだけ）

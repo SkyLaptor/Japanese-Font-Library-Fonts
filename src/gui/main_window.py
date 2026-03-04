@@ -45,7 +45,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from const import BLANK_GLYPHS, EXCLUDE_CHARS, SUBSETS_DIR
+from const import BLANK_GLYPHS, EXCLUDE_CHARS, SUBSETS_DIR, TEMPLATE_FONTSWF_PATH
 from core.ffdec_wrapper import (
     detect_java_executable,
     ensure_ffdec_runtime,
@@ -59,7 +59,12 @@ from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_
 from modules.merge_font import merge_font_objects
 from modules.remove_empty_glyphs import remove_empty_glyphs
 from modules.skyrim_builder import ACTION_MAP, dispatch_action
-from modules.skyrim_swf_patcher import patch_swf_internal_fontname, replace_glyph_in_swf
+from modules.skyrim_swf_patcher import (
+    patch_swf_internal_fontname,
+    patch_swf_internal_fontnames,
+    replace_glyph_in_swf,
+    replace_glyphs_in_swf,
+)
 from utils.file_io import load_text
 
 PREVIEW_SAMPLE_TEXT = "0Aa永あ"
@@ -94,7 +99,6 @@ class EmbedItem:
 
 @dataclass(slots=True)
 class SingleEmbedTaskConfig:
-    target_swf: str
     output_swf: str
     items: list[EmbedItem]
 
@@ -773,37 +777,17 @@ class SingleSwfEmbedTab(QWidget):
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout(self)
 
-        target_group = QGroupBox("ターゲット / 出力")
+        target_group = QGroupBox("出力")
         target_layout = QVBoxLayout(target_group)
-        self.target_swf_edit = QLineEdit()
         self.output_swf_edit = QLineEdit()
-        self.target_swf_edit.setToolTip("埋め込み先となるSWFファイルを指定します。")
         self.output_swf_edit.setToolTip("埋め込み後の出力SWFファイルを指定します。")
-        target_label = QLabel("ターゲットSWF")
         output_label = QLabel("出力SWF")
-        btn_target = QPushButton("埋め込み先SWFを選択")
         btn_output = QPushButton("出力SWFを選択")
-        btn_target.clicked.connect(self._select_target_swf)
         btn_output.clicked.connect(self._select_output_swf)
 
-        target_label_width = max(
-            target_label.sizeHint().width(), output_label.sizeHint().width()
-        )
-        target_label.setFixedWidth(target_label_width)
-        output_label.setFixedWidth(target_label_width)
+        output_label.setFixedWidth(output_label.sizeHint().width())
 
-        target_button_width = max(
-            btn_target.sizeHint().width(), btn_output.sizeHint().width()
-        )
-        btn_target.setFixedWidth(target_button_width)
-        btn_output.setFixedWidth(target_button_width)
-
-        target_row = QWidget()
-        target_row_layout = QHBoxLayout(target_row)
-        target_row_layout.setContentsMargins(0, 0, 0, 0)
-        target_row_layout.addWidget(target_label)
-        target_row_layout.addWidget(self.target_swf_edit)
-        target_row_layout.addWidget(btn_target)
+        btn_output.setFixedWidth(btn_output.sizeHint().width())
 
         output_row = QWidget()
         output_row_layout = QHBoxLayout(output_row)
@@ -812,7 +796,6 @@ class SingleSwfEmbedTab(QWidget):
         output_row_layout.addWidget(self.output_swf_edit)
         output_row_layout.addWidget(btn_output)
 
-        target_layout.addWidget(target_row)
         target_layout.addWidget(output_row)
         root_layout.addWidget(target_group)
 
@@ -847,13 +830,6 @@ class SingleSwfEmbedTab(QWidget):
         self.execute_button.setProperty("importance", "primary")
         self.execute_button.clicked.connect(self._emit_execute)
         root_layout.addWidget(self.execute_button)
-
-    def _select_target_swf(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, "埋め込み先SWFを選択", "", "SWF (*.swf)"
-        )
-        if path:
-            self.target_swf_edit.setText(path)
 
     def _select_output_swf(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "出力SWFを選択", "", "SWF (*.swf)")
@@ -890,7 +866,6 @@ class SingleSwfEmbedTab(QWidget):
                 items.append(EmbedItem(ttf_path=ttf_path, internal_name=internal_name))
 
         config = SingleEmbedTaskConfig(
-            target_swf=self.target_swf_edit.text().strip(),
             output_swf=self.output_swf_edit.text().strip(),
             items=items,
         )
@@ -1706,22 +1681,25 @@ class MainWindow(QMainWindow):
         config: SingleEmbedTaskConfig,
         log: Callable[[str], None],
     ) -> None:
-        self._validate_path_required(config.target_swf, "ターゲットSWF")
         self._validate_path_required(config.output_swf, "出力SWF")
         if not config.items:
             raise ValueError("埋め込み対象TTFが未指定です")
 
-        target_swf = self._resolve_user_path(config.target_swf)
+        target_swf = TEMPLATE_FONTSWF_PATH
         output_swf = self._resolve_user_path(config.output_swf)
-        self._validate_file_exists(target_swf, "ターゲットSWF")
+        self._validate_file_exists(target_swf, "テンプレートSWF")
 
         output_swf.parent.mkdir(parents=True, exist_ok=True)
 
-        if len(config.items) == 1:
-            item = config.items[0]
+        resolved_items: list[tuple[Path, str]] = []
+        for index, item in enumerate(config.items, start=1):
             ttf_path = self._resolve_user_path(item.ttf_path)
-            self._validate_file_exists(ttf_path, "埋め込みTTF")
+            self._validate_file_exists(ttf_path, f"埋め込みTTF[{index}]")
             internal_name = item.internal_name.strip() or ttf_path.stem
+            resolved_items.append((ttf_path, internal_name))
+
+        if len(resolved_items) == 1:
+            ttf_path, internal_name = resolved_items[0]
 
             self._capture_module_output(
                 log,
@@ -1734,41 +1712,24 @@ class MainWindow(QMainWindow):
             log(f"[単体:SWF埋め込み] 完了: {output_swf}")
             return
 
-        output_base = output_swf.parent
-        output_stem = output_swf.stem
-        output_suffix = output_swf.suffix
+        ttf_paths = [ttf_path for ttf_path, _ in resolved_items]
+        internal_names_by_id = {
+            index: internal_name
+            for index, (_, internal_name) in enumerate(resolved_items, start=1)
+        }
 
-        for index, item in enumerate(config.items, start=1):
-            ttf_path = self._resolve_user_path(item.ttf_path)
-            self._validate_file_exists(ttf_path, f"埋め込みTTF[{index}]")
-            internal_name = item.internal_name.strip() or ttf_path.stem
-            safe_name = "".join(
-                character
-                for character in internal_name
-                if character.isalnum() or character in ("-", "_")
-            )
-            if not safe_name:
-                safe_name = f"font_{index:03d}"
-
-            each_output = (
-                output_base / f"{output_stem}_{index:03d}_{safe_name}{output_suffix}"
-            )
-            self._capture_module_output(
-                log,
-                lambda tgt=target_swf, out=each_output, ttf=ttf_path: replace_glyph_in_swf(
-                    tgt, out, ttf
-                ),
-            )
-            self._capture_module_output(
-                log,
-                lambda out=each_output, name=internal_name: patch_swf_internal_fontname(
-                    out, name
-                ),
-            )
-            log(
-                "[単体:SWF埋め込み] 出力 "
-                f"({index}/{len(config.items)}): {each_output.name}"
-            )
+        self._capture_module_output(
+            log,
+            lambda: replace_glyphs_in_swf(target_swf, output_swf, ttf_paths),
+        )
+        self._capture_module_output(
+            log,
+            lambda: patch_swf_internal_fontnames(output_swf, internal_names_by_id),
+        )
+        log(
+            f"[単体:SWF埋め込み] 完了: {output_swf} "
+            f"(埋め込み数: {len(resolved_items)})"
+        )
 
     def _run_batch(
         self,
@@ -1866,12 +1827,14 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _capture_module_output(
         log: Callable[[str], None],
-        action: Callable[[], None],
+        action: Callable[[], object],
     ) -> None:
         stream = _LogStream(log)
         with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
-            action()
+            result = action()
             stream.flush()
+        if result is False:
+            raise RuntimeError("モジュール処理が失敗しました。ログを確認してください。")
 
     @staticmethod
     def _validate_path_required(value: str, label: str) -> None:

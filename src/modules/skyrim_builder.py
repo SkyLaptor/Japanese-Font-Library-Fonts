@@ -254,7 +254,11 @@ def run_batch_swf_export(work_dir: str, debug: bool = False) -> None:
                         TEMPLATE_FONTSWF_PATH, output_swf_path, ttf_path
                     )
                     time.sleep(0.5)
-                    patch_swf_internal_fontname(output_swf_path, internal_font_name)
+                    patched = patch_swf_internal_fontname(
+                        output_swf_path, internal_font_name
+                    )
+                    if not patched:
+                        raise RuntimeError("SWF内部フォント名パッチに失敗しました")
                     print(f"  [成功]: {swf_filename}")
                     break
                 except Exception as e:
