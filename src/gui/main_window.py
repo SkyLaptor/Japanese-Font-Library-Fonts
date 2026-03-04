@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -215,6 +216,8 @@ class _LogStream(io.TextIOBase):
 class SingleFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
     preview_requested = pyqtSignal(object)
+    _EXECUTE_LABEL = "単体処理を実行"
+    _EXECUTING_LABEL = "単体処理を実行中..."
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -575,14 +578,14 @@ class SingleFontProcessingTab(QWidget):
         merge_layout.addLayout(merge_buttons)
         root_layout.addWidget(merge_group)
 
-        btn_execute = QPushButton("単体処理を実行")
-        btn_execute.setProperty("importance", "primary")
-        btn_execute.clicked.connect(self._emit_execute)
+        self.execute_button = QPushButton(self._EXECUTE_LABEL)
+        self.execute_button.setProperty("importance", "primary")
+        self.execute_button.clicked.connect(self._emit_execute)
 
         action_row = QWidget()
         action_layout = QHBoxLayout(action_row)
         action_layout.setContentsMargins(0, 0, 0, 0)
-        action_layout.addWidget(btn_execute)
+        action_layout.addWidget(self.execute_button)
         root_layout.addWidget(action_row)
         root_layout.addStretch(1)
 
@@ -692,6 +695,11 @@ class SingleFontProcessingTab(QWidget):
             return
         self.preview_requested.emit(config)
 
+    def set_executing_state(self, executing: bool) -> None:
+        self.execute_button.setText(
+            self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
+        )
+
     def _build_single_font_config(self) -> SingleFontTaskConfig | None:
         metric_ascent = None
         metric_descent = None
@@ -755,6 +763,8 @@ class SingleFontProcessingTab(QWidget):
 
 class SingleSwfEmbedTab(QWidget):
     execute_requested = pyqtSignal(object)
+    _EXECUTE_LABEL = "埋め込みを実行"
+    _EXECUTING_LABEL = "埋め込みを実行中..."
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -833,10 +843,10 @@ class SingleSwfEmbedTab(QWidget):
         table_layout.addLayout(table_buttons)
         root_layout.addWidget(table_group)
 
-        btn_execute = QPushButton("埋め込みを実行")
-        btn_execute.setProperty("importance", "primary")
-        btn_execute.clicked.connect(self._emit_execute)
-        root_layout.addWidget(btn_execute)
+        self.execute_button = QPushButton(self._EXECUTE_LABEL)
+        self.execute_button.setProperty("importance", "primary")
+        self.execute_button.clicked.connect(self._emit_execute)
+        root_layout.addWidget(self.execute_button)
 
     def _select_target_swf(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -886,9 +896,16 @@ class SingleSwfEmbedTab(QWidget):
         )
         self.execute_requested.emit(config)
 
+    def set_executing_state(self, executing: bool) -> None:
+        self.execute_button.setText(
+            self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
+        )
+
 
 class BatchModeTab(QWidget):
     execute_requested = pyqtSignal(object)
+    _EXECUTE_LABEL = "バッチ実行（マージ→SWF埋め込み）"
+    _EXECUTING_LABEL = "バッチ実行中..."
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -966,10 +983,10 @@ class BatchModeTab(QWidget):
 
         root_layout.addWidget(form_group)
 
-        btn_execute = QPushButton("バッチ実行（マージ→SWF埋め込み）")
-        btn_execute.setProperty("importance", "primary")
-        btn_execute.clicked.connect(self._emit_execute)
-        root_layout.addWidget(btn_execute)
+        self.execute_button = QPushButton(self._EXECUTE_LABEL)
+        self.execute_button.setProperty("importance", "primary")
+        self.execute_button.clicked.connect(self._emit_execute)
+        root_layout.addWidget(self.execute_button)
         root_layout.addStretch(1)
 
     def _select_recipe(self) -> None:
@@ -999,6 +1016,11 @@ class BatchModeTab(QWidget):
             output_dir=self.output_dir_edit.text().strip(),
         )
         self.execute_requested.emit(config)
+
+    def set_executing_state(self, executing: bool) -> None:
+        self.execute_button.setText(
+            self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
+        )
 
 
 class PreviewWindow(QDialog):
@@ -1031,10 +1053,19 @@ class PreviewWindow(QDialog):
 
 
 class MainWindow(QMainWindow):
+    _STATUSBAR_ERROR_STYLESHEET = (
+        "QStatusBar {"
+        "background-color: #7a1f1f;"
+        "color: #ffffff;"
+        "font-weight: 600;"
+        "}"
+    )
+
     def __init__(self) -> None:
         super().__init__()
         self._task_thread: QThread | None = None
         self._task_worker: BackgroundTaskWorker | None = None
+        self._current_task_name: str | None = None
         self._preview_window: PreviewWindow | None = None
         self._build_ui()
         self._ensure_startup_logistics()
@@ -1059,6 +1090,20 @@ class MainWindow(QMainWindow):
             QPushButton[importance=\"primary\"]:pressed {
                 background-color: #2467ab;
             }
+            QPushButton[importance=\"danger\"]:enabled {
+                background-color: #b33a3a;
+                color: #ffffff;
+                border: 1px solid #8f2f2f;
+                border-radius: 5px;
+                padding: 6px 12px;
+                font-weight: 600;
+            }
+            QPushButton[importance=\"danger\"]:enabled:hover {
+                background-color: #c64545;
+            }
+            QPushButton[importance=\"danger\"]:enabled:pressed {
+                background-color: #8f2f2f;
+            }
             """
         )
 
@@ -1076,6 +1121,16 @@ class MainWindow(QMainWindow):
         self.single_font_tab = SingleFontProcessingTab()
         self.single_embed_tab = SingleSwfEmbedTab()
         self.batch_tab = BatchModeTab()
+        self.stop_task_button = QPushButton("処理を強制停止")
+        self.stop_task_button.setProperty("importance", "danger")
+        self.stop_task_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        self.stop_task_button.setMinimumHeight(
+            self.single_font_tab.execute_button.sizeHint().height() + 8
+        )
+        self.stop_task_button.setEnabled(False)
 
         self.tabs.addTab(self.single_font_tab, "単体：フォント加工")
         self.tabs.addTab(self.single_embed_tab, "単体：SWF埋め込み")
@@ -1090,6 +1145,7 @@ class MainWindow(QMainWindow):
         self.log_text_edit = QTextEdit()
         self.log_text_edit.setReadOnly(True)
         bottom_layout.addWidget(self.log_text_edit)
+        bottom_layout.addWidget(self.stop_task_button)
 
         splitter.addWidget(top_widget)
         splitter.addWidget(bottom_widget)
@@ -1103,6 +1159,7 @@ class MainWindow(QMainWindow):
         self.single_font_tab.preview_requested.connect(self._run_single_font_preview)
         self.single_embed_tab.execute_requested.connect(self._start_single_embed_task)
         self.batch_tab.execute_requested.connect(self._start_batch_task)
+        self.stop_task_button.clicked.connect(self._force_stop_current_task)
 
     def append_log(self, message: str) -> None:
         self.log_text_edit.append(message)
@@ -1131,6 +1188,45 @@ class MainWindow(QMainWindow):
 
     def _set_ui_enabled(self, enabled: bool) -> None:
         self.tabs.setEnabled(enabled)
+        executing = not enabled
+        self.single_font_tab.set_executing_state(executing)
+        self.single_embed_tab.set_executing_state(executing)
+        self.batch_tab.set_executing_state(executing)
+        self.stop_task_button.setEnabled(executing)
+
+    def _set_status_error(self, is_error: bool) -> None:
+        self.statusBar().setStyleSheet(
+            self._STATUSBAR_ERROR_STYLESHEET if is_error else ""
+        )
+
+    def _force_stop_current_task(self) -> None:
+        if self._task_thread is None:
+            QMessageBox.information(self, "停止", "停止対象の処理はありません。")
+            return
+
+        task_name = self._current_task_name or "処理"
+        decision = QMessageBox.question(
+            self,
+            "強制停止確認",
+            f"{task_name} を強制停止しますか？\n未保存の途中成果は失われる可能性があります。",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if decision != QMessageBox.StandardButton.Yes:
+            return
+
+        self.append_log(f"[{task_name}] ユーザー要求により強制停止を実行")
+
+        task_thread = self._task_thread
+        task_thread.terminate()
+        task_thread.wait(3000)
+
+        self._set_ui_enabled(True)
+        self._set_status_error(True)
+        self.statusBar().showMessage(f"{task_name} 強制停止", 5000)
+        self._task_worker = None
+        self._task_thread = None
+        self._current_task_name = None
 
     def _start_worker(
         self,
@@ -1153,16 +1249,27 @@ class MainWindow(QMainWindow):
         self._task_worker.finished.connect(self._task_thread.quit)
         self._task_thread.finished.connect(self._task_thread.deleteLater)
 
+        self._current_task_name = task_name
+        self._set_status_error(False)
+        self.statusBar().showMessage(f"{task_name} 実行中...")
         self._set_ui_enabled(False)
         self._task_thread.start()
 
     def _on_worker_finished(self, success: bool, detail: str) -> None:
         self._set_ui_enabled(True)
+        task_name = self._current_task_name or "処理"
+        if success:
+            self._set_status_error(False)
+            self.statusBar().showMessage(f"{task_name} 完了", 5000)
+        else:
+            self._set_status_error(True)
+            self.statusBar().showMessage(f"{task_name} 失敗", 5000)
         if not success and detail:
             QMessageBox.critical(self, "実行失敗", detail)
 
         self._task_worker = None
         self._task_thread = None
+        self._current_task_name = None
 
     def _start_single_font_task(self, config: SingleFontTaskConfig) -> None:
         self.append_log(f"[単体:フォント加工] 受信: {config}")
