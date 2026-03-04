@@ -1334,6 +1334,20 @@ class MainWindow(QMainWindow):
         self.resize(1080, 760)
         self.setStyleSheet(
             """
+            QLineEdit:disabled,
+            QComboBox:disabled,
+            QAbstractSpinBox:disabled {
+                background-color: palette(alternate-base);
+                color: palette(mid);
+                border: 1px solid palette(mid);
+            }
+            QPushButton:disabled {
+                background-color: palette(alternate-base);
+                color: palette(mid);
+                border: 1px solid palette(mid);
+                border-radius: 5px;
+                padding: 6px 12px;
+            }
             QPushButton[importance=\"primary\"] {
                 background-color: #2f7fcf;
                 color: #ffffff;
