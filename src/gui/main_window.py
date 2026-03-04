@@ -48,6 +48,7 @@ from PyQt6.QtWidgets import (
 from const import (
     BLANK_GLYPHS,
     EXCLUDE_CHARS,
+    MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
     PREVIEW_BASELINE_COLOR,
     PREVIEW_BASELINE_WIDTH,
@@ -69,6 +70,7 @@ from const import (
     PREVIEW_MIN_WIDTH,
     PREVIEW_PADDING,
     PREVIEW_UNDERLINE_COLOR,
+    PREVIEW_WINDOW_TITLE,
     SUBSETS_DIR,
     TEMPLATE_FONTSWF_PATH,
 )
@@ -248,8 +250,8 @@ class _LogStream(io.TextIOBase):
 class SingleFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
     preview_requested = pyqtSignal(object)
-    _EXECUTE_LABEL = "単体処理を実行"
-    _EXECUTING_LABEL = "単体処理を実行中..."
+    _EXECUTE_LABEL = "個別処理を実行"
+    _EXECUTING_LABEL = "個別処理を実行中..."
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -361,13 +363,11 @@ class SingleFontProcessingTab(QWidget):
         self.horizontal_percent_spin = QDoubleSpinBox()
         self.horizontal_percent_spin.setRange(1.0, 400.0)
         self.horizontal_percent_spin.setValue(100.0)
-        self.horizontal_percent_spin.setSuffix(" %")
         self.horizontal_percent_spin.setToolTip("横方向の拡大率です。100%で等倍です。")
 
         self.vertical_percent_spin = QDoubleSpinBox()
         self.vertical_percent_spin.setRange(1.0, 400.0)
         self.vertical_percent_spin.setValue(100.0)
-        self.vertical_percent_spin.setSuffix(" %")
         self.vertical_percent_spin.setToolTip("縦方向の拡大率です。100%で等倍です。")
 
         self.link_scale_check = QToolButton()
@@ -508,11 +508,26 @@ class SingleFontProcessingTab(QWidget):
         link_mode_row_layout.addWidget(self.link_scale_mode_combo)
         link_mode_row_layout.addStretch(1)
 
-        horizontal_percent_label = QLabel("横 %")
-        vertical_percent_label = QLabel("縦 %")
+        horizontal_percent_label = QLabel("横")
+        vertical_percent_label = QLabel("縦")
         horizontal_offset_label = QLabel("横オフセット")
         vertical_offset_label = QLabel("縦オフセット")
         glyph_weight_label = QLabel("太さ変更量（em）")
+        horizontal_percent_unit_label = QLabel("%")
+        vertical_percent_unit_label = QLabel("%")
+        horizontal_offset_unit_label = QLabel("em")
+        vertical_offset_unit_label = QLabel("em")
+
+        unit_label_width = max(
+            horizontal_percent_unit_label.sizeHint().width(),
+            vertical_percent_unit_label.sizeHint().width(),
+            horizontal_offset_unit_label.sizeHint().width(),
+            vertical_offset_unit_label.sizeHint().width(),
+        )
+        horizontal_percent_unit_label.setFixedWidth(unit_label_width)
+        vertical_percent_unit_label.setFixedWidth(unit_label_width)
+        horizontal_offset_unit_label.setFixedWidth(unit_label_width)
+        vertical_offset_unit_label.setFixedWidth(unit_label_width)
 
         transform_label_width = max(
             horizontal_percent_label.sizeHint().width(),
@@ -545,9 +560,11 @@ class SingleFontProcessingTab(QWidget):
         scale_percent_row_layout.setContentsMargins(0, 0, 0, 0)
         scale_percent_row_layout.addWidget(horizontal_percent_label)
         scale_percent_row_layout.addWidget(self.horizontal_percent_spin)
+        scale_percent_row_layout.addWidget(horizontal_percent_unit_label)
         scale_percent_row_layout.addSpacing(16)
         scale_percent_row_layout.addWidget(vertical_percent_label)
         scale_percent_row_layout.addWidget(self.vertical_percent_spin)
+        scale_percent_row_layout.addWidget(vertical_percent_unit_label)
         scale_percent_row_layout.addStretch(1)
 
         offset_row = QWidget()
@@ -555,9 +572,11 @@ class SingleFontProcessingTab(QWidget):
         offset_row_layout.setContentsMargins(0, 0, 0, 0)
         offset_row_layout.addWidget(horizontal_offset_label)
         offset_row_layout.addWidget(self.horizontal_offset_spin)
+        offset_row_layout.addWidget(horizontal_offset_unit_label)
         offset_row_layout.addSpacing(16)
         offset_row_layout.addWidget(vertical_offset_label)
         offset_row_layout.addWidget(self.vertical_offset_spin)
+        offset_row_layout.addWidget(vertical_offset_unit_label)
         offset_row_layout.addStretch(1)
 
         weight_row = QWidget()
@@ -1120,7 +1139,7 @@ class BatchModeTab(QWidget):
 class PreviewWindow(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("プレビュー")
+        self.setWindowTitle(PREVIEW_WINDOW_TITLE)
         self.setModal(False)
         self.setWindowFlag(Qt.WindowType.Window, True)
         self._original_pixmap = QPixmap()
@@ -1166,7 +1185,7 @@ class MainWindow(QMainWindow):
         self._bind_events()
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("Japanese Font Library Fonts - 統合司令部")
+        self.setWindowTitle(MAIN_WINDOW_TITLE)
         self.resize(1080, 760)
         self.setStyleSheet(
             """
@@ -1226,8 +1245,8 @@ class MainWindow(QMainWindow):
         )
         self.stop_task_button.setEnabled(False)
 
-        self.tabs.addTab(self.single_font_tab, "単体：フォント加工")
-        self.tabs.addTab(self.single_embed_tab, "単体：SWF埋め込み")
+        self.tabs.addTab(self.single_font_tab, "個別：フォント加工")
+        self.tabs.addTab(self.single_embed_tab, "個別：SWF埋め込み")
         self.tabs.addTab(self.batch_tab, "一括：バッチモード")
 
         top_layout.addWidget(self.tabs)
@@ -1259,8 +1278,8 @@ class MainWindow(QMainWindow):
         self.log_text_edit.append(message)
 
     def _ensure_startup_logistics(self) -> None:
-        self.statusBar().showMessage("兵站確保中...")
-        self.append_log("[起動] 兵站確保中...")
+        self.statusBar().showMessage("実行環境を準備中...")
+        self.append_log("[起動] 実行環境を準備中...")
 
         try:
             ffdec_jar = ensure_ffdec_runtime(log=self.append_log)
@@ -1270,11 +1289,11 @@ class MainWindow(QMainWindow):
             self.append_log(f"[起動] Javaランタイム 確認完了: {ensured_java}")
             self.append_log(f"[起動] Java 確認完了: {java_executable}")
         except Exception as error:
-            self.append_log(f"[起動] 兵站確保失敗: {error}")
+            self.append_log(f"[起動] 実行環境の準備に失敗: {error}")
             QMessageBox.warning(
                 self,
-                "兵站確保失敗",
-                "兵站の確保に失敗しました。\n"
+                "実行環境の準備に失敗",
+                "実行環境の準備に失敗しました。\n"
                 "通信環境を確認し、data/ffdec と data/java/bin/java(.exe) を手動配置してください。",
             )
         finally:
@@ -1366,19 +1385,19 @@ class MainWindow(QMainWindow):
         self._current_task_name = None
 
     def _start_single_font_task(self, config: SingleFontTaskConfig) -> None:
-        self.append_log(f"[単体:フォント加工] 受信: {config}")
+        self.append_log(f"[個別:フォント加工] 受信: {config}")
 
         def task(log: Callable[[str], None]) -> None:
             self._run_single_font_processing(config, log)
 
-        self._start_worker("単体:フォント加工", task)
+        self._start_worker("個別:フォント加工", task)
 
     def _run_single_font_preview(self, config: SingleFontTaskConfig) -> None:
-        self.append_log(f"[単体:フォント加工][プレビュー] 受信: {config}")
+        self.append_log(f"[個別:フォント加工][プレビュー] 受信: {config}")
         try:
             pixmap = self._generate_single_font_preview_pixmap(config)
         except Exception as error:
-            message = f"[単体:フォント加工][プレビュー] 失敗: {error}"
+            message = f"[個別:フォント加工][プレビュー] 失敗: {error}"
             self.append_log(message)
             QMessageBox.warning(self, "プレビュー失敗", str(error))
             return
@@ -1391,7 +1410,7 @@ class MainWindow(QMainWindow):
             preview_window.show()
         preview_window.raise_()
         preview_window.activateWindow()
-        self.append_log("[単体:フォント加工][プレビュー] 完了")
+        self.append_log("[個別:フォント加工][プレビュー] 完了")
 
     def _ensure_preview_window(self) -> PreviewWindow:
         if self._preview_window is None:
@@ -1696,12 +1715,12 @@ class MainWindow(QMainWindow):
         return pixmap
 
     def _start_single_embed_task(self, config: SingleEmbedTaskConfig) -> None:
-        self.append_log(f"[単体:SWF埋め込み] 受信: {config}")
+        self.append_log(f"[個別:SWF埋め込み] 受信: {config}")
 
         def task(log: Callable[[str], None]) -> None:
             self._run_single_embed(config, log)
 
-        self._start_worker("単体:SWF埋め込み", task)
+        self._start_worker("個別:SWF埋め込み", task)
 
     def _start_batch_task(self, config: BatchTaskConfig) -> None:
         self.append_log(f"[一括:バッチモード] 受信: {config}")
@@ -1729,29 +1748,29 @@ class MainWindow(QMainWindow):
             self._validate_file_exists(subset_path, "サブセットテキスト")
             subset_text = load_text(str(subset_path), EXCLUDE_CHARS)
             log(
-                "[単体:フォント加工][前処理] サブセット有効: "
+                "[個別:フォント加工][前処理] サブセット有効: "
                 f"{subset_path}（マージ前に適用）"
             )
         else:
-            log("[単体:フォント加工][前処理] サブセット無効: サブセットテキスト未指定")
+            log("[個別:フォント加工][前処理] サブセット無効: サブセットテキスト未指定")
 
         with TTFont(str(input_ttf_path)) as input_font_obj:
             current_base_font_obj = reopen_font(input_font_obj)
 
         if subset_text is not None:
             log(
-                "[単体:フォント加工][前処理] 入力TTFへサブセット適用 "
+                "[個別:フォント加工][前処理] 入力TTFへサブセット適用 "
                 f"（マージ前）: {input_ttf_path.name}"
             )
             current_base_font_obj = create_subset(current_base_font_obj, subset_text)
 
         if config.remove_empty_glyphs:
-            log("[単体:フォント加工] 空白グリフ除去を実行")
+            log("[個別:フォント加工] 空白グリフ除去を実行")
             current_base_font_obj = remove_empty_glyphs(current_base_font_obj)
 
         if config.glyph_weight_offset != 0:
             log(
-                "[単体:フォント加工] グリフ太さ調整を実行 "
+                "[個別:フォント加工] グリフ太さ調整を実行 "
                 f"(変更量={config.glyph_weight_offset}) [入力TTFのみ]"
             )
             current_base_font_obj = change_weight(
@@ -1787,7 +1806,7 @@ class MainWindow(QMainWindow):
                     int(config.metric_descent)
                 )
                 log(
-                    "[単体:フォント加工] 手動メトリクスを適用: "
+                    "[個別:フォント加工] 手動メトリクスを適用: "
                     f"上端={config.metric_ascent}, "
                     f"下端={config.metric_descent}, "
                     f"行間={config.metric_line_gap}, "
@@ -1795,7 +1814,7 @@ class MainWindow(QMainWindow):
                     f"下線太さ={config.metric_underline_thickness}"
                 )
                 log(
-                    f"[単体:フォント加工] UPMをメトリクスから自動決定: {manual_new_upm}"
+                    f"[個別:フォント加工] UPMをメトリクスから自動決定: {manual_new_upm}"
                 )
 
             current_base_font_obj = apply_font_transform(
@@ -1815,7 +1834,7 @@ class MainWindow(QMainWindow):
                 f"補完フォント[{merge_index}]",
             )
             log(
-                "[単体:フォント加工][マージ] マージ実行 "
+                "[個別:フォント加工][マージ] マージ実行 "
                 f"({merge_index}/{len(config.merge_fonts)}): {merge_font_path.name} "
                 "[前処理サブセット済み→自動サイズ適合→メトリクス同期→手動変形→浄化]"
             )
@@ -1823,7 +1842,7 @@ class MainWindow(QMainWindow):
                 prepared_merge_font_obj = merge_font_obj
                 if subset_text is not None:
                     log(
-                        "[単体:フォント加工][前処理] 補完フォントへサブセット適用 "
+                        "[個別:フォント加工][前処理] 補完フォントへサブセット適用 "
                         f"（マージ前）: {merge_font_path.name}"
                     )
                     prepared_merge_font_obj = create_subset(
@@ -1845,7 +1864,7 @@ class MainWindow(QMainWindow):
                 )
 
         if config.anonymize and not config.merge_fonts:
-            log("[単体:フォント加工] 匿名化を実行")
+            log("[個別:フォント加工] 匿名化を実行")
             current_base_font_obj = anonymize_info(
                 current_base_font_obj,
                 font_name=config.anonymize_font_name,
@@ -1861,7 +1880,7 @@ class MainWindow(QMainWindow):
                 missing_no_outline_codes,
             ) = self._count_missing_subset_glyphs(current_base_font_obj, subset_text)
             log(
-                "[単体:フォント加工][検査] 出力直前サブセット欠損: "
+                "[個別:フォント加工][検査] 出力直前サブセット欠損: "
                 f"{missing_total}/{target_total} "
                 f"(未マップ={missing_unmapped}, アウトライン無し={missing_no_outline})"
             )
@@ -1893,11 +1912,11 @@ class MainWindow(QMainWindow):
                 )
 
                 report_path.write_text("\n".join(report_lines), encoding="utf-8")
-                log(f"[単体:フォント加工][検査] 欠損レポートを出力: {report_path}")
+                log(f"[個別:フォント加工][検査] 欠損レポートを出力: {report_path}")
 
         output_ttf_path.parent.mkdir(parents=True, exist_ok=True)
         current_base_font_obj.save(str(output_ttf_path))
-        log(f"[単体:フォント加工] 完了: {output_ttf_path}")
+        log(f"[個別:フォント加工] 完了: {output_ttf_path}")
         if config.mode == "base":
             self._validate_path_required(config.base_font_path, "ベースフォント")
 
@@ -2046,7 +2065,7 @@ class MainWindow(QMainWindow):
                 log,
                 lambda: patch_swf_internal_fontname(output_swf, internal_name),
             )
-            log(f"[単体:SWF埋め込み] 完了: {output_swf}")
+            log(f"[個別:SWF埋め込み] 完了: {output_swf}")
             return
 
         ttf_paths = [ttf_path for ttf_path, _ in resolved_items]
@@ -2064,7 +2083,7 @@ class MainWindow(QMainWindow):
             lambda: patch_swf_internal_fontnames(output_swf, internal_names_by_id),
         )
         log(
-            f"[単体:SWF埋め込み] 完了: {output_swf} "
+            f"[個別:SWF埋め込み] 完了: {output_swf} "
             f"(埋め込み数: {len(resolved_items)})"
         )
 

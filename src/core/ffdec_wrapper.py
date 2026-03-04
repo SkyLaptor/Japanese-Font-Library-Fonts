@@ -82,7 +82,7 @@ def _download_file(
             downloaded += len(chunk)
             if log is not None and total > 0:
                 percent = int((downloaded / total) * 100)
-                log(f"[起動] 兵站確保中... FFDecダウンロード {percent}%")
+                log(f"[起動] 実行環境を準備中... FFDecダウンロード {percent}%")
 
 
 def _deploy_ffdec_archive(
@@ -194,7 +194,7 @@ def ensure_ffdec_runtime(
 
     if _ffdec_runtime_ready(ffdec_root):
         if log is not None:
-            log("[起動] FFDec 兵站確認: 配備済み")
+            log("[起動] FFDec 確認: 配備済み")
         return ffdec_root / "ffdec.jar"
 
     url = ffdec_archive_url or os.environ.get(
@@ -202,7 +202,7 @@ def ensure_ffdec_runtime(
     )
 
     if log is not None:
-        log("[起動] 兵站確保中... FFDecを自動調達します")
+        log("[起動] 実行環境を準備中... FFDecを自動ダウンロードします")
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -229,7 +229,7 @@ def ensure_java_runtime(
 
     if _java_runtime_ready(java_root):
         if log is not None:
-            log("[起動] Javaランタイム 兵站確認: 配備済み (data/java)")
+            log("[起動] Javaランタイム 確認: 配備済み (data/java)")
         for java_path in _candidate_java_paths(java_root):
             if java_path.exists() and _is_java_executable_usable(str(java_path)):
                 return java_path
@@ -237,7 +237,7 @@ def ensure_java_runtime(
     url = java_archive_url or os.environ.get("JFL_JAVA_ARCHIVE_URL", JAVA_ARCHIVE_URL)
 
     if log is not None:
-        log("[起動] 兵站確保中... Javaランタイムを自動調達します")
+        log("[起動] 実行環境を準備中... Javaランタイムを自動ダウンロードします")
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)

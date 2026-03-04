@@ -173,7 +173,7 @@ def _prepare_interpolation_font_for_merge(
         new_upm=None,
     )
 
-    # Step 4: 浄化と合体（合体前の浄化）
+    # Step 4: クリーンアップと合体（合体前のクリーンアップ）
     if remove_empty:
         prepared_font_obj = remove_empty_glyphs(prepared_font_obj)
 

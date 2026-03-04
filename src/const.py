@@ -2,12 +2,16 @@ from pathlib import Path
 
 # 出力テキストファイルのエンコード
 ENCODE = "utf-8"
+# メインウィンドウタイトル
+MAIN_WINDOW_TITLE = "TESVFontForge"
+# プレビューウィンドウタイトル
+PREVIEW_WINDOW_TITLE = "プレビュー"
 # 各種ディレクトリ
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 BUILD_DIR = BASE_DIR / "build"
 SUBSETS_DIR = DATA_DIR / "subsets"
-# 兵站自動調達用URL
+# FFDecとJavaの自動ダウンロード用URL
 FFDEC_ARCHIVE_URL = "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.2/ffdec_25.1.2.zip"
 JAVA_ARCHIVE_URL = "https://corretto.aws/downloads/resources/25.0.2.10.1/amazon-corretto-25.0.2.10.1-windows-x64-jdk.zip"
 # 追加文字（Unicode直接指定）

@@ -108,7 +108,7 @@ $ java -jar data\ffdec\ffdec.jar -help
 > [!NOTE]
 > ゲームバージョンにより若干フォント名前が異なります。
 
-5. 取り出したフォントに対し、GUIの「単体処理」タブを使って空白除去処理を行います。
+5. 取り出したフォントに対し、GUIの「個別処理」タブを使って空白除去処理を行います。
   * 入力TTF: 取り出したフォント
   * 出力TTF: `data\base_fonts\skyrim\every.ttf` / `book.ttf` / `handwrite.ttf`
   * 実行時に空白グリフ除去を有効にする
