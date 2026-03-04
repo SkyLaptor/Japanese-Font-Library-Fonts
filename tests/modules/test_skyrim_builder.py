@@ -7,8 +7,8 @@ import pytest
 import modules.skyrim_builder as skyrim_builder_module
 from core.ffdec_wrapper import run_ffdec
 from modules.skyrim_builder import (
-    run_batch_swf_export,
-    run_batch_variant_export,
+    swf_export,
+    variant_export,
 )
 
 
@@ -62,10 +62,10 @@ def test_swf_internal_name_consistency(test_workspace):
 
     try:
         # 2. Variant展開を実行
-        run_batch_variant_export(str(test_workspace))
+        variant_export(str(test_workspace))
 
         # 3. SWFエクスポートを実行
-        run_batch_swf_export(str(test_workspace))
+        swf_export(str(test_workspace))
     finally:
         # 3.5 テスト後に元へ戻す
         skyrim_builder_module.SKYRIM_EXPORT_MATRIX = original_matrix
@@ -116,7 +116,7 @@ def test_swf_internal_name_consistency(test_workspace):
 #         shutil.copy(ttf2, font_dir2 / "test-font2_premerge.ttf")
 
 #     # 2. マージを実行
-#     run_batch_merge_font(str(test_workspace), merge_conf=merge_conf, debug=True)
+#     merge_font(str(test_workspace), merge_conf=merge_conf, debug=True)
 
 #     # 3. 検証の準備：
 #     marged_name1 = (

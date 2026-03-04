@@ -108,14 +108,10 @@ $ java -jar data\ffdec\ffdec.jar -help
 > [!NOTE]
 > ゲームバージョンにより若干フォント名前が異なります。
 
-5. 取り出したフォントに対し空白除去処理を行います。
-以下のコマンドで空白が除去されます。
-
-```powershell:
-$ uv run remove_empty_glyphs build\1_Skyrim_JP_EveryFont_0805.ttf -o data\base_fonts\skyrim\every.ttf
-$ uv run remove_empty_glyphs build\22_Skyrim_JP_BookFont_0805.ttf -o data\base_fonts\skyrim\book.ttf
-$ uv run remove_empty_glyphs build\5_Skyrim_JP_HandWriteFont_0805.ttf -o data\base_fonts\skyrim\handwrite.ttf
-```
+5. 取り出したフォントに対し、GUIの「単体処理」タブを使って空白除去処理を行います。
+  * 入力TTF: 取り出したフォント
+  * 出力TTF: `data\base_fonts\skyrim\every.ttf` / `book.ttf` / `handwrite.ttf`
+  * 実行時に空白グリフ除去を有効にする
 
 以上でベースフォントの作成が完了となります。このフォントはサイズ変更処理などで基準となるので、空白グリフクリーンアップ以外の変更は行ってはなりません。
 
@@ -216,11 +212,7 @@ $ uv run remove_empty_glyphs build\5_Skyrim_JP_HandWriteFont_0805.ttf -o data\ba
 
 ## validNameCharsの生成
 
-1. 以下のコマンドを実行します。
-
-```
-$ uv run generate_subset_jp_jisx0208 data\fontconfigs\skyrim\validNameChars.txt --validnamechars_escape
-```
+1. `data\fontconfigs\skyrim\validNameChars.txt` を編集して更新します。
 
 > [!NOTE]
 > validNameCharsはRaceMenuでキャラ名に使用できる名前の文字の一覧です。フォントとは直接の関係はありません。
@@ -231,14 +223,7 @@ $ uv run generate_subset_jp_jisx0208 data\fontconfigs\skyrim\validNameChars.txt 
 ゲームデフォルトのフォントで使用可能な文字列のみの軽量なサブセットテキストを作成します。  
 事前に[ベースフォント](#ベースフォントの作成)を作成しておく必要があります。
 
-1. 各フォントに含まれている文字を取り出します。
-以下のコマンドを実行します。
-
-```powershell:
-$ uv run get_glyphs data\base_fonts\skyrim\every.ttf -o build\every_glyphs.txt
-$ uv run get_glyphs data\base_fonts\skyrim\book.ttf -o build\book_glyphs.txt
-$ uv run get_glyphs data\base_fonts\skyrim\handwrite.ttf -o build\handwrite_glyphs.txt
-```
+1. `data\subsets\skyrim\subset_jp_lightweight.txt` を基準ファイルとして更新します。
 
 > [!NOTE]
 > 困ったことにバニラのゲームフォントには意図しない空白が多数存在します。それをクリーニングしていない状態で含まれている文字を検索してしまうと正しい結果を得られません。なお、各フォントに含まれる文字には若干の差があります。
@@ -253,12 +238,7 @@ $ uv run get_glyphs data\base_fonts\skyrim\handwrite.ttf -o build\handwrite_glyp
 > [!NOTE]
 > 最新スカイリム(v1.6.1170)の日本語フォントはなぜか全角英数字が空白グリフで登録されているというとんでもないバグがあります。さすがにこれは看過できないため、補間用として準備します。
 
-3. 文字列を結合します。
-以下のコマンドを実行します。
-
-```powershell:
-$ uv run merge_text build -o data\subsets\skyrim\subset_jp_lightweight.txt
-```
+3. 収集した文字列を `data\subsets\skyrim\subset_jp_lightweight.txt` に統合します。
 
 > [!NOTE]
 > 結合を実行する際、`build` ディレクトリには**フォントから抽出した文字列ファイル**と**全角英数補間ファイル**以外のテキストファイルは置かないで下さい。それらも結合されてしまいます。
@@ -267,11 +247,7 @@ $ uv run merge_text build -o data\subsets\skyrim\subset_jp_lightweight.txt
 ## サブセットテキスト作成(日本語フル)
 JIS第四水準＋いくつかの最新文字を加えた、おおよそ日本で使用しうる文字を網羅したサブセットテキストを作成します。
 
-1. 以下のコマンドを実行します。
-
-```powershell:
-$ uv run generate_subset_jp_full data\subsets\skyrim\subset_jp_full.txt
-```
+1. `data\subsets\skyrim\subset_jp_full.txt` を更新します。
 
 > [!NOTE]
 > 可能な限り日本語圏で表示しうる文字列を生成していますが、もし不足が出た場合には `src\const.py` の `EXTRA_UNICODES` にUnicode指定で追加することを検討して下さい。

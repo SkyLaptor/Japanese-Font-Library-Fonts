@@ -16,27 +16,6 @@ dependencies = [
 [tool.uv]
 package = true
 
-[project.scripts]
-generate_subset_jp_full = "ui.cui.generate_subset_jp_full:main"
-generate_subset_jp_jisx0208 = "ui.cui.generate_subset_jp_jisx0208:main"
-get_average_size = "ui.cui.get_average_size:main"
-get_glyphs = "ui.cui.get_glyphs:main"
-get_info = "ui.cui.get_info:main"
-get_offset_to_align_bottom = "ui.cui.get_offset_to_align_bottom:main"
-validate_subset = "ui.cui.validate_subset:main"
-anonymize_info = "ui.cui.anonymize_info:main"
-change_weight = "ui.cui.change_weight:main"
-harmonize_font_metrics = "ui.cui.harmonize_font_metrics:main"
-#merge_font = "modules.modifier.merge_font:main"
-remove_black_circles = "ui.cui.remove_black_circles:main"
-create_subset = "ui.cui.create_subset:main"
-merge_text = "ui.cui.merge_text:main"
-remove_empty_glyphs = "ui.cui.remove_empty_glyphs:main"
-builder = "ui.cui.builder:main"
-inspect_swf_tags = "ui.cui.inspect_swf_tags:main"
-convert_otf2ttf = "ui.cui.convert_otf2ttf:main"
-otf2ttf = "ui.cui.convert_otf2ttf:main"
-
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",

@@ -1381,7 +1381,7 @@ class MainWindow(QMainWindow):
         self.append_log(f"[一括:バッチモード] 受信: {config}")
 
         def task(log: Callable[[str], None]) -> None:
-            self._run_batch(config, log)
+            self._run_recipe(config, log)
 
         self._start_worker("一括:バッチモード", task)
 
@@ -1731,7 +1731,7 @@ class MainWindow(QMainWindow):
             f"(埋め込み数: {len(resolved_items)})"
         )
 
-    def _run_batch(
+    def _run_recipe(
         self,
         config: BatchTaskConfig,
         log: Callable[[str], None],
@@ -1754,7 +1754,7 @@ class MainWindow(QMainWindow):
         if not isinstance(steps, list) or not steps:
             raise ValueError(
                 "recipe.yml に steps または actions が見つかりません。"
-                "例: steps: [{action: run_batch_merge_font}]"
+                "例: steps: [{action: merge_font}]"
             )
 
         shared_kwargs = {

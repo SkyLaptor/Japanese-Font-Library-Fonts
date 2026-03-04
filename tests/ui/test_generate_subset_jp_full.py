@@ -1,7 +1,7 @@
-from ui.cui.generate_subset_jp_full import action_generate_subset_jp_full
+from modules.subset_generator import generate_subset_jp_full
 
 
-def test_action_generate_subset_jp_full_output(tmp_path):
+def test_generate_subset_jp_full_output(tmp_path):
     """
     サブセット生成アクションが正常に走り、ファイルが書き出されるかのテスト
     """
@@ -10,9 +10,8 @@ def test_action_generate_subset_jp_full_output(tmp_path):
 
     # 2. 実行: アクションを直接叩く
     # 引数は実際の関数に合わせて調整してください
-    action_generate_subset_jp_full(
-        output_path=str(output_file), validnamechars_escape=True, debug=True
-    )
+    subset_text = generate_subset_jp_full(validnamechars_escape=True)
+    output_file.write_text(subset_text, encoding="utf-8")
 
     # 3. 検証: ファイルが物理的に存在し、中身が空でないか
     assert output_file.exists(), "ファイルが生成されていません"
