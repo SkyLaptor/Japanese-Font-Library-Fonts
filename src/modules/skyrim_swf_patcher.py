@@ -4,7 +4,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from const import ENCODE, FONTFILE_NAME_PREFIX, SWF_NAME_RULES
+from const import ENCODE
 from core.ffdec_wrapper import ffdec_replace, run_ffdec
 
 FONT_TAG_TYPES = {"DefineFont2Tag", "DefineFont3Tag", "DefineFont4Tag"}
@@ -132,19 +132,3 @@ def replace_glyphs_in_swf(
                 input_font_path=str(ttf_path),
             )
             current_input = next_output
-
-
-def get_swf_name(font_name: str, font_file_name: str) -> str:
-    features_part = font_file_name.lower().replace(font_name.lower(), "")
-    feature_parts_list = features_part.split("_")
-
-    results = []
-    for category in ["weight", "ui", "condense", "subset"]:
-        rules = SWF_NAME_RULES.get(category, [])
-        for keywords, suffix in rules:
-            if any(kw in feature_parts_list for kw in keywords):
-                results.append(suffix)
-                break
-
-    suffixes = "".join(results)
-    return f"{FONTFILE_NAME_PREFIX}{font_name}{suffixes}.swf"

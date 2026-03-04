@@ -27,7 +27,7 @@ def action_get_offset_to_align_bottom(
 def get_offset_to_align_bottom(
     font_obj: TTFont, base_line: int = BASE_LINE_TARGET, debug: bool = False
 ) -> int:
-    if 'CFF ' in font_obj or 'CFF2' in font_obj:
+    if "CFF " in font_obj or "CFF2" in font_obj:
         raise ValueError("CFF/CFF2には対応していません。")
 
     cmap = font_obj.getBestCmap()

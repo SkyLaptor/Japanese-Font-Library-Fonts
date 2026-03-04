@@ -1,8 +1,7 @@
 # Dependencies: FFDec=False, FontForge=False
 from pathlib import Path
 
-from const import ENCODE
-from modules.validate_subset import EXCLUDE_CHARS
+from const import ENCODE, EXCLUDE_CHARS
 from utils.dprint import dprint
 from utils.file_io import save_text
 
@@ -17,16 +16,6 @@ def action_merge_text(input_dir, output_path, debug: bool = False, **_):
 
 
 def merge_text(input_dir: str, debug: bool = False) -> str:
-    """
-    指定ディレクトリ内のテキストを結合する
-
-    :param input_dir: 入力ディレクトリ
-    :type input_dir: str
-    :param debug: デバッグモード
-    :type debug: bool
-    :return: 結合済みテキスト
-    :rtype: str
-    """
     input_dir_path = Path(input_dir)
     all_content = []
 
