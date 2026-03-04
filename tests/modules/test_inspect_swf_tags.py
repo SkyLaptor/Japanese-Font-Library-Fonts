@@ -6,7 +6,7 @@ from modules.inspect_swf_tags import inspect_swf_tags
 
 
 def test_inspect_swf_tags_template():
-    swf_path = Path("data/font_swfs/fonts_template.swf")
+    swf_path = Path("data/template.swf")
     result = inspect_swf_tags(swf_path)
 
     assert result.signature == "FWS"
@@ -16,9 +16,7 @@ def test_inspect_swf_tags_template():
 
 
 def test_inspect_swf_tags_core():
-    swf_path = Path("data/font_swfs/fonts_core.swf")
-    if not swf_path.exists():
-        pytest.skip("data/font_swfs/fonts_core.swf が存在しない環境のためスキップ")
+    swf_path = Path("data/template.swf")
     result = inspect_swf_tags(swf_path)
 
     assert result.signature == "FWS"

@@ -62,37 +62,6 @@ wheels = [
 ]
 
 [[package]]
-name = "japanese-font-library-fonts"
-version = "2.4.0"
-source = { editable = "." }
-dependencies = [
-    { name = "fonttools" },
-    { name = "otf2ttf" },
-    { name = "pillow" },
-    { name = "pyqt6" },
-    { name = "pyyaml" },
-    { name = "skia-pathops" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fonttools", specifier = ">=4.61.1" },
-    { name = "otf2ttf", specifier = ">=0.2" },
-    { name = "pillow", specifier = ">=11.0.0" },
-    { name = "pyqt6", specifier = ">=6.9.1" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "skia-pathops", specifier = ">=0.9.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.2" }]
-
-[[package]]
 name = "otf2ttf"
 version = "0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -264,3 +233,34 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/85/3b/45ff339b49dd8eed91ade81842464c6ce955f84dd6805cbe1bafc2b1cd4b/skia_pathops-0.9.1-cp310-abi3-win32.whl", hash = "sha256:56c4b3bc9c281b12693f0f2771367c53a7a20104beac203fb5cb90cb2b9a4649", size = 1450920, upload-time = "2025-12-08T11:44:38.624Z" },
     { url = "https://files.pythonhosted.org/packages/bf/d1/698e85d5f7e2ce3b731232dc9f26e2cecb8afc66194aa494dc78c04194cc/skia_pathops-0.9.1-cp310-abi3-win_amd64.whl", hash = "sha256:e718f2e1284f05ccccde111b1280a79e33093c4af30c118a0b2f5b0753f0727e", size = 1782888, upload-time = "2025-12-08T11:44:39.983Z" },
 ]
+
+[[package]]
+name = "tesvfontforge"
+version = "1.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "fonttools" },
+    { name = "otf2ttf" },
+    { name = "pillow" },
+    { name = "pyqt6" },
+    { name = "pyyaml" },
+    { name = "skia-pathops" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fonttools", specifier = ">=4.61.1" },
+    { name = "otf2ttf", specifier = ">=0.2" },
+    { name = "pillow", specifier = ">=11.0.0" },
+    { name = "pyqt6", specifier = ">=6.9.1" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "skia-pathops", specifier = ">=0.9.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
