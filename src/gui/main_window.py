@@ -14,7 +14,7 @@ import yaml
 from fontTools.ttLib import TTFont
 from PIL import Image, ImageDraw, ImageFont
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QPixmap
+from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeyEvent, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -220,6 +220,152 @@ class MergeFontsListWidget(QListWidget):
             event.acceptProposedAction()
             return
         super().dropEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            for item in self.selectedItems():
+                self.takeItem(self.row(item))
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+class SingleEmbedTableWidget(QTableWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(0, 2, parent)
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        self.horizontalHeader().setStretchLastSection(False)
+
+    @staticmethod
+    def _normalized_path_key(path: str) -> str:
+        normalized = str(Path(path).resolve(strict=False))
+        return normalized.casefold()
+
+    def add_paths(self, paths: list[str]) -> None:
+        existing_keys = {
+            self._normalized_path_key(self.item(index, 0).text().strip())
+            for index in range(self.rowCount())
+            if self.item(index, 0) and self.item(index, 0).text().strip()
+        }
+
+        for path in paths:
+            if Path(path).suffix.lower() != ".ttf":
+                continue
+
+            key = self._normalized_path_key(path)
+            if key in existing_keys:
+                continue
+
+            row = self.rowCount()
+            self.insertRow(row)
+            self.setItem(row, 0, QTableWidgetItem(path))
+            default_internal_name = Path(path).stem
+            self.setItem(row, 1, QTableWidgetItem(default_internal_name))
+            existing_keys.add(key)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        if event.mimeData().hasUrls():
+            paths = [
+                url.toLocalFile()
+                for url in event.mimeData().urls()
+                if url.isLocalFile()
+            ]
+            self.add_paths(paths)
+            event.acceptProposedAction()
+            return
+
+        if event.source() is self:
+            selected_rows = {
+                index.row() for index in self.selectionModel().selectedRows()
+            }
+            if not selected_rows:
+                event.ignore()
+                return
+
+            drop_position = event.position().toPoint()
+            target_row = self.rowAt(drop_position.y())
+            self._move_selected_rows(target_row)
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+            return
+
+        super().dropEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            selected_rows = sorted(
+                {index.row() for index in self.selectionModel().selectedRows()},
+                reverse=True,
+            )
+            for row in selected_rows:
+                self.removeRow(row)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def _move_selected_rows(self, target_row: int) -> None:
+        selected_rows = sorted(
+            {index.row() for index in self.selectionModel().selectedRows()}
+        )
+        if not selected_rows:
+            return
+
+        row_payloads: list[list[QTableWidgetItem]] = []
+        for row in selected_rows:
+            payload: list[QTableWidgetItem] = []
+            for column in range(self.columnCount()):
+                item = self.item(row, column)
+                payload.append(item.clone() if item else QTableWidgetItem(""))
+            row_payloads.append(payload)
+
+        if target_row < 0:
+            target_row = self.rowCount()
+
+        for row in reversed(selected_rows):
+            self.removeRow(row)
+            if row < target_row:
+                target_row -= 1
+
+        for offset, payload in enumerate(row_payloads):
+            row = target_row + offset
+            self.insertRow(row)
+            for column, item in enumerate(payload):
+                self.setItem(row, column, item)
+
+        self.clearSelection()
+        for offset in range(len(row_payloads)):
+            self.selectRow(target_row + offset)
+
+    def _apply_column_ratio(self) -> None:
+        if self.columnCount() < 2:
+            return
+        width = self.viewport().width()
+        if width <= 0:
+            return
+        left_width = int(width * 0.6)
+        self.setColumnWidth(0, left_width)
+        self.setColumnWidth(1, max(1, width - left_width))
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_column_ratio()
 
 
 class _LogStream(io.TextIOBase):
@@ -937,14 +1083,14 @@ class SingleSwfEmbedTab(QWidget):
         target_layout.addWidget(output_row)
         root_layout.addWidget(target_group)
 
-        table_group = QGroupBox("TTFリスト（Internal Name付き）")
+        table_group = QGroupBox("TTFリスト（内部名付き）")
         table_layout = QVBoxLayout(table_group)
-        self.embed_table = QTableWidget(0, 2)
-        self.embed_table.setHorizontalHeaderLabels(["TTF Path", "Internal Name"])
+        self.embed_table = SingleEmbedTableWidget()
+        self.embed_table.setHorizontalHeaderLabels(["TTFパス", "内部名"])
         self.embed_table.setToolTip(
-            "埋め込むTTFとInternal Nameの一覧です。Internal NameはSWF内の識別名です。"
+            "埋め込むTTFと内部名の一覧です。内部名はSWF内の識別名です。"
         )
-        self.embed_table.horizontalHeader().setStretchLastSection(True)
+        self.embed_table._apply_column_ratio()
         self.embed_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
         )
@@ -978,12 +1124,7 @@ class SingleSwfEmbedTab(QWidget):
         paths, _ = QFileDialog.getOpenFileNames(
             self, "埋め込みTTFを選択", "", "TTF (*.ttf)"
         )
-        for path in paths:
-            row = self.embed_table.rowCount()
-            self.embed_table.insertRow(row)
-            self.embed_table.setItem(row, 0, QTableWidgetItem(path))
-            default_internal_name = Path(path).stem
-            self.embed_table.setItem(row, 1, QTableWidgetItem(default_internal_name))
+        self.embed_table.add_paths(paths)
 
     def _remove_selected_rows(self) -> None:
         selected_rows = sorted(
