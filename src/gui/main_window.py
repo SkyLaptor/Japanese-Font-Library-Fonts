@@ -49,6 +49,7 @@ from PyQt6.QtWidgets import (
 
 from const import (
     BLANK_GLYPHS,
+    ENCODE,
     EXCLUDE_CHARS,
     MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
@@ -88,7 +89,6 @@ from modules.create_subset import create_subset
 from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
 from modules.merge_font import merge_font_objects
 from modules.remove_empty_glyphs import remove_empty_glyphs
-from modules.skyrim_builder import ACTION_MAP, dispatch_action
 from modules.skyrim_swf_patcher import (
     patch_swf_internal_fontname,
     patch_swf_internal_fontnames,
@@ -137,7 +137,7 @@ class SingleEmbedTaskConfig:
 
 
 @dataclass(slots=True)
-class BatchTaskConfig:
+class BatchFontProcessingTaskConfig:
     recipe_path: str
     input_dir: str
     output_dir: str
@@ -462,7 +462,7 @@ class SingleFontProcessingTab(QWidget):
             "入力した拡大率・オフセット・太さ変更量をそのまま適用します。"
         )
         self.mode_base_radio.setToolTip(
-            "ベースフォントに近づくように、入力値を基準に比較計算して適用します。"
+            "基準フォントに近づくように、入力値を基準に比較計算して適用します。"
         )
         self.mode_manual_radio.setChecked(True)
         self.mode_button_group = QButtonGroup(self)
@@ -485,7 +485,7 @@ class SingleFontProcessingTab(QWidget):
         self.base_font_edit.editingFinished.connect(
             self._update_metrics_display_from_base_font
         )
-        btn_browse_base_font = QPushButton("ベースフォントを選択")
+        btn_browse_base_font = QPushButton("基準フォントを選択")
         btn_browse_base_font.setEnabled(False)
         btn_browse_base_font.clicked.connect(self._select_base_font)
         self.base_font_button = btn_browse_base_font
@@ -499,7 +499,7 @@ class SingleFontProcessingTab(QWidget):
         base_font_wrapper_row = QWidget()
         base_font_wrapper_row_layout = QHBoxLayout(base_font_wrapper_row)
         base_font_wrapper_row_layout.setContentsMargins(0, 0, 0, 0)
-        base_font_wrapper_row_layout.addWidget(QLabel("ベースフォント"))
+        base_font_wrapper_row_layout.addWidget(QLabel("基準フォント"))
         base_font_wrapper_row_layout.addWidget(base_font_row)
 
         mode_layout.addWidget(mode_select_row)
@@ -845,7 +845,7 @@ class SingleFontProcessingTab(QWidget):
 
     def _select_base_font(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "ベースフォントを選択", "", "Font (*.ttf *.otf)"
+            self, "基準フォントを選択", "", "Font (*.ttf *.otf)"
         )
         if path:
             self.base_font_edit.setText(path)
@@ -864,7 +864,7 @@ class SingleFontProcessingTab(QWidget):
             return
 
         try:
-            base_font_obj = self._load_font_for_processing(path_obj, "ベースフォント")
+            base_font_obj = self._load_font_for_processing(path_obj, "基準フォント")
             with base_font_obj:
                 base_upm = int(base_font_obj['head'].unitsPerEm)
                 scale_for_1024 = 1.0
@@ -1160,10 +1160,10 @@ class SingleSwfEmbedTab(QWidget):
         )
 
 
-class BatchModeTab(QWidget):
+class BatchFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
-    _EXECUTE_LABEL = "バッチ実行（マージ→SWF埋め込み）"
-    _EXECUTING_LABEL = "バッチ実行中..."
+    _EXECUTE_LABEL = "一括処理実行（フォント加工）"
+    _EXECUTING_LABEL = "一括処理実行中..."
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -1172,25 +1172,27 @@ class BatchModeTab(QWidget):
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout(self)
 
-        form_group = QGroupBox("レシピ / 拠点設定")
+        form_group = QGroupBox("レシピ設定")
         form_layout = QVBoxLayout(form_group)
 
         self.recipe_edit = QLineEdit()
         self.input_dir_edit = QLineEdit()
         self.output_dir_edit = QLineEdit()
-        self.recipe_edit.setToolTip("バッチ処理のレシピYAMLを指定します。")
+        self.recipe_edit.setToolTip("フォント一括処理用のレシピ（YAML）を指定します。")
         self.input_dir_edit.setToolTip(
-            "レシピで参照する入力ファイルのルートディレクトリです。"
+            "レシピで参照する加工対象フォントの親フォルダです。レシピ内の入力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
         )
-        self.output_dir_edit.setToolTip("生成結果の出力先ディレクトリです。")
+        self.output_dir_edit.setToolTip(
+            "加工後のフォントの出力先親フォルダです。レシピ内の出力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
+        )
 
         recipe_label = QLabel("レシピ")
-        input_dir_label = QLabel("input_dir")
-        output_dir_label = QLabel("output_dir")
+        input_dir_label = QLabel("対象フォルダ")
+        output_dir_label = QLabel("出力フォルダ")
 
-        btn_recipe = QPushButton("recipe.ymlを選択")
-        btn_input_dir = QPushButton("input_dirを選択")
-        btn_output_dir = QPushButton("output_dirを選択")
+        btn_recipe = QPushButton("選択")
+        btn_input_dir = QPushButton("選択")
+        btn_output_dir = QPushButton("選択")
 
         btn_recipe.clicked.connect(self._select_recipe)
         btn_input_dir.clicked.connect(self._select_input_dir)
@@ -1268,7 +1270,7 @@ class BatchModeTab(QWidget):
             self.output_dir_edit.setText(path)
 
     def _emit_execute(self) -> None:
-        config = BatchTaskConfig(
+        config = BatchFontProcessingTaskConfig(
             recipe_path=self.recipe_edit.text().strip(),
             input_dir=self.input_dir_edit.text().strip(),
             output_dir=self.output_dir_edit.text().strip(),
@@ -1392,7 +1394,7 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.single_font_tab = SingleFontProcessingTab()
         self.single_embed_tab = SingleSwfEmbedTab()
-        self.batch_tab = BatchModeTab()
+        self.batch_tab = BatchFontProcessingTab()
         self.stop_task_button = QPushButton("処理を強制停止")
         self.stop_task_button.setProperty("importance", "danger")
         self.stop_task_button.setSizePolicy(
@@ -1406,14 +1408,14 @@ class MainWindow(QMainWindow):
 
         self.tabs.addTab(self.single_font_tab, "個別：フォント加工")
         self.tabs.addTab(self.single_embed_tab, "個別：SWF埋め込み")
-        self.tabs.addTab(self.batch_tab, "一括：バッチモード")
+        self.tabs.addTab(self.batch_tab, "一括：フォント加工")
 
         top_layout.addWidget(self.tabs)
 
         bottom_widget = QWidget()
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
-        bottom_layout.addWidget(QLabel("共通ログ"))
+        bottom_layout.addWidget(QLabel("ログ"))
         self.log_text_edit = QTextEdit()
         self.log_text_edit.setReadOnly(True)
         bottom_layout.addWidget(self.log_text_edit)
@@ -1453,7 +1455,7 @@ class MainWindow(QMainWindow):
                 self,
                 "実行環境の準備に失敗",
                 "実行環境の準備に失敗しました。\n"
-                "通信環境を確認し、data/ffdec と data/java/bin/java(.exe) を手動配置してください。",
+                "インターネットにアクセス出来ることを確認してください。",
             )
         finally:
             self.statusBar().clearMessage()
@@ -1738,12 +1740,12 @@ class MainWindow(QMainWindow):
         offset_height = int(round(config.vertical_offset))
 
         if config.mode == "base":
-            self._validate_path_required(config.base_font_path, "ベースフォント")
+            self._validate_path_required(config.base_font_path, "基準フォント")
             base_font_path = self._resolve_user_path(config.base_font_path)
-            self._validate_file_exists(base_font_path, "ベースフォント")
+            self._validate_file_exists(base_font_path, "基準フォント")
             base_font_obj = self._load_font_for_processing(
                 base_font_path,
-                "ベースフォント",
+                "基準フォント",
                 log=self.append_log,
                 log_prefix="[個別:フォント加工][プレビュー][前処理]",
             )
@@ -1891,13 +1893,13 @@ class MainWindow(QMainWindow):
 
         self._start_worker("個別:SWF埋め込み", task)
 
-    def _start_batch_task(self, config: BatchTaskConfig) -> None:
-        self.append_log(f"[一括:バッチモード] 受信: {config}")
+    def _start_batch_task(self, config: BatchFontProcessingTaskConfig) -> None:
+        self.append_log(f"[一括:フォント加工] 受信: {config}")
 
         def task(log: Callable[[str], None]) -> None:
-            self._run_recipe(config, log)
+            self._run_font_proccessing_recipe(config, log)
 
-        self._start_worker("一括:バッチモード", task)
+        self._start_worker("一括:フォント加工モード", task)
 
     def _run_single_font_processing(
         self,
@@ -1957,12 +1959,12 @@ class MainWindow(QMainWindow):
         offset_height = int(round(config.vertical_offset))
 
         if config.mode == "base":
-            self._validate_path_required(config.base_font_path, "ベースフォント")
+            self._validate_path_required(config.base_font_path, "基準フォント")
             base_font_path = self._resolve_user_path(config.base_font_path)
-            self._validate_file_exists(base_font_path, "ベースフォント")
+            self._validate_file_exists(base_font_path, "基準フォント")
             base_font_obj = self._load_font_for_processing(
                 base_font_path,
-                "ベースフォント",
+                "基準フォント",
                 log=log,
             )
             with base_font_obj:
@@ -2100,7 +2102,7 @@ class MainWindow(QMainWindow):
         current_base_font_obj.save(str(output_ttf_path))
         log(f"[個別:フォント加工] 完了: {output_ttf_path}")
         if config.mode == "base":
-            self._validate_path_required(config.base_font_path, "ベースフォント")
+            self._validate_path_required(config.base_font_path, "基準フォント")
 
     @staticmethod
     def _count_missing_subset_glyphs(
@@ -2313,9 +2315,9 @@ class MainWindow(QMainWindow):
         )
         return temp_ttf_path
 
-    def _run_recipe(
+    def _run_font_proccessing_recipe(
         self,
-        config: BatchTaskConfig,
+        config: BatchFontProcessingTaskConfig,
         log: Callable[[str], None],
     ) -> None:
         self._validate_path_required(config.recipe_path, "recipe.yml")
@@ -2324,7 +2326,7 @@ class MainWindow(QMainWindow):
         recipe_path = self._resolve_user_path(config.recipe_path)
         self._validate_file_exists(recipe_path, "recipe.yml")
 
-        with recipe_path.open("r", encoding="utf-8") as recipe_file:
+        with recipe_path.open("r", encoding=ENCODE) as recipe_file:
             recipe_data = yaml.safe_load(recipe_file) or {}
 
         steps = recipe_data.get("steps")
@@ -2334,16 +2336,15 @@ class MainWindow(QMainWindow):
                 steps = [{"action": action_name} for action_name in actions]
 
         if not isinstance(steps, list) or not steps:
-            raise ValueError(
-                "recipe.yml に steps または actions が見つかりません。"
-                "例: steps: [{action: merge_font}]"
-            )
+            raise ValueError("レシピ内に処理ステップが見つかりません。")
 
         shared_kwargs = {
-            "work_dir": str(self._resolve_user_path(config.input_dir)),
-            "base_line": recipe_data.get("base_line", 0),
-            "merge_conf": recipe_data.get("merge_conf"),
+            "input_dir": str(self._resolve_user_path(config.input_dir)),
+            "output_dir": str(self._resolve_user_path(config.output_dir)),
+            "remove_blank_glyphs": bool(recipe_data.get("remove_blank_glyphs", True)),
             "anonymize": bool(recipe_data.get("anonymize", False)),
+            "subset_text_path": str(recipe_data.get("subset_text_path", "")).strip(),
+            "modify_metrics": bool(recipe_data.get("modify_metrics", False)),
             "output_font_info": bool(recipe_data.get("output_font_info", False)),
             "debug": bool(recipe_data.get("debug", False)),
         }
@@ -2352,27 +2353,28 @@ class MainWindow(QMainWindow):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         for step_index, step in enumerate(steps, start=1):
-            if isinstance(step, str):
-                action_name = step
-                step_kwargs: dict[str, object] = {}
-            elif isinstance(step, dict):
-                action_name = str(step.get("action", "")).strip()
-                step_kwargs = {
-                    key: value for key, value in step.items() if key != "action"
-                }
-            else:
-                raise ValueError(f"steps[{step_index}] の形式が不正です: {step}")
+            # if isinstance(step, str):
+            #     action_name = step
+            #     step_kwargs: dict[str, object] = {}
+            # elif isinstance(step, dict):
+            #     action_name = str(step.get("action", "")).strip()
+            #     step_kwargs = {
+            #         key: value for key, value in step.items() if key != "action"
+            #     }
+            # else:
+            #     raise ValueError(f"steps[{step_index}] の形式が不正です: {step}")
 
-            if action_name not in ACTION_MAP:
-                raise ValueError(f"未対応アクションです: {action_name}")
+            # run_kwargs = {**shared_kwargs, **step_kwargs, "action": action_name}
+            # log(
+            #     f"[一括:フォント加工モード] 実行 ({step_index}/{len(steps)}): {action_name}"
+            # )
+            # self._capture_module_output(
+            #     log, lambda kwargs=run_kwargs: dispatch_action(**kwargs)
+            # )
+            # TODO: 一括フォント加工処理
+            continue
 
-            run_kwargs = {**shared_kwargs, **step_kwargs, "action": action_name}
-            log(f"[一括:バッチモード] 実行 ({step_index}/{len(steps)}): {action_name}")
-            self._capture_module_output(
-                log, lambda kwargs=run_kwargs: dispatch_action(**kwargs)
-            )
-
-        log(f"[一括:バッチモード] 完了: {recipe_path}")
+        log(f"[一括:フォント加工モード] 完了: {recipe_path}")
 
     @staticmethod
     def _is_otf_path(path: Path) -> bool:
