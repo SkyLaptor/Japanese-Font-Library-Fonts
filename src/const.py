@@ -14,6 +14,7 @@ SUBSETS_DIR = DATA_DIR / "subsets"
 # FFDecとJavaの自動ダウンロード用URL
 FFDEC_ARCHIVE_URL = "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.2/ffdec_25.1.2.zip"
 JAVA_ARCHIVE_URL = "https://corretto.aws/downloads/resources/25.0.2.10.1/amazon-corretto-25.0.2.10.1-windows-x64-jdk.zip"
+FONTFORGE_ARCHIVE_URL = "https://portableapps.com/downloading/?a=FontForgePortable&s=s&p=&d=pa&n=FontForge%20Portable&f=FontForgePortable_2025-10-09.paf.exe"
 # 追加文字（Unicode直接指定）
 EXTRA_UNICODES = [
     0x2026,  # … (三点リーダー)

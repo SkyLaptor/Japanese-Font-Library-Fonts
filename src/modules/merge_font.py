@@ -1,195 +1,34 @@
-# Dependencies: FFDec=False, FontForge=False
-from io import BytesIO
+import tempfile
+from pathlib import Path
 
-from fontTools.merge import Merger
 from fontTools.ttLib import TTFont
 
-from modules.anonymize_info import anonymize_info
+from core.fontforge_wrapper import ff_merge_fonts
 from modules.get_average_size import get_average_size
-from modules.harmonize_font_metrics import apply_font_transform
-from modules.remove_empty_glyphs import remove_empty_glyphs
-from utils.file_io import save_font
 
 
-def _font_to_buffer(font_obj: TTFont) -> BytesIO:
-    buffer = BytesIO()
-    font_obj.save(buffer)
-    buffer.seek(0)
-    return buffer
-
-
-def _get_base_metrics_override(base_font_obj: TTFont) -> dict[str, dict[str, int]]:
-    metrics_override: dict[str, dict[str, int]] = {}
-
-    base_os2 = base_font_obj.get('OS/2')
-    if base_os2 is not None:
-        metrics_override["os2"] = {
-            "usWinAscent": int(base_os2.usWinAscent),
-            "usWinDescent": int(base_os2.usWinDescent),
-            "sTypoAscender": int(base_os2.sTypoAscender),
-            "sTypoDescender": int(base_os2.sTypoDescender),
-            "sTypoLineGap": int(base_os2.sTypoLineGap),
-        }
-
-    base_hhea = base_font_obj.get('hhea')
-    if base_hhea is not None:
-        metrics_override["hhea"] = {
-            "ascent": int(base_hhea.ascent),
-            "descent": int(base_hhea.descent),
-            "lineGap": int(base_hhea.lineGap),
-        }
-
-    base_post = base_font_obj.get('post')
-    if base_post is not None:
-        metrics_override["post"] = {
-            "underlinePosition": int(base_post.underlinePosition),
-            "underlineThickness": int(base_post.underlineThickness),
-        }
-
-    return metrics_override
-
-
-def _remove_overlapping_cmap_entries(
-    base_font_obj: TTFont,
-    interpolation_font_obj: TTFont,
-    *,
-    debug: bool = False,
-) -> TTFont:
-    base_cmap = base_font_obj.getBestCmap()
-    target_cmap = interpolation_font_obj.getBestCmap()
-
-    overlap_codes = [code for code in target_cmap if code in base_cmap]
-    if not overlap_codes:
-        return interpolation_font_obj
-
-    for code in overlap_codes:
-        del target_cmap[code]
-
-    if debug:
-        print(
-            "[merge_font][dedupe] "
-            f"base重複コードポイントを除外: {len(overlap_codes)} 件"
-        )
-
-    return interpolation_font_obj
-
-
-def _select_scaling_baseline(
-    base_avg,
-    target_avg,
+def _calculate_auto_scale(
+    base_path: str, interpolation_path: str
 ) -> tuple[float, float, str]:
+    """
+    ベースと補完側のフォントを読み込み、平均サイズから自動スケーリング倍率を計算する
+    """
+    with TTFont(base_path) as base_font, TTFont(interpolation_path) as interp_font:
+        base_avg = get_average_size(base_font)
+        target_avg = get_average_size(interp_font)
+
     if target_avg.count and target_avg.avg_w and target_avg.avg_h:
-        baseline_base_w = base_avg.avg_w
-        baseline_base_h = base_avg.avg_h
-        baseline_target_w = target_avg.avg_w
-        baseline_target_h = target_avg.avg_h
-        baseline_name = "CJK"
+        scale_x = base_avg.avg_w / target_avg.avg_w
+        scale_y = base_avg.avg_h / target_avg.avg_h
+        name = "CJK"
     elif target_avg.count_latin and target_avg.avg_w_latin and target_avg.avg_h_latin:
-        baseline_base_w = base_avg.avg_w_latin
-        baseline_base_h = base_avg.avg_h_latin
-        baseline_target_w = target_avg.avg_w_latin
-        baseline_target_h = target_avg.avg_h_latin
-        baseline_name = "Latin"
+        scale_x = base_avg.avg_w_latin / target_avg.avg_w_latin
+        scale_y = base_avg.avg_h_latin / target_avg.avg_h_latin
+        name = "Latin"
     else:
-        baseline_base_w = 0
-        baseline_base_h = 0
-        baseline_target_w = 0
-        baseline_target_h = 0
-        baseline_name = "Fallback(1.0)"
+        scale_x, scale_y, name = 1.0, 1.0, "Fallback"
 
-    auto_scale_x = 1.0
-    auto_scale_y = 1.0
-
-    if baseline_target_w and baseline_base_w:
-        auto_scale_x = baseline_base_w / baseline_target_w
-
-    if baseline_target_h and baseline_base_h:
-        auto_scale_y = baseline_base_h / baseline_target_h
-
-    return auto_scale_x, auto_scale_y, baseline_name
-
-
-def _prepare_interpolation_font_for_merge(
-    base_font_obj: TTFont,
-    interpolation_font_obj: TTFont,
-    *,
-    scale_width: float = 1.0,
-    scale_height: float = 1.0,
-    offset_width: int = 0,
-    offset_height: int = 0,
-    remove_empty: bool = False,
-    anonymize: bool = False,
-    anonymize_font_name: str = "Anonymous",
-    debug: bool = False,
-) -> TTFont:
-    prepared_font_obj = interpolation_font_obj
-
-    # Step 1: 自動サイズ適合
-    base_avg = get_average_size(base_font_obj)
-    target_avg = get_average_size(prepared_font_obj)
-
-    auto_scale_x, auto_scale_y, baseline_name = _select_scaling_baseline(
-        base_avg=base_avg,
-        target_avg=target_avg,
-    )
-
-    if debug:
-        print(
-            "[merge_font][auto_scale] "
-            f"baseline={baseline_name}, "
-            f"scale_x={auto_scale_x:.3f}, scale_y={auto_scale_y:.3f}, "
-            f"target_cjk={target_avg.count}, target_latin={target_avg.count_latin}"
-        )
-
-    prepared_font_obj = apply_font_transform(
-        target_font_obj=prepared_font_obj,
-        scale_x=auto_scale_x,
-        scale_y=auto_scale_y,
-        offset_x=0,
-        offset_y=0,
-        new_upm=None,
-    )
-
-    # Step 2: メトリクス強制同期（Ascent/Descent/LineGap/Underline/UPM）
-    base_upm = int(base_font_obj['head'].unitsPerEm)
-    metrics_override = _get_base_metrics_override(base_font_obj)
-    prepared_font_obj = apply_font_transform(
-        target_font_obj=prepared_font_obj,
-        scale_x=1.0,
-        scale_y=1.0,
-        offset_x=0,
-        offset_y=0,
-        new_upm=base_upm,
-        metrics_override=metrics_override,
-    )
-
-    # Step 3: ユーザーパラメータ適用
-    prepared_font_obj = apply_font_transform(
-        target_font_obj=prepared_font_obj,
-        scale_x=scale_width,
-        scale_y=scale_height,
-        offset_x=offset_width,
-        offset_y=offset_height,
-        new_upm=None,
-    )
-
-    # Step 4: クリーンアップと合体（合体前のクリーンアップ）
-    if remove_empty:
-        prepared_font_obj = remove_empty_glyphs(prepared_font_obj)
-
-    if anonymize:
-        prepared_font_obj = anonymize_info(
-            prepared_font_obj,
-            font_name=anonymize_font_name,
-        )
-
-    prepared_font_obj = _remove_overlapping_cmap_entries(
-        base_font_obj=base_font_obj,
-        interpolation_font_obj=prepared_font_obj,
-        debug=debug,
-    )
-
-    return prepared_font_obj
+    return scale_x, scale_y, name
 
 
 def action_merge_font(
@@ -198,103 +37,95 @@ def action_merge_font(
     output_path: str,
     scale_width: float = 1.0,
     scale_height: float = 1.0,
-    offset_width: int = 0,
-    offset_height: int = 0,
-    remove_empty: bool = False,
-    anonymize: bool = False,
-    anonymize_font_name: str = "Anonymous",
     debug: bool = False,
-    **_,
+    **kwargs,
 ):
-    merged_font = merge_font(
-        base_path=base_path,
-        interpolation_path=interpolation_path,
-        scale_width=scale_width,
-        scale_height=scale_height,
-        offset_width=offset_width,
-        offset_height=offset_height,
-        remove_empty=remove_empty,
-        anonymize=anonymize,
-        anonymize_font_name=anonymize_font_name,
-        debug=debug,
-    )
-    if output_path is not None:
-        saved_output_path = save_font(
-            font_obj=merged_font,
-            input_path=base_path,
-            output_path=output_path,
-            suffix="_merged",
-            debug=debug,
+    """
+    レシピから呼び出されるメインエントリ。
+    FontForge エンジンを使用してフォントをマージします。
+    """
+    # 1. 自動スケーリング倍率の計算
+    auto_x, auto_y, baseline = _calculate_auto_scale(base_path, interpolation_path)
+
+    # ユーザー指定の倍率を乗算
+    final_scale_x = auto_x * scale_width
+    final_scale_y = auto_y * scale_height
+
+    if debug:
+        print(
+            f"[action_merge_font] AutoScale({baseline}): x={auto_x:.3f}, y={auto_y:.3f}"
         )
-        print(f"フォントを保存しました: {saved_output_path}")
+        print(
+            f"[action_merge_font] FinalScale: x={final_scale_x:.3f}, y={final_scale_y:.3f}"
+        )
+
+    # 2. FontForge ラッパーの呼び出し
+    # FontForge側で「不足Unicodeの特定」「スケーリング」「32bit loca書き出し」を一括で行います
+    try:
+        result = ff_merge_fonts(
+            base_path=base_path,
+            interp_path=interpolation_path,
+            output_path=output_path,
+            scale_x=final_scale_x,
+            scale_y=final_scale_y,
+        )
+
+        if debug and result.stdout:
+            print(f"--- FontForge Output ---\n{result.stdout}")
+
+        print(f"フォントを保存しました: {output_path}")
+
+    except Exception as e:
+        print(f"❌ マージ中にエラーが発生しました: {e}")
+        raise
+
+
+# 以下、古い関数の掃除
+def merge_font(*args, **kwargs):
+    # 以前のコードがこの関数を期待している場合のエラー回避用
+    # 実体は action_merge_font に移行したため、直接呼ぶべきではない
+    raise NotImplementedError(
+        "merge_font は廃止されました。action_merge_font を使用してください。"
+    )
 
 
 def merge_font_objects(
-    base_font_obj: TTFont,
-    interpolation_font_obj: TTFont,
-    *,
-    scale_width: float = 1.0,
-    scale_height: float = 1.0,
-    offset_width: int = 0,
-    offset_height: int = 0,
-    remove_empty: bool = False,
-    anonymize: bool = False,
-    anonymize_font_name: str = "Anonymous",
-    debug: bool = False,
+    base_font_obj: TTFont, interpolation_font_obj: TTFont, **kwargs
 ) -> TTFont:
-    prepared_interpolation_font_obj = _prepare_interpolation_font_for_merge(
-        base_font_obj=base_font_obj,
-        interpolation_font_obj=interpolation_font_obj,
-        scale_width=scale_width,
-        scale_height=scale_height,
-        offset_width=offset_width,
-        offset_height=offset_height,
-        remove_empty=remove_empty,
-        anonymize=anonymize,
-        anonymize_font_name=anonymize_font_name,
-        debug=debug,
-    )
+    """
+    batch_processorから送られてきた『メモリ上のフォント』を
+    一時ファイルに書き出して、FontForgeエンジンに処理させます。
+    """
+    debug = kwargs.get("debug", False)
 
-    merger = Merger()
-    base_buffer = _font_to_buffer(base_font_obj)
-    prepared_buffer = _font_to_buffer(prepared_interpolation_font_obj)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_base = Path(tmpdir) / "base.ttf"
+        tmp_interp = Path(tmpdir) / "interp.ttf"
+        tmp_out = Path(tmpdir) / "merged.ttf"
 
-    try:
-        return merger.merge(
-            [
-                base_buffer,
-                prepared_buffer,
-            ]
+        # 1. 今のメモリ状態を一旦ファイルにする
+        base_font_obj.save(tmp_base)
+        interpolation_font_obj.save(tmp_interp)
+
+        if debug:
+            print(
+                f"[Bridge] FontForgeマージ開始 - 一時ファイル: {tmp_base}, {tmp_interp}"
+            )
+
+        # 2. FontForgeを呼び出す (ff_merge_fonts は core.fontforge_wrapper から)
+        # この関数はフォントオブジェクトを返したりはしないため、出力パスからTTFontに再ロードする必要があります
+        ff_merge_fonts(
+            base_path=str(tmp_base),
+            interp_path=str(tmp_interp),
+            output_path=str(tmp_out),
         )
-    except AssertionError as e:
-        raise ValueError(
-            "fontToolsによるマージに失敗しました。"
-            "入力フォントのメトリクスや内部情報の整合性を確認してください。"
-        ) from e
 
-
-def merge_font(
-    base_path: str,
-    interpolation_path: str,
-    scale_width: float = 1.0,
-    scale_height: float = 1.0,
-    offset_width: int = 0,
-    offset_height: int = 0,
-    remove_empty: bool = False,
-    anonymize: bool = False,
-    anonymize_font_name: str = "Anonymous",
-    debug: bool = False,
-) -> TTFont:
-    with TTFont(base_path) as base_font_obj, TTFont(interpolation_path) as sub_font_obj:
-        return merge_font_objects(
-            base_font_obj=base_font_obj,
-            interpolation_font_obj=sub_font_obj,
-            scale_width=scale_width,
-            scale_height=scale_height,
-            offset_width=offset_width,
-            offset_height=offset_height,
-            remove_empty=remove_empty,
-            anonymize=anonymize,
-            anonymize_font_name=anonymize_font_name,
-            debug=debug,
-        )
+        # 【重要】マージ済みのファイルを読み込み直して、新しいオブジェクトとして返す
+        if Path(tmp_out).exists():
+            if debug:
+                print(f"[Bridge] マージ済みファイルを再ロードします: {tmp_out}")
+            # fontToolsオブジェクトとして再構成
+            return TTFont(str(tmp_out))
+        else:
+            print("[Bridge] 警告: マージ出力ファイルが見つかりません。")
+            return base_font_obj

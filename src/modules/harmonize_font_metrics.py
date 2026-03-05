@@ -166,10 +166,10 @@ def _derive_upm_from_metrics_override(
 
 def apply_font_transform(
     target_font_obj: TTFont,
-    scale_x: float,
-    scale_y: float,
-    offset_x: int,
-    offset_y: int,
+    scale_width: float,
+    scale_height: float,
+    offset_width: int,
+    offset_height: int,
     new_upm: int | None = None,
     metrics_override: Mapping[str, object] | None = None,
 ) -> TTFont:
@@ -184,7 +184,7 @@ def apply_font_transform(
     glyph_set = target_font_obj.getGlyphSet()
     glyph_order = target_font_obj.getGlyphOrder()
 
-    transform = Transform(scale_x, 0, 0, scale_y, offset_x, offset_y)
+    transform = Transform(scale_width, 0, 0, scale_height, offset_width, offset_height)
     glyf_table = target_font_obj['glyf']
 
     for name in glyph_order:
@@ -200,8 +200,8 @@ def apply_font_transform(
         hmtx = target_font_obj['hmtx']
         for name in hmtx.metrics:
             advance_width, lsb = hmtx.metrics[name]
-            new_width = int(round(advance_width * scale_x))
-            new_lsb = int(round(lsb * scale_x)) + offset_x
+            new_width = int(round(advance_width * scale_width))
+            new_lsb = int(round(lsb * scale_width)) + offset_width
             hmtx.metrics[name] = (new_width, new_lsb)
 
     for glyph in glyf_table.glyphs.values():
@@ -236,10 +236,10 @@ def action_harmonize_font_metrics(
 
             harmonized_input_font_obj = apply_font_transform(
                 target_font_obj=input_font_obj,
-                scale_x=scale_width,
-                scale_y=scale_height,
-                offset_x=offset_width,
-                offset_y=offset_height,
+                scale_width=scale_width,
+                scale_height=scale_height,
+                offset_width=offset_width,
+                offset_height=offset_height,
                 new_upm=effective_upm,
                 metrics_override=metrics_override,
             )
@@ -400,10 +400,10 @@ def harmonize_with_base(
 
     transformed_font_obj = apply_font_transform(
         target_font_obj=target_font_obj,
-        scale_x=final_scale_width,
-        scale_y=final_scale_height,
-        offset_x=offset_width,
-        offset_y=offset_height,
+        scale_width=final_scale_width,
+        scale_height=final_scale_height,
+        offset_width=offset_width,
+        offset_height=offset_height,
         new_upm=new_upm,
         metrics_override=metrics_override,
     )

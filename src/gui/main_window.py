@@ -1769,10 +1769,10 @@ class MainWindow(QMainWindow):
 
             preview_font_obj = apply_font_transform(
                 target_font_obj=preview_font_obj,
-                scale_x=scale_width,
-                scale_y=scale_height,
-                offset_x=offset_width,
-                offset_y=offset_height,
+                scale_width=scale_width,
+                scale_height=scale_height,
+                offset_width=offset_width,
+                offset_height=offset_height,
                 new_upm=manual_new_upm,
                 metrics_override=metrics_override,
             )
@@ -1998,10 +1998,10 @@ class MainWindow(QMainWindow):
 
             current_base_font_obj = apply_font_transform(
                 target_font_obj=current_base_font_obj,
-                scale_x=scale_width,
-                scale_y=scale_height,
-                offset_x=offset_width,
-                offset_y=offset_height,
+                scale_width=scale_width,
+                scale_height=scale_height,
+                offset_width=offset_width,
+                offset_height=offset_height,
                 new_upm=manual_new_upm,
                 metrics_override=metrics_override,
             )

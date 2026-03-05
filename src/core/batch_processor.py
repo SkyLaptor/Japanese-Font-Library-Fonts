@@ -379,8 +379,8 @@ def action_merge_font(**kwargs: Any) -> None:
 
     期待キー（assets/recipe/recipe_full.yml 構造）:
     - base_font_path: str | Path
-    - scale_x: float(%) / scale_y: float(%)
-    - offset_x: float(em) / offset_y: float(em)
+    - scale_width: float(%) / scale_height: float(%)
+    - offset_width: float(em) / offset_height: float(em)
     - modify_metrics: bool + ascent/descent/line_gap/u_pos/u_thick
     - merge_fonts: list[{font_path: str}]
     - anonymize: bool, font_name: str
@@ -400,15 +400,15 @@ def action_merge_font(**kwargs: Any) -> None:
         raise ValueError("steps.output_font_path もしくは steps.output_name が必要です")
 
     # 新仕様のキー名（後方互換を維持）
-    scale_x_pct = float(kwargs.get("scale_width", kwargs.get("scale_x", 100.0)))
-    scale_y_pct = float(kwargs.get("scale_height", kwargs.get("scale_y", 100.0)))
+    scale_width_pct = float(kwargs.get("scale_width", 100.0))
+    scale_height_pct = float(kwargs.get("scale_height", 100.0))
     # apply_font_transform は倍率を1.0=100%で受け取る
-    scale_x = scale_x_pct / 100.0
-    scale_y = scale_y_pct / 100.0
+    scale_width = scale_width_pct / 100.0
+    scale_height = scale_height_pct / 100.0
 
     # オフセット（em）: 後段で factor を算出してから正規化
-    raw_offset_x = float(kwargs.get("offset_width", kwargs.get("offset_x", 0)))
-    raw_offset_y = float(kwargs.get("offset_height", kwargs.get("offset_y", 0)))
+    raw_offset_width = float(kwargs.get("offset_width", 0))
+    raw_offset_height = float(kwargs.get("offset_height", 0))
 
     # サブセットテキストの準備（任意）
     subset_text: str | None = None
@@ -423,16 +423,23 @@ def action_merge_font(**kwargs: Any) -> None:
 
     weight_offset = int(round(float(kwargs.get("weight_offset", 0))))
 
-    # 1) ベース読み込み
+    # 1) 入力フォント読み込み
     with TTFont(str(base_font_path)) as base_font_obj:
         # OTF入力ならオンメモリ変換
         if _is_otf_path(base_font_path):
+            if debug:
+                print("入力フォントをTTFに変換しています...")
             otf_to_ttf(base_font_obj)
 
         # 任意前処理: サブセット/太さ変更
         if subset_text:
+            if debug:
+                print("入力フォントをサブセット化しています...")
             base_font_obj = create_subset(base_font_obj, subset_text, debug)
+
         if weight_offset != 0:
+            if debug:
+                print(f"入力フォントの太さを変更しています...: {weight_offset}")
             base_font_obj = change_weight(
                 base_font_obj, offset_weight=weight_offset, debug=debug
             )
@@ -443,25 +450,28 @@ def action_merge_font(**kwargs: Any) -> None:
         )
 
         # オフセット適用値へ正規化係数を反映
-        offset_x = int(round(raw_offset_x * factor))
-        offset_y = int(round(raw_offset_y * factor))
+        offset_width = int(round(raw_offset_width * factor))
+        offset_height = int(round(raw_offset_height * factor))
 
         # 2) 変形適用（スケール・オフセット・メトリクス）
+        if debug:
+            print("入力フォントを変形しています...")
         base_font_obj = apply_font_transform(
             target_font_obj=base_font_obj,
-            scale_x=scale_x,
-            scale_y=scale_y,
-            offset_x=offset_x,
-            offset_y=offset_y,
-            new_upm=None,
+            scale_width=scale_width,
+            scale_height=scale_height,
+            offset_width=offset_width,
+            offset_height=offset_height,
+            new_upm=None,  # TODO: これいる？
             metrics_override=metrics_override,
         )
 
-        # 3) 逐次マージ（ステップで未指定ならグローバルを継承済み）
+        # 3) マージフォントの順次処理と合成
         merge_list = kwargs.get("merge_fonts") or []
         if not isinstance(merge_list, list):
             raise ValueError("steps.merge_fonts はリストである必要があります")
 
+        item_count = 1
         for item in merge_list:
             if not isinstance(item, Mapping):
                 raise ValueError("merge_fonts の各要素はマップである必要があります")
@@ -469,38 +479,70 @@ def action_merge_font(**kwargs: Any) -> None:
             if not sub_path:
                 continue
             with TTFont(str(sub_path)) as sub_font_obj:
-                # 変換・前処理
+                print(
+                    f"マージフォントを処理しています...: ({item_count}/{len(merge_list)}) {sub_path}"
+                )
+
+                if debug:
+                    print(
+                        f"[DEBUG]: マージ前の入力フォントのグリフ数(Unicodeマップ済): {get_info(base_font_obj, debug=False).glyph_count_uni}"
+                    )
+
+                # マージフォントがOTFならTTF変換
                 if _is_otf_path(sub_path):
+                    if debug:
+                        print("マージフォントをTTFに変換しています...")
                     otf_to_ttf(sub_font_obj)
+                # マージフォントのサブセット化
                 if subset_text:
-                    sub_font_obj = create_subset(sub_font_obj, subset_text, debug)
-                # マージフォント個別の太さ変更
+                    if debug:
+                        print("マージフォントをサブセット化しています...")
+                    sub_font_obj = create_subset(
+                        font_obj=sub_font_obj, subset_text=subset_text, debug=debug
+                    )
+                # マージフォントの太さ変更
                 item_weight_offset = int(round(float(item.get("weight_offset", 0))))
                 if item_weight_offset != 0:
+                    if debug:
+                        print(
+                            f"マージフォントの太さを変更しています...: {item_weight_offset}"
+                        )
                     sub_font_obj = change_weight(
                         sub_font_obj, offset_weight=item_weight_offset, debug=debug
                     )
 
-                # マージフォント個別のオフセット（正規化係数を反映）
-                item_offset_x = int(
-                    round(
-                        float(item.get("offset_width", item.get("offset_x", 0)))
-                        * factor
-                    )
+                # マージフォントの変形（正規化係数を反映）
+                item_offset_width = int(
+                    round(float(item.get("offset_width", 0)) * factor)
                 )
-                item_offset_y = int(
-                    round(
-                        float(item.get("offset_height", item.get("offset_y", 0)))
-                        * factor
-                    )
+                item_offset_height = int(
+                    round(float(item.get("offset_height", 0)) * factor)
                 )
+                if debug:
+                    print("マージフォントを変形しています...")
+                sub_font_obj = apply_font_transform(
+                    target_font_obj=sub_font_obj,
+                    scale_width=scale_width,  # マージフォントは入力フォントと同じスケールを適用
+                    scale_height=scale_height,  # マージフォントは入力フォントと同じスケールを適用
+                    offset_width=item_offset_width,
+                    offset_height=item_offset_height,
+                    new_upm=None,  # TODO: これいる？
+                    metrics_override=metrics_override,
+                )
+
+                # マージ実行
                 base_font_obj = merge_font_objects(
                     base_font_obj=base_font_obj,
                     interpolation_font_obj=sub_font_obj,
-                    offset_width=item_offset_x,
-                    offset_height=item_offset_y,
                     debug=debug,
                 )
+
+                if debug:
+                    print(
+                        f"[DEBUG]: マージ後の入力フォントのグリフ数(Unicodeマップ済): {get_info(base_font_obj, debug=False).glyph_count_uni}"
+                    )
+
+                item_count += 1
 
         # 4) 空白削除・匿名化
         if bool(kwargs.get("remove_blank_glyphs", True)):
