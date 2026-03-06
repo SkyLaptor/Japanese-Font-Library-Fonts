@@ -212,9 +212,9 @@ def process_font(params: Mapping[str, Any]) -> None:
     debug = bool(params.get("debug", False))
 
     # 入力/出力パス
-    base_font_path = params.get("input_font_path") or params.get("base_font_path")
-    if not base_font_path:
-        raise ValueError("input_font_path または base_font_path が必要です")
+    input_font_path = params.get("input_font_path")
+    if not input_font_path:
+        raise ValueError("input_font_path が必要です")
 
     output_path = params.get("output_font_path") or params.get("output_name")
     if not output_path:
@@ -243,8 +243,8 @@ def process_font(params: Mapping[str, Any]) -> None:
     weight_offset = int(round(float(params.get("weight_offset", 0))))
 
     # 1) 入力フォント読み込み
-    with TTFont(str(base_font_path)) as base_font_obj:
-        if is_otf_path(base_font_path):
+    with TTFont(str(input_font_path)) as base_font_obj:
+        if is_otf_path(input_font_path):
             if debug:
                 print("入力フォントをTTFに変換しています...")
             otf_to_ttf(base_font_obj)
@@ -270,15 +270,31 @@ def process_font(params: Mapping[str, Any]) -> None:
         # 2) 変形適用
         if debug:
             print("入力フォントを変形しています...")
-        base_font_obj = apply_font_transform(
-            target_font_obj=base_font_obj,
-            scale_width=scale_width * factor,
-            scale_height=scale_height * factor,
-            offset_width=offset_width,
-            offset_height=offset_height,
-            new_upm=NORMALIZED_UPM,
-            metrics_override=metrics_override,
-        )
+
+        # 基準フォントモードの場合は自動調整を最初に行う
+        ref_font_path = params.get("base_font_path")
+        if params.get("mode") == "base" and ref_font_path:
+            with TTFont(str(ref_font_path)) as ref_font_obj:
+                base_font_obj = harmonize_font_metrics(
+                    target_font_obj=base_font_obj,
+                    base_font_obj=ref_font_obj,
+                    scale_width_manual=scale_width,
+                    scale_height_manual=scale_height,
+                    offset_width=offset_width,
+                    offset_height=offset_height,
+                    debug=debug,
+                ).font_obj
+        else:
+            # マニュアルモードまたは基準フォント未指定
+            base_font_obj = apply_font_transform(
+                target_font_obj=base_font_obj,
+                scale_width=scale_width * factor,
+                scale_height=scale_height * factor,
+                offset_width=offset_width,
+                offset_height=offset_height,
+                new_upm=NORMALIZED_UPM,
+                metrics_override=metrics_override,
+            )
 
         # 3) 空白削除
         if bool(params.get("remove_blank_glyphs", True)):
@@ -352,7 +368,7 @@ def process_font(params: Mapping[str, Any]) -> None:
         # 6) 保存
         saved_output = save_font(
             font_obj=base_font_obj,
-            input_path=str(base_font_path),
+            input_path=str(input_font_path),
             output_path=str(output_path),
         )
         print(f"フォントを保存しました: {saved_output}")
