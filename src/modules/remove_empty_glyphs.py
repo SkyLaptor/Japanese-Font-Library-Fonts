@@ -5,7 +5,6 @@ from fontTools.ttLib import TTFont
 from const import BLANK_GLYPHS
 from core.font_processor import reopen_font
 from modules.create_subset import create_subset
-from modules.subset_generator import generate_subset_jp_full
 from utils.file_io import save_font
 
 
@@ -38,10 +37,10 @@ def remove_empty_glyphs(font_obj: TTFont, debug: bool = False) -> TTFont:
     :return: クリーニング済みフォントオブジェクト
     :rtype: TTFont
     """
-    if 'CFF ' in font_obj or 'CFF2' in font_obj:
+    if "CFF " in font_obj or "CFF2" in font_obj:
         raise ValueError("この関数はCFF/CFF2には対応していません。")
 
-    glyf = font_obj['glyf']
+    glyf = font_obj["glyf"]
     cmap = font_obj.getBestCmap()
     deleted_glyphs = []
 
@@ -49,14 +48,29 @@ def remove_empty_glyphs(font_obj: TTFont, debug: bool = False) -> TTFont:
         if code in BLANK_GLYPHS:
             continue
 
+        if name not in glyf:
+            deleted_glyphs.append(code)
+            continue
+
         glyph = glyf[name]
 
-        if glyph.numberOfContours == 0:
+        # 輪郭もコンポーネントも持たないグリフを空と判定
+        number_of_contours = getattr(glyph, "numberOfContours", 0)
+        has_outline = number_of_contours > 0 or (
+            number_of_contours < 0 and bool(getattr(glyph, "components", None))
+        )
+        if not has_outline:
             deleted_glyphs.append(code)
 
-    for code in deleted_glyphs:
-        del cmap[code]
+    if debug:
+        print(f"[remove_empty_glyphs] 削除対象の空グリフ数: {len(deleted_glyphs)}")
 
-    gid_cleaned_font_obj = create_subset(font_obj, generate_subset_jp_full(), debug)
+    for code in deleted_glyphs:
+        if code in cmap:
+            del cmap[code]
+
+    # 現在の全文字を維持しつつ、GIDを詰め直すためにサブセット作成を呼び出す
+    all_chars = "".join(chr(cp) for cp in cmap.keys())
+    gid_cleaned_font_obj = create_subset(font_obj, all_chars, debug)
 
     return reopen_font(gid_cleaned_font_obj)

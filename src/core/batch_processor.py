@@ -12,12 +12,13 @@ from otf2ttf.cli import otf_to_ttf
 from pydantic import BaseModel, Field, field_validator
 
 from const import BLANK_GLYPHS, ENCODE, EXCLUDE_CHARS, NORMALIZED_UPM
+from core.font_processor import reopen_font
 from modules.anonymize_info import anonymize_info
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.get_info import get_info
 from modules.harmonize_font_metrics import apply_font_transform
-from modules.merge_font import merge_font_objects
+from modules.merge_font import merge_font_objects_v2
 from modules.remove_empty_glyphs import remove_empty_glyphs
 from utils.dprint import dprint
 from utils.file_io import load_text, save_font
@@ -466,7 +467,11 @@ def action_merge_font(**kwargs: Any) -> None:
             metrics_override=metrics_override,
         )
 
-        # 3) マージフォントの順次処理と合成
+        # 3) マージ前の空白削除（重要：空の予約枠を消すことでマージ側に不足分として認識させる）
+        if bool(kwargs.get("remove_blank_glyphs", True)):
+            base_font_obj = remove_empty_glyphs(base_font_obj, debug=debug)
+
+        # 4) マージフォントの順次処理と合成
         merge_list = kwargs.get("merge_fonts") or []
         if not isinstance(merge_list, list):
             raise ValueError("steps.merge_fonts はリストである必要があります")
@@ -511,6 +516,10 @@ def action_merge_font(**kwargs: Any) -> None:
                         sub_font_obj, offset_weight=item_weight_offset, debug=debug
                     )
 
+                # マージフォントの空白削除（ドナー側の空グリフがベースに混入するのを防ぐ）
+                if bool(kwargs.get("remove_blank_glyphs", True)):
+                    sub_font_obj = remove_empty_glyphs(sub_font_obj, debug=debug)
+
                 # マージフォントの変形（正規化係数を反映）
                 item_offset_width = int(
                     round(float(item.get("offset_width", 0)) * factor)
@@ -531,11 +540,12 @@ def action_merge_font(**kwargs: Any) -> None:
                 )
 
                 # マージ実行
-                base_font_obj = merge_font_objects(
-                    base_font_obj=base_font_obj,
-                    interpolation_font_obj=sub_font_obj,
-                    debug=debug,
+                base_font_obj = merge_font_objects_v2(
+                    base_font=base_font_obj,
+                    interp_font=sub_font_obj,
                 )
+                # メモリ上の整合性を保つため再オープン
+                base_font_obj = reopen_font(base_font_obj)
 
                 if debug:
                     print(
