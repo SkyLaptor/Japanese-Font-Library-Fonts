@@ -1,4 +1,5 @@
 {
+    "python.terminal.activateEnvironment": false,
     // Black Formatter の「お節介（クォートの自動変換）」を止める
     "black-formatter.args": [
         "--skip-string-normalization"
