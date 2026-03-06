@@ -4,7 +4,7 @@ import time
 
 from fontTools.ttLib import TTFont
 
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from modules.get_info import get_info
 from utils.dprint import dprint
 from utils.file_io import save_font

@@ -3,7 +3,7 @@
 from fontTools.ttLib import TTFont
 
 from const import BLANK_GLYPHS
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from modules.create_subset import create_subset
 from utils.file_io import save_font
 

@@ -2,7 +2,7 @@
 
 from fontTools.ttLib import TTFont
 
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from utils.file_io import save_font
 
 REMOVE_TARGET_SIZE = 90

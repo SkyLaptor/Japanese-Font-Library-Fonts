@@ -6,7 +6,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from pathops import Path
 
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from utils.dprint import dprint
 from utils.file_io import save_font
 

@@ -82,12 +82,12 @@ from core.ffdec_wrapper import (
     ensure_ffdec_runtime,
     ensure_java_runtime,
 )
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
+from core.font_processor import is_otf_path, process_font
 from modules.anonymize_info import anonymize_info
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
-from modules.merge_font import merge_font_objects
 from modules.remove_empty_glyphs import remove_empty_glyphs
 from modules.skyrim_swf_patcher import (
     patch_swf_internal_fontname,
@@ -95,7 +95,7 @@ from modules.skyrim_swf_patcher import (
     replace_glyph_in_swf,
     replace_glyphs_in_swf,
 )
-from utils.file_io import load_text
+from utils.file_io import load_text, save_font
 
 PREVIEW_SAMPLE_TEXT = "0Aa永あ"
 ACCEPTABLE_INPUT_FONT_SUFFIXES = {".ttf", ".otf"}
@@ -1906,203 +1906,42 @@ class MainWindow(QMainWindow):
         config: SingleFontTaskConfig,
         log: Callable[[str], None],
     ) -> None:
-        self._validate_path_required(config.input_ttf, "入力元")
-        self._validate_path_required(config.output_ttf, "出力先")
+        params = self._map_config_to_params(config)
+        self._capture_module_output(log, lambda: process_font(params))
 
-        input_ttf_path = self._resolve_user_path(config.input_ttf)
-        output_ttf_path = self._resolve_user_path(config.output_ttf)
-        self._validate_file_exists(input_ttf_path, "入力元")
-
-        subset_text: str | None = None
-        if config.subset_text_path:
-            subset_path = self._resolve_user_path(config.subset_text_path)
-            self._validate_file_exists(subset_path, "サブセットテキスト")
-            subset_text = load_text(str(subset_path), EXCLUDE_CHARS)
-            log(
-                "[個別:フォント加工][前処理] サブセット有効: "
-                f"{subset_path}（マージ前に適用）"
-            )
-        else:
-            log("[個別:フォント加工][前処理] サブセット無効: サブセットテキスト未指定")
-
-        current_base_font_obj = self._load_font_for_processing(
-            input_ttf_path,
-            "入力元",
-            log=log,
-        )
-
-        if subset_text is not None:
-            log(
-                "[個別:フォント加工][前処理] 入力元へサブセット適用 "
-                f"（マージ前）: {input_ttf_path.name}"
-            )
-            current_base_font_obj = create_subset(current_base_font_obj, subset_text)
-
-        if config.remove_empty_glyphs:
-            log("[個別:フォント加工] 空白グリフ除去を実行")
-            current_base_font_obj = remove_empty_glyphs(current_base_font_obj)
-
-        if config.glyph_weight_offset != 0:
-            log(
-                "[個別:フォント加工] グリフ太さ調整を実行 "
-                f"(変更量={config.glyph_weight_offset}) [入力元のみ]"
-            )
-            current_base_font_obj = change_weight(
-                current_base_font_obj,
-                offset_weight=config.glyph_weight_offset,
-                debug=True,
-            )
-
-        scale_width = config.horizontal_percent / 100.0
-        scale_height = config.vertical_percent / 100.0
-        offset_width = int(round(config.horizontal_offset))
-        offset_height = int(round(config.vertical_offset))
-
-        if config.mode == "base":
-            self._validate_path_required(config.base_font_path, "基準フォント")
-            base_font_path = self._resolve_user_path(config.base_font_path)
-            self._validate_file_exists(base_font_path, "基準フォント")
-            base_font_obj = self._load_font_for_processing(
-                base_font_path,
-                "基準フォント",
-                log=log,
-            )
-            with base_font_obj:
-                result = harmonize_font_metrics(
-                    target_font_obj=current_base_font_obj,
-                    base_font_obj=base_font_obj,
-                    scale_width_manual=scale_width,
-                    scale_height_manual=scale_height,
-                    offset_width=offset_width,
-                    offset_height=offset_height,
-                )
-                current_base_font_obj = result.font_obj
-        else:
-            metrics_override = self._build_manual_metrics_override(config)
-            manual_new_upm: int | None = None
-            if metrics_override:
-                manual_new_upm = int(config.metric_ascent) + abs(
-                    int(config.metric_descent)
-                )
-                log(
-                    "[個別:フォント加工] 手動メトリクスを適用: "
-                    f"上端={config.metric_ascent}, "
-                    f"下端={config.metric_descent}, "
-                    f"行間={config.metric_line_gap}, "
-                    f"下線位置={config.metric_underline_position}, "
-                    f"下線太さ={config.metric_underline_thickness}"
-                )
-                log(
-                    f"[個別:フォント加工] UPMをメトリクスから自動決定: {manual_new_upm}"
-                )
-
-            current_base_font_obj = apply_font_transform(
-                target_font_obj=current_base_font_obj,
-                scale_width=scale_width,
-                scale_height=scale_height,
-                offset_width=offset_width,
-                offset_height=offset_height,
-                new_upm=manual_new_upm,
-                metrics_override=metrics_override,
-            )
-
-        for merge_index, merge_font in enumerate(config.merge_fonts, start=1):
-            merge_font_path = self._resolve_user_path(merge_font)
-            self._validate_file_exists(
-                merge_font_path,
-                f"補完フォント[{merge_index}]",
-            )
-            log(
-                "[個別:フォント加工][マージ] マージ実行 "
-                f"({merge_index}/{len(config.merge_fonts)}): {merge_font_path.name} "
-                "[前処理サブセット済み→自動サイズ適合→メトリクス同期→手動変形→浄化]"
-            )
-            merge_font_obj = self._load_font_for_processing(
-                merge_font_path,
-                f"補完フォント[{merge_index}]",
-                log=log,
-            )
-            with merge_font_obj:
-                prepared_merge_font_obj = merge_font_obj
-                if subset_text is not None:
-                    log(
-                        "[個別:フォント加工][前処理] 補完フォントへサブセット適用 "
-                        f"（マージ前）: {merge_font_path.name}"
-                    )
-                    prepared_merge_font_obj = create_subset(
-                        prepared_merge_font_obj,
-                        subset_text,
-                    )
-
-                current_base_font_obj = merge_font_objects(
-                    base_font_obj=current_base_font_obj,
-                    interpolation_font_obj=prepared_merge_font_obj,
-                    scale_width=scale_width,
-                    scale_height=scale_height,
-                    offset_width=offset_width,
-                    offset_height=offset_height,
-                    remove_empty=config.remove_empty_glyphs,
-                    anonymize=config.anonymize,
-                    anonymize_font_name=config.anonymize_font_name,
-                    debug=True,
-                )
-
-        if config.anonymize and not config.merge_fonts:
-            log("[個別:フォント加工] 匿名化を実行")
-            current_base_font_obj = anonymize_info(
-                current_base_font_obj,
-                font_name=config.anonymize_font_name,
-            )
-
-        if subset_text is not None:
-            (
-                missing_total,
-                missing_unmapped,
-                missing_no_outline,
-                target_total,
-                missing_unmapped_codes,
-                missing_no_outline_codes,
-            ) = self._count_missing_subset_glyphs(current_base_font_obj, subset_text)
-            log(
-                "[個別:フォント加工][検査] 出力直前サブセット欠損: "
-                f"{missing_total}/{target_total} "
-                f"(未マップ={missing_unmapped}, アウトライン無し={missing_no_outline})"
-            )
-
-            if missing_total > 0:
-                output_ttf_path.parent.mkdir(parents=True, exist_ok=True)
-                report_path = output_ttf_path.with_suffix(".txt")
-                report_lines = [
-                    "[サブセット欠損レポート]",
-                    f"出力フォント: {output_ttf_path.name}",
-                    f"対象コードポイント数: {target_total}",
-                    f"欠損総数: {missing_total}",
-                    f"未マップ数: {missing_unmapped}",
-                    f"アウトライン無し数: {missing_no_outline}",
-                    "",
-                    "[未マップ]",
-                ]
-                report_lines.extend(
-                    self._format_codepoint_list(missing_unmapped_codes)
-                    if missing_unmapped_codes
-                    else ["(なし)"]
-                )
-                report_lines.append("")
-                report_lines.append("[アウトライン無し]")
-                report_lines.extend(
-                    self._format_codepoint_list(missing_no_outline_codes)
-                    if missing_no_outline_codes
-                    else ["(なし)"]
-                )
-
-                report_path.write_text("\n".join(report_lines), encoding="utf-8")
-                log(f"[個別:フォント加工][検査] 欠損レポートを出力: {report_path}")
-
-        output_ttf_path.parent.mkdir(parents=True, exist_ok=True)
-        current_base_font_obj.save(str(output_ttf_path))
-        log(f"[個別:フォント加工] 完了: {output_ttf_path}")
-        if config.mode == "base":
-            self._validate_path_required(config.base_font_path, "基準フォント")
+    def _map_config_to_params(self, config: SingleFontTaskConfig) -> dict[str, Any]:
+        """GUIのコンフィグを一括処理エンジン互換のパラメータ辞書に変換する。"""
+        # 一括処理エンジンの仕様（メトリクス指定による正規化）に合わせる。
+        params = {
+            "input_font_path": self._resolve_user_path(config.input_ttf),
+            "output_font_path": self._resolve_user_path(config.output_ttf),
+            "subset_text_path": (
+                self._resolve_user_path(config.subset_text_path)
+                if config.subset_text_path
+                else None
+            ),
+            "remove_blank_glyphs": config.remove_empty_glyphs,
+            "anonymize": config.anonymize,
+            "font_name": config.anonymize_font_name,
+            "scale_width": config.horizontal_percent,
+            "scale_height": config.vertical_percent,
+            "offset_width": config.horizontal_offset,
+            "offset_height": config.vertical_offset,
+            "weight_offset": config.glyph_weight_offset,
+            "modify_metrics": config.metric_ascent is not None,
+            "ascent": config.metric_ascent,
+            "descent": config.metric_descent,
+            "line_gap": config.metric_line_gap,
+            "u_pos": config.metric_underline_position,
+            "u_thick": config.metric_underline_thickness,
+            "merge_fonts": [
+                {"font_path": self._resolve_user_path(path)}
+                for path in config.merge_fonts
+            ],
+            "output_font_info": True,
+            "debug": True,
+        }
+        return params
 
     @staticmethod
     def _count_missing_subset_glyphs(
@@ -2320,65 +2159,15 @@ class MainWindow(QMainWindow):
         config: BatchFontProcessingTaskConfig,
         log: Callable[[str], None],
     ) -> None:
-        self._validate_path_required(config.recipe_path, "recipe.yml")
-        self._validate_path_required(config.input_dir, "input_dir")
-        self._validate_path_required(config.output_dir, "output_dir")
-        recipe_path = self._resolve_user_path(config.recipe_path)
-        self._validate_file_exists(recipe_path, "recipe.yml")
+        from core.batch_processor import CLIArgs, run_batch
 
-        with recipe_path.open("r", encoding=ENCODE) as recipe_file:
-            recipe_data = yaml.safe_load(recipe_file) or {}
-
-        steps = recipe_data.get("steps")
-        if not isinstance(steps, list) or not steps:
-            actions = recipe_data.get("actions")
-            if isinstance(actions, list) and actions:
-                steps = [{"action": action_name} for action_name in actions]
-
-        if not isinstance(steps, list) or not steps:
-            raise ValueError("レシピ内に処理ステップが見つかりません。")
-
-        shared_kwargs = {
-            "input_dir": str(self._resolve_user_path(config.input_dir)),
-            "output_dir": str(self._resolve_user_path(config.output_dir)),
-            "remove_blank_glyphs": bool(recipe_data.get("remove_blank_glyphs", True)),
-            "anonymize": bool(recipe_data.get("anonymize", False)),
-            "subset_text_path": str(recipe_data.get("subset_text_path", "")).strip(),
-            "modify_metrics": bool(recipe_data.get("modify_metrics", False)),
-            "output_font_info": bool(recipe_data.get("output_font_info", False)),
-            "debug": bool(recipe_data.get("debug", False)),
-        }
-
-        output_dir = self._resolve_user_path(config.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        for step_index, step in enumerate(steps, start=1):
-            # if isinstance(step, str):
-            #     action_name = step
-            #     step_kwargs: dict[str, object] = {}
-            # elif isinstance(step, dict):
-            #     action_name = str(step.get("action", "")).strip()
-            #     step_kwargs = {
-            #         key: value for key, value in step.items() if key != "action"
-            #     }
-            # else:
-            #     raise ValueError(f"steps[{step_index}] の形式が不正です: {step}")
-
-            # run_kwargs = {**shared_kwargs, **step_kwargs, "action": action_name}
-            # log(
-            #     f"[一括:フォント加工モード] 実行 ({step_index}/{len(steps)}): {action_name}"
-            # )
-            # self._capture_module_output(
-            #     log, lambda kwargs=run_kwargs: dispatch_action(**kwargs)
-            # )
-            # TODO: 一括フォント加工処理
-            continue
-
-        log(f"[一括:フォント加工モード] 完了: {recipe_path}")
-
-    @staticmethod
-    def _is_otf_path(path: Path) -> bool:
-        return path.suffix.lower() == ".otf"
+        cli = CLIArgs(
+            recipe_path=self._resolve_user_path(config.recipe_path),
+            input_path=self._resolve_user_path(config.input_dir),
+            output_dir=self._resolve_user_path(config.output_dir),
+            debug=True,
+        )
+        self._capture_module_output(log, lambda: run_batch(cli))
 
     def _load_font_for_processing(
         self,
@@ -2390,7 +2179,7 @@ class MainWindow(QMainWindow):
         with TTFont(str(font_path)) as source_font_obj:
             loaded_font_obj = reopen_font(source_font_obj)
 
-        if self._is_otf_path(font_path):
+        if is_otf_path(font_path):
             if loaded_font_obj.sfntVersion != "OTTO" or "CFF " not in loaded_font_obj:
                 raise ValueError(f"{label} がOTF形式として解釈できません: {font_path}")
             otf_to_ttf(loaded_font_obj)

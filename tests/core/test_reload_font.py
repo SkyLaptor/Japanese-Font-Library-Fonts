@@ -1,4 +1,4 @@
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 
 
 def test_reload_font_is_different_object(create_mock_font):

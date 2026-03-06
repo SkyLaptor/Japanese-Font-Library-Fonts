@@ -7,7 +7,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 
 from const import NORMALIZED_UPM
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from models.harmonize_font_metrics_result import HarmonizeFontMetricsResult
 from modules.get_average_size import get_average_size
 from modules.get_info import get_info

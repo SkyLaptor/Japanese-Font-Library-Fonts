@@ -4,7 +4,7 @@ from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
 
 from const import EXCLUDE_CHARS
-from core.font_processor import reopen_font
+from core.font_loader import reopen_font
 from utils.file_io import load_text, save_font
 
 
