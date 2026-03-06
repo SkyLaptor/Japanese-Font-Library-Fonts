@@ -251,8 +251,8 @@ def test_harmonize_font_metrics_scaling(create_mock_font):
 
     h_font = result.font_obj
     assert h_font['head'].unitsPerEm == NORMALIZED_UPM
-    # スケーリング計算: (200/100) / (1024/1000) = 1.953125倍
-    assert h_font['hmtx'].metrics['uni4E00'][0] == 293
+    # スケーリング計算: (ベースの比率 300/2000=0.15) * (ターゲットの新しいUPM 1024) = 153.6 -> 154
+    assert h_font['hmtx'].metrics['uni4E00'][0] == 154
 
 
 def test_harmonize_font_metrics_offset(create_mock_font):

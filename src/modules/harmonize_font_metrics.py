@@ -370,8 +370,8 @@ def harmonize_with_base(
         debug,
     )
 
-    final_scale_width = scale_width_pure / scale_for_upm * scale_width_manual
-    final_scale_height = scale_height_pure / scale_for_upm * scale_height_manual
+    final_scale_width = scale_width_pure * (new_upm / base_upm) * scale_width_manual
+    final_scale_height = scale_height_pure * (new_upm / base_upm) * scale_height_manual
 
     dprint(
         f"UPM倍率: x{scale_for_upm:.3f}",

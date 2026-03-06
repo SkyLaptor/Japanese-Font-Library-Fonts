@@ -40,10 +40,10 @@ subset_text_path: "subsets/subset_jp_full.txt" # 【任意】サブセット化�
 merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
   - font_path: "genjyuu-gothic/GenJyuuGothic-P-Medium.ttf"
     offset_height: -40 # 【任意】縦位置オフセット (em) デフォルト: 0
-    weight_offset: 16 # 【任意】太さ変更量 (em) デフォルト: 0
+    weight_offset: 8 # 【任意】太さ変更量 (em) デフォルト: 0
   - font_path: "source-han-sans/SourceHanSansJP-Medium.ttf"
     offset_height: -80
-    weight_offset: 8
+    #weight_offset: 0
 output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
 
 # ------------------------------------------

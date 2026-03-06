@@ -13,7 +13,7 @@ from modules.anonymize_info import anonymize_info
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.get_info import get_info
-from modules.harmonize_font_metrics import apply_font_transform
+from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
 from modules.merge_font import merge_font
 from modules.remove_empty_glyphs import remove_empty_glyphs
 from utils.file_io import load_text, save_font
@@ -272,8 +272,8 @@ def process_font(params: Mapping[str, Any]) -> None:
             print("入力フォントを変形しています...")
         base_font_obj = apply_font_transform(
             target_font_obj=base_font_obj,
-            scale_width=scale_width,
-            scale_height=scale_height,
+            scale_width=scale_width * factor,
+            scale_height=scale_height * factor,
             offset_width=offset_width,
             offset_height=offset_height,
             new_upm=NORMALIZED_UPM,
@@ -322,15 +322,19 @@ def process_font(params: Mapping[str, Any]) -> None:
                 item_offset_height = int(
                     round(float(item.get("offset_height", 0)) * factor)
                 )
-                sub_font_obj = apply_font_transform(
+                item_scale_width = float(item.get("scale_width", 100.0)) / 100.0
+                item_scale_height = float(item.get("scale_height", 100.0)) / 100.0
+
+                # ベースフォントの現在のサイズに自動調和させる
+                sub_font_obj = harmonize_font_metrics(
                     target_font_obj=sub_font_obj,
-                    scale_width=scale_width,
-                    scale_height=scale_height,
+                    base_font_obj=base_font_obj,
+                    scale_width_manual=item_scale_width,
+                    scale_height_manual=item_scale_height,
                     offset_width=item_offset_width,
                     offset_height=item_offset_height,
-                    new_upm=base_font_obj["head"].unitsPerEm,
-                    metrics_override=metrics_override,
-                )
+                    debug=debug,
+                ).font_obj
 
                 base_font_obj = merge_font(
                     base_font=base_font_obj,
