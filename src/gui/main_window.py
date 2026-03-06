@@ -122,6 +122,8 @@ class SingleFontTaskConfig:
     metric_underline_thickness: int | None
     base_font_path: str
     merge_fonts: list[str]
+    preview_text: str
+    preview_text: str
 
 
 @dataclass(slots=True)
@@ -781,6 +783,16 @@ class SingleFontProcessingTab(QWidget):
         self._last_horizontal_percent = self.horizontal_percent_spin.value()
         self._last_vertical_percent = self.vertical_percent_spin.value()
 
+        preview_text_row = QWidget()
+        preview_text_layout = QHBoxLayout(preview_text_row)
+        preview_text_layout.setContentsMargins(0, 0, 0, 0)
+        self.preview_text_edit = QLineEdit()
+        self.preview_text_edit.setText(PREVIEW_SAMPLE_TEXT)
+        self.preview_text_edit.setToolTip("プレビュー画像に表示する文字列を指定します。")
+        preview_text_layout.addWidget(QLabel("プレビュー文字列"))
+        preview_text_layout.addWidget(self.preview_text_edit)
+        root_layout.addWidget(preview_text_row)
+
         btn_preview = QPushButton("プレビュー")
         btn_preview.clicked.connect(self._emit_preview)
         root_layout.addWidget(btn_preview)
@@ -1070,6 +1082,7 @@ class SingleFontProcessingTab(QWidget):
                 self.merge_fonts_list.item(index).text()
                 for index in range(self.merge_fonts_list.count())
             ],
+            preview_text=self.preview_text_edit.text(),
         )
         return config
 
@@ -1746,7 +1759,7 @@ class MainWindow(QMainWindow):
             log_prefix="[個別:フォント加工][プレビュー][前処理]",
         )
 
-        preview_font_obj = create_subset(preview_font_obj, PREVIEW_SAMPLE_TEXT)
+        preview_font_obj = create_subset(preview_font_obj, config.preview_text)
 
         if config.glyph_weight_offset != 0:
             preview_font_obj = change_weight(
@@ -1807,7 +1820,7 @@ class MainWindow(QMainWindow):
         measurement = Image.new("RGBA", (1, 1), (0, 0, 0, 255))
         measurement_draw = ImageDraw.Draw(measurement)
         left, top, right, bottom = measurement_draw.textbbox(
-            (0, 0), PREVIEW_SAMPLE_TEXT, font=pil_font
+            (0, 0), config.preview_text, font=pil_font
         )
         text_width = max(1, right - left)
         text_height = max(1, bottom - top)
@@ -1824,7 +1837,7 @@ class MainWindow(QMainWindow):
         text_y = padding - top
         draw.text(
             (text_x, text_y),
-            PREVIEW_SAMPLE_TEXT,
+            config.preview_text,
             fill=(255, 255, 255, 255),
             font=pil_font,
         )
