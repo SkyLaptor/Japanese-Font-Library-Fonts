@@ -18,7 +18,7 @@ from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.get_info import get_info
 from modules.harmonize_font_metrics import apply_font_transform
-from modules.merge_font import merge_font_objects_v2
+from modules.merge_font import merge_font
 from modules.remove_empty_glyphs import remove_empty_glyphs
 from utils.dprint import dprint
 from utils.file_io import load_text, save_font
@@ -463,7 +463,7 @@ def action_merge_font(**kwargs: Any) -> None:
             scale_height=scale_height,
             offset_width=offset_width,
             offset_height=offset_height,
-            new_upm=None,  # TODO: これいる？
+            new_upm=NORMALIZED_UPM,  # UPMを標準値に正規化
             metrics_override=metrics_override,
         )
 
@@ -505,7 +505,12 @@ def action_merge_font(**kwargs: Any) -> None:
                     sub_font_obj = create_subset(
                         font_obj=sub_font_obj, subset_text=subset_text, debug=debug
                     )
-                # マージフォントの太さ変更
+
+                # a) マージフォントの空白削除（ドナー側の空グリフがベースに混入するのを防ぐ）
+                if bool(kwargs.get("remove_blank_glyphs", True)):
+                    sub_font_obj = remove_empty_glyphs(sub_font_obj, debug=debug)
+
+                # b) マージフォントの太さ変更
                 item_weight_offset = int(round(float(item.get("weight_offset", 0))))
                 if item_weight_offset != 0:
                     if debug:
@@ -516,11 +521,7 @@ def action_merge_font(**kwargs: Any) -> None:
                         sub_font_obj, offset_weight=item_weight_offset, debug=debug
                     )
 
-                # マージフォントの空白削除（ドナー側の空グリフがベースに混入するのを防ぐ）
-                if bool(kwargs.get("remove_blank_glyphs", True)):
-                    sub_font_obj = remove_empty_glyphs(sub_font_obj, debug=debug)
-
-                # マージフォントの変形（正規化係数を反映）
+                # c) マージフォントの変形（正規化係数反映 ＋ ベースフォントのUPMに強制同期）
                 item_offset_width = int(
                     round(float(item.get("offset_width", 0)) * factor)
                 )
@@ -535,12 +536,12 @@ def action_merge_font(**kwargs: Any) -> None:
                     scale_height=scale_height,  # マージフォントは入力フォントと同じスケールを適用
                     offset_width=item_offset_width,
                     offset_height=item_offset_height,
-                    new_upm=None,  # TODO: これいる？
+                    new_upm=base_font_obj["head"].unitsPerEm,  # ベースに同期
                     metrics_override=metrics_override,
                 )
 
                 # マージ実行
-                base_font_obj = merge_font_objects_v2(
+                base_font_obj = merge_font(
                     base_font=base_font_obj,
                     interp_font=sub_font_obj,
                 )
@@ -554,17 +555,14 @@ def action_merge_font(**kwargs: Any) -> None:
 
                 item_count += 1
 
-        # 4) 空白削除・匿名化
-        if bool(kwargs.get("remove_blank_glyphs", True)):
-            base_font_obj = remove_empty_glyphs(base_font_obj, debug=debug)
-
+        # 5) 匿名化 (最後のみ。空白削除はループ前に行っているため不要)
         if bool(kwargs.get("anonymize", False)):
             font_name = kwargs.get("font_name") or "Anonymous"
             base_font_obj = anonymize_info(
                 base_font_obj, font_name=str(font_name), debug=debug
             )
 
-        # 5) 保存
+        # 6) 保存
         saved_output = save_font(
             font_obj=base_font_obj,
             input_path=str(base_font_path),
