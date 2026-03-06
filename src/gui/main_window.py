@@ -852,57 +852,77 @@ class SingleFontProcessingTab(QWidget):
             self._update_metrics_display_from_base_font()
 
     def _update_metrics_display_from_base_font(self) -> None:
-        if not self.mode_base_radio.isChecked():
+        base_font_path_str = self.base_font_edit.text().strip()
+        if not base_font_path_str:
             return
 
-        base_font_path = self.base_font_edit.text().strip()
-        if not base_font_path:
-            return
-
-        path_obj = Path(base_font_path)
+        path_obj = Path(base_font_path_str)
         if not path_obj.exists():
             return
 
         try:
-            base_font_obj = self._load_font_for_processing(path_obj, "基準フォント")
-            with base_font_obj:
-                base_upm = int(base_font_obj['head'].unitsPerEm)
-                scale_for_1024 = 1.0
-                if base_upm > 0:
-                    scale_for_1024 = float(NORMALIZED_UPM) / float(base_upm)
+            # TTFontを直接コンテキストマネージャで開く
+            with TTFont(str(path_obj)) as base_font_obj:
+                if is_otf_path(path_obj):
+                    otf_to_ttf(base_font_obj)
 
-                def _to_1024(value: int) -> int:
-                    return int(round(int(value) * scale_for_1024))
+                base_upm = int(base_font_obj["head"].unitsPerEm)
+                if base_upm <= 0:
+                    return
 
-                hhea_table = base_font_obj.get('hhea')
-                os2_table = base_font_obj.get('OS/2')
-                post_table = base_font_obj.get('post')
+                # NORMALIZED_UPM (1024) へのスケーリング係数
+                scale_for_1024 = float(NORMALIZED_UPM) / float(base_upm)
 
-                if os2_table is not None:
-                    self.metric_ascent_spin.setValue(
-                        _to_1024(int(os2_table.sTypoAscender))
-                    )
-                    self.metric_descent_spin.setValue(
-                        _to_1024(int(os2_table.sTypoDescender))
-                    )
-                    self.metric_line_gap_spin.setValue(
-                        _to_1024(int(os2_table.sTypoLineGap))
-                    )
-                elif hhea_table is not None:
-                    self.metric_ascent_spin.setValue(_to_1024(int(hhea_table.ascent)))
-                    self.metric_descent_spin.setValue(_to_1024(int(hhea_table.descent)))
-                    self.metric_line_gap_spin.setValue(
-                        _to_1024(int(hhea_table.lineGap))
-                    )
+                def _to_1024(value: int | float) -> int:
+                    return int(round(float(value) * scale_for_1024))
 
-                if post_table is not None:
+                hhea = base_font_obj.get("hhea")
+                os2 = base_font_obj.get("OS/2")
+                post = base_font_obj.get("post")
+
+                # FontForge の Ascent/Descent は通常 hhea テーブルの値に対応する
+                asc, desc, lg = 0, 0, 0
+                if hhea is not None:
+                    asc = int(hhea.ascent)
+                    desc = int(hhea.descent)
+                    lg = int(hhea.lineGap)
+                elif os2 is not None:
+                    # hhea が無い場合のフォールバック
+                    asc = int(os2.sTypoAscender)
+                    desc = int(os2.sTypoDescender)
+                    lg = int(os2.sTypoLineGap)
+
+                # 1024基準に変換
+                final_ascent = _to_1024(asc)
+                final_descent = _to_1024(desc)
+                final_line_gap = _to_1024(lg)
+
+                # 合計が 1024 になるように丸め誤差を調整（Descentが負であることを考慮）
+                # FontForgeの定義では ascent + abs(descent) = UPM
+                if (final_ascent + abs(final_descent)) != NORMALIZED_UPM:
+                    # 誤差を Ascent 側で吸収
+                    final_ascent = NORMALIZED_UPM - abs(final_descent)
+
+                self.metric_ascent_spin.setValue(final_ascent)
+                self.metric_descent_spin.setValue(final_descent)
+                self.metric_line_gap_spin.setValue(final_line_gap)
+
+                if post is not None:
                     self.metric_underline_position_spin.setValue(
-                        _to_1024(int(post_table.underlinePosition))
+                        _to_1024(int(post.underlinePosition))
                     )
                     self.metric_underline_thickness_spin.setValue(
-                        _to_1024(int(post_table.underlineThickness))
+                        _to_1024(int(post.underlineThickness))
                     )
-        except Exception:
+
+                # ログ出力（デバッグ用）
+                print(
+                    f"基準フォントからメトリクスを読み取りました: {path_obj.name} "
+                    f"(Asc:{final_ascent}, Desc:{final_descent}, UPM:{final_ascent + abs(final_descent)})"
+                )
+
+        except Exception as e:
+            print(f"基準フォントの読み取りに失敗しました: {e}")
             return
 
     def _add_merge_fonts(self) -> None:
@@ -1025,6 +1045,7 @@ class SingleFontProcessingTab(QWidget):
                     f"上端/下端 から算出される UPM が {NORMALIZED_UPM} ではありません。\n"
                     f"計算値: {derived_upm} (上端={metric_ascent}, 下端={metric_descent})",
                 )
+                return None
 
         config = SingleFontTaskConfig(
             input_ttf=self.input_ttf_edit.text().strip(),
@@ -1923,6 +1944,12 @@ class MainWindow(QMainWindow):
             "remove_blank_glyphs": config.remove_empty_glyphs,
             "anonymize": config.anonymize,
             "font_name": config.anonymize_font_name,
+            "mode": config.mode,
+            "base_font_path": (
+                self._resolve_user_path(config.base_font_path)
+                if config.base_font_path
+                else None
+            ),
             "scale_width": config.horizontal_percent,
             "scale_height": config.vertical_percent,
             "offset_width": config.horizontal_offset,
