@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-import yaml
 from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
 from PIL import Image, ImageDraw, ImageFont
@@ -19,7 +18,6 @@ from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeyEvent, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView,
-    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -34,7 +32,6 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QRadioButton,
     QSizePolicy,
     QSpinBox,
     QSplitter,
@@ -49,8 +46,6 @@ from PyQt6.QtWidgets import (
 
 from const import (
     BLANK_GLYPHS,
-    ENCODE,
-    EXCLUDE_CHARS,
     MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
     PREVIEW_BASELINE_COLOR,
@@ -84,21 +79,26 @@ from core.ffdec_wrapper import (
 )
 from core.font_loader import reopen_font
 from core.font_processor import is_otf_path, process_font
-from modules.anonymize_info import anonymize_info
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
-from modules.remove_empty_glyphs import remove_empty_glyphs
 from modules.skyrim_swf_patcher import (
     patch_swf_internal_fontname,
     patch_swf_internal_fontnames,
     replace_glyph_in_swf,
     replace_glyphs_in_swf,
 )
-from utils.file_io import load_text, save_font
 
 PREVIEW_SAMPLE_TEXT = "0Aa永あ"
 ACCEPTABLE_INPUT_FONT_SUFFIXES = {".ttf", ".otf"}
+
+
+@dataclass(slots=True)
+class MergeFontItem:
+    font_path: str
+    offset_width: float
+    offset_height: float
+    weight_offset: int
 
 
 @dataclass(slots=True)
@@ -121,8 +121,7 @@ class SingleFontTaskConfig:
     metric_underline_position: int | None
     metric_underline_thickness: int | None
     base_font_path: str
-    merge_fonts: list[str]
-    preview_text: str
+    merge_fonts: list[MergeFontItem]
     preview_text: str
 
 
@@ -398,6 +397,191 @@ class _LogStream(io.TextIOBase):
             self._buffer = ""
 
 
+class MergeFontsTableWidget(QTableWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(0, 4, parent)
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        self.horizontalHeader().setStretchLastSection(False)
+
+    @staticmethod
+    def _normalized_path_key(path: str) -> str:
+        normalized = str(Path(path).resolve(strict=False))
+        return normalized.casefold()
+
+    def add_paths(self, paths: list[str]) -> None:
+        existing_keys = {
+            self._normalized_path_key(self.item(index, 0).text().strip())
+            for index in range(self.rowCount())
+            if self.item(index, 0) and self.item(index, 0).text().strip()
+        }
+
+        for path in paths:
+            if Path(path).suffix.lower() not in ACCEPTABLE_INPUT_FONT_SUFFIXES:
+                continue
+
+            key = self._normalized_path_key(path)
+            if key in existing_keys:
+                continue
+
+            row = self.rowCount()
+            self.insertRow(row)
+            self.setItem(row, 0, QTableWidgetItem(path))
+
+            w_spin = QDoubleSpinBox()
+            w_spin.setRange(-5000.0, 5000.0)
+            w_spin.setValue(0.0)
+            self.setCellWidget(row, 1, w_spin)
+
+            h_spin = QDoubleSpinBox()
+            h_spin.setRange(-5000.0, 5000.0)
+            h_spin.setValue(0.0)
+            self.setCellWidget(row, 2, h_spin)
+
+            weight_spin = QSpinBox()
+            weight_spin.setRange(-5000, 5000)
+            weight_spin.setValue(0)
+            self.setCellWidget(row, 3, weight_spin)
+
+            existing_keys.add(key)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        if event.mimeData().hasUrls():
+            paths = [
+                url.toLocalFile()
+                for url in event.mimeData().urls()
+                if url.isLocalFile()
+            ]
+            self.add_paths(paths)
+            event.acceptProposedAction()
+            return
+
+        if event.source() is self:
+            selected_rows = {
+                index.row() for index in self.selectionModel().selectedRows()
+            }
+            if not selected_rows:
+                event.ignore()
+                return
+
+            drop_position = event.position().toPoint()
+            target_row = self.rowAt(drop_position.y())
+            self._move_selected_rows(target_row)
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+            return
+
+        super().dropEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            selected_rows = sorted(
+                {index.row() for index in self.selectionModel().selectedRows()},
+                reverse=True,
+            )
+            for row in selected_rows:
+                self.removeRow(row)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def _move_selected_rows(self, target_row: int) -> None:
+        selected_rows = sorted(
+            {index.row() for index in self.selectionModel().selectedRows()}
+        )
+        if not selected_rows:
+            return
+
+        row_payloads: list[tuple[list[QTableWidgetItem], list[object]]] = []
+        for row in selected_rows:
+            items_payload: list[QTableWidgetItem] = []
+            widgets_payload: list[object] = []
+            # column 0 is QTableWidgetItem, others are widgets
+            item0 = self.item(row, 0)
+            items_payload.append(item0.clone() if item0 else QTableWidgetItem(""))
+            widgets_payload.append(self.cellWidget(row, 1))
+            widgets_payload.append(self.cellWidget(row, 2))
+            widgets_payload.append(self.cellWidget(row, 3))
+            row_payloads.append((items_payload, widgets_payload))
+
+        if target_row < 0:
+            target_row = self.rowCount()
+
+        for row in reversed(selected_rows):
+            self.removeRow(row)
+            if row < target_row:
+                target_row -= 1
+
+        for offset, (items_payload, widgets_payload) in enumerate(row_payloads):
+            row = target_row + offset
+            self.insertRow(row)
+            # restore item
+            self.setItem(row, 0, items_payload[0])
+
+            # restore widgets (need to clone values into new widgets)
+            def _clone_spin(widget):
+                if isinstance(widget, QDoubleSpinBox):
+                    s = QDoubleSpinBox()
+                    s.setRange(widget.minimum(), widget.maximum())
+                    s.setValue(widget.value())
+                    return s
+                if isinstance(widget, QSpinBox):
+                    s = QSpinBox()
+                    s.setRange(widget.minimum(), widget.maximum())
+                    s.setValue(widget.value())
+                    return s
+                return None
+
+            w_spin = _clone_spin(widgets_payload[0])
+            h_spin = _clone_spin(widgets_payload[1])
+            weight_spin = _clone_spin(widgets_payload[2])
+            if w_spin:
+                self.setCellWidget(row, 1, w_spin)
+            if h_spin:
+                self.setCellWidget(row, 2, h_spin)
+            if weight_spin:
+                self.setCellWidget(row, 3, weight_spin)
+
+        self.clearSelection()
+        for offset in range(len(row_payloads)):
+            self.selectRow(target_row + offset)
+
+    def _apply_column_ratio(self) -> None:
+        if self.columnCount() < 4:
+            return
+        width = self.viewport().width()
+        if width <= 0:
+            return
+        path_width = int(width * 0.6)
+        remain = max(1, width - path_width)
+        num_cols = 3
+        each = max(1, remain // num_cols)
+        self.setColumnWidth(0, path_width)
+        self.setColumnWidth(1, each)
+        self.setColumnWidth(2, each)
+        self.setColumnWidth(3, remain - each * 2)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_column_ratio()
+
+
 class SingleFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
     preview_requested = pyqtSignal(object)
@@ -456,39 +640,21 @@ class SingleFontProcessingTab(QWidget):
         io_layout.addWidget(output_row)
         root_layout.addWidget(io_group)
 
-        mode_group = QGroupBox("モード切り替え")
-        mode_layout = QVBoxLayout(mode_group)
-        self.mode_manual_radio = QRadioButton("任意変形モード（数値指定）")
-        self.mode_base_radio = QRadioButton("ベース基準モード（比較計算）")
-        self.mode_manual_radio.setToolTip(
-            "入力した拡大率・オフセット・太さ変更量をそのまま適用します。"
-        )
-        self.mode_base_radio.setToolTip(
-            "基準フォントに近づくように、入力値を基準に比較計算して適用します。"
-        )
-        self.mode_manual_radio.setChecked(True)
-        self.mode_button_group = QButtonGroup(self)
-        self.mode_button_group.addButton(self.mode_manual_radio)
-        self.mode_button_group.addButton(self.mode_base_radio)
-        self.mode_button_group.buttonToggled.connect(self._on_mode_toggled)
+        # モード切替を撤廃。基準フォント入力をパラメータグループ内へ移動。
 
-        mode_select_row = QWidget()
-        mode_select_row_layout = QHBoxLayout(mode_select_row)
-        mode_select_row_layout.setContentsMargins(0, 0, 0, 0)
-        mode_select_row_layout.addWidget(self.mode_manual_radio)
-        mode_select_row_layout.addWidget(self.mode_base_radio)
-        mode_select_row_layout.addStretch(1)
+        params_group = QGroupBox("パラメータ")
+        params_layout = QVBoxLayout(params_group)
 
         self.base_font_edit = QLineEdit()
-        self.base_font_edit.setEnabled(False)
+        self.base_font_edit.setEnabled(True)
         self.base_font_edit.setToolTip(
-            "ベース基準モードで比較対象にするフォントを指定します。"
+            "ここに基準となるフォントを入力した場合、大きさ及びメトリクス値を読み取り、入力されたフォントに適用します。その際、パラメーターの横幅％縦幅％の値は、まずは基準フォントに合わせた後に、指定の値で変形が行われます"
         )
         self.base_font_edit.editingFinished.connect(
             self._update_metrics_display_from_base_font
         )
         btn_browse_base_font = QPushButton("基準フォントを選択")
-        btn_browse_base_font.setEnabled(False)
+        btn_browse_base_font.setEnabled(True)
         btn_browse_base_font.clicked.connect(self._select_base_font)
         self.base_font_button = btn_browse_base_font
 
@@ -503,13 +669,6 @@ class SingleFontProcessingTab(QWidget):
         base_font_wrapper_row_layout.setContentsMargins(0, 0, 0, 0)
         base_font_wrapper_row_layout.addWidget(QLabel("基準フォント"))
         base_font_wrapper_row_layout.addWidget(base_font_row)
-
-        mode_layout.addWidget(mode_select_row)
-        mode_layout.addWidget(base_font_wrapper_row)
-        root_layout.addWidget(mode_group)
-
-        params_group = QGroupBox("パラメータ")
-        params_layout = QVBoxLayout(params_group)
 
         self.horizontal_percent_spin = QDoubleSpinBox()
         self.horizontal_percent_spin.setRange(1.0, 400.0)
@@ -770,6 +929,7 @@ class SingleFontProcessingTab(QWidget):
         subset_wrapper_row_layout.addWidget(QLabel("サブセットテキスト"))
         subset_wrapper_row_layout.addWidget(subset_text_row)
 
+        params_layout.addWidget(base_font_wrapper_row)
         params_layout.addWidget(link_mode_row)
         params_layout.addWidget(scale_percent_row)
         params_layout.addWidget(offset_row)
@@ -788,7 +948,9 @@ class SingleFontProcessingTab(QWidget):
         preview_text_layout.setContentsMargins(0, 0, 0, 0)
         self.preview_text_edit = QLineEdit()
         self.preview_text_edit.setText(PREVIEW_SAMPLE_TEXT)
-        self.preview_text_edit.setToolTip("プレビュー画像に表示する文字列を指定します。")
+        self.preview_text_edit.setToolTip(
+            "プレビュー画像に表示する文字列を指定します。"
+        )
         preview_text_layout.addWidget(QLabel("プレビュー文字列"))
         preview_text_layout.addWidget(self.preview_text_edit)
         root_layout.addWidget(preview_text_row)
@@ -799,15 +961,20 @@ class SingleFontProcessingTab(QWidget):
 
         merge_group = QGroupBox("マージ機能（補完フォント）")
         merge_layout = QVBoxLayout(merge_group)
-        self.merge_fonts_list = MergeFontsListWidget()
-        self.merge_fonts_list.setSelectionMode(
+        self.merge_table = MergeFontsTableWidget()
+        self.merge_table.setHorizontalHeaderLabels(
+            ["フォントパス", "横オフセット", "縦オフセット", "太さ"]
+        )
+        self.merge_table.setToolTip(
+            "補完フォント一覧です。ドラッグ&ドロップで追加、行の並べ替え、削除ができます。"
+        )
+        self.merge_table._apply_column_ratio()
+        self.merge_table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.merge_table.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection
         )
-        self.merge_fonts_list.setToolTip(
-            "補完フォント一覧です。ドラッグ&ドロップで追加、並び順変更ができます。"
-        )
-        merge_row_height = self.fontMetrics().height() + 8
-        self.merge_fonts_list.setFixedHeight(merge_row_height * 3 + 4)
         merge_buttons = QHBoxLayout()
         btn_add_merge = QPushButton("追加")
         btn_remove_merge = QPushButton("削除")
@@ -815,7 +982,7 @@ class SingleFontProcessingTab(QWidget):
         btn_remove_merge.clicked.connect(self._remove_merge_fonts)
         merge_buttons.addWidget(btn_add_merge)
         merge_buttons.addWidget(btn_remove_merge)
-        merge_layout.addWidget(self.merge_fonts_list)
+        merge_layout.addWidget(self.merge_table)
         merge_layout.addLayout(merge_buttons)
         root_layout.addWidget(merge_group)
 
@@ -829,14 +996,6 @@ class SingleFontProcessingTab(QWidget):
         action_layout.addWidget(self.execute_button)
         root_layout.addWidget(action_row)
         root_layout.addStretch(1)
-
-    def _on_mode_toggled(self, button: QRadioButton, checked: bool) -> None:
-        if button is not self.mode_base_radio:
-            return
-        self.base_font_edit.setEnabled(checked)
-        self.base_font_button.setEnabled(checked)
-        if checked:
-            self._update_metrics_display_from_base_font()
 
     def _select_input_ttf(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -944,7 +1103,7 @@ class SingleFontProcessingTab(QWidget):
             "",
             "Font (*.ttf *.otf)",
         )
-        self.merge_fonts_list.add_paths(paths)
+        self.merge_table.add_paths(paths)
 
     def _select_subset_text(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -957,8 +1116,12 @@ class SingleFontProcessingTab(QWidget):
             self.subset_text_edit.setText(path)
 
     def _remove_merge_fonts(self) -> None:
-        for item in self.merge_fonts_list.selectedItems():
-            self.merge_fonts_list.takeItem(self.merge_fonts_list.row(item))
+        selected_rows = sorted(
+            {index.row() for index in self.merge_table.selectionModel().selectedRows()},
+            reverse=True,
+        )
+        for row in selected_rows:
+            self.merge_table.removeRow(row)
 
     def _on_link_scale_toggled(self, checked: bool) -> None:
         self.link_scale_check.setText("🔗" if checked else "🔓")
@@ -1042,7 +1205,8 @@ class SingleFontProcessingTab(QWidget):
                 )
                 return
 
-        is_manual_mode = self.mode_manual_radio.isChecked()
+        base_font_specified = bool(self.base_font_edit.text().strip())
+        is_manual_mode = not base_font_specified
         if is_manual_mode and self.manual_metrics_check.isChecked():
             metric_ascent = self.metric_ascent_spin.value()
             metric_descent = self.metric_descent_spin.value()
@@ -1059,6 +1223,30 @@ class SingleFontProcessingTab(QWidget):
                 )
                 return None
 
+        # マージフォントのテーブルから収集
+        merge_items: list[MergeFontItem] = []
+        for row in range(getattr(self, 'merge_table').rowCount()):
+            path_item = self.merge_table.item(row, 0)
+            font_path = path_item.text().strip() if path_item else ""
+            if not font_path:
+                continue
+            w_spin = self.merge_table.cellWidget(row, 1)
+            h_spin = self.merge_table.cellWidget(row, 2)
+            weight_spin = self.merge_table.cellWidget(row, 3)
+            w_off = float(w_spin.value()) if isinstance(w_spin, QDoubleSpinBox) else 0.0
+            h_off = float(h_spin.value()) if isinstance(h_spin, QDoubleSpinBox) else 0.0
+            wt_off = (
+                int(weight_spin.value()) if isinstance(weight_spin, QSpinBox) else 0
+            )
+            merge_items.append(
+                MergeFontItem(
+                    font_path=font_path,
+                    offset_width=w_off,
+                    offset_height=h_off,
+                    weight_offset=wt_off,
+                )
+            )
+
         config = SingleFontTaskConfig(
             input_ttf=self.input_ttf_edit.text().strip(),
             output_ttf=self.output_ttf_edit.text().strip(),
@@ -1066,7 +1254,7 @@ class SingleFontProcessingTab(QWidget):
             remove_empty_glyphs=self.remove_empty_glyphs_check.isChecked(),
             anonymize=self.anonymize_check.isChecked(),
             anonymize_font_name=anonymize_font_name,
-            mode="base" if self.mode_base_radio.isChecked() else "manual",
+            mode="base" if base_font_specified else "manual",
             horizontal_percent=self.horizontal_percent_spin.value(),
             vertical_percent=self.vertical_percent_spin.value(),
             horizontal_offset=self.horizontal_offset_spin.value(),
@@ -1078,10 +1266,7 @@ class SingleFontProcessingTab(QWidget):
             metric_underline_position=metric_underline_position,
             metric_underline_thickness=metric_underline_thickness,
             base_font_path=self.base_font_edit.text().strip(),
-            merge_fonts=[
-                self.merge_fonts_list.item(index).text()
-                for index in range(self.merge_fonts_list.count())
-            ],
+            merge_fonts=merge_items,
             preview_text=self.preview_text_edit.text(),
         )
         return config
@@ -1975,8 +2160,13 @@ class MainWindow(QMainWindow):
             "u_pos": config.metric_underline_position,
             "u_thick": config.metric_underline_thickness,
             "merge_fonts": [
-                {"font_path": self._resolve_user_path(path)}
-                for path in config.merge_fonts
+                {
+                    "font_path": self._resolve_user_path(item.font_path),
+                    "offset_width": item.offset_width,
+                    "offset_height": item.offset_height,
+                    "weight_offset": item.weight_offset,
+                }
+                for item in config.merge_fonts
             ],
             "output_font_info": True,
             "debug": True,
