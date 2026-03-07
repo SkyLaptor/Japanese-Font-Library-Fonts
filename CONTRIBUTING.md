@@ -273,6 +273,18 @@ FFdecを使用して、該当部品のyminを増やして文字の位置を変�
 MCMを実現しているUIは SkyUI LE/SE共に`Interface/skyui/configpanel.swf`です。FFDecを使用してフォントマップを指定している箇所を検索して書き換えます。
 
 
+## フォント紹介画像の生成
+https://stmn.itch.io/font2bitmap
+
+
+* Shadow: ON
+* Characters(ダミーテキスト)
+```
+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz山路を登りながら、こう考えた。智に働けば角が立つ。情に棹させば流される。意地を通せば窮屈だ。とかくに人の世は住みにくい。
+```
+
+他はデフォルトで、フォント名(TTF名).png、SWF名_内部名.pngとして作成すること。
+
 ## 開発の参考に
 * fontTools Documentation: https://fonttools.readthedocs.io/en/latest/
 * FontForge Scripting: https://fontforge.org/docs/scripting/scripting.html

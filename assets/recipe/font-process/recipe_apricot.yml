@@ -20,7 +20,7 @@ output_dir: "assets/fonts" # フォント出力先といった出力系パスを
 # グローバル設定
 #   処理ステップ側で同名のパラメーターを指定している場合、そちらが優先されます。
 # ------------------------------------------
-input_font_path: "apricot/apricot.ttf" # 【必須】入力フォントのパス
+input_font_path: "apricot/source.ttf" # 【必須】入力フォントのパス
 #output_font_path: "" # 【必須】出力フォントのパス 出力形式はTTF固定です。ステップ側で指定することをお勧めします。
 #base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf" # 【任意】基準フォントのパス デフォルト:未指定(基準比較を行いません。)
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
