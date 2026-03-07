@@ -9,7 +9,7 @@ import tempfile
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
@@ -96,8 +96,8 @@ ACCEPTABLE_INPUT_FONT_SUFFIXES = {".ttf", ".otf"}
 @dataclass(slots=True)
 class MergeFontItem:
     font_path: str
-    offset_width: float
-    offset_height: float
+    offset_width: int
+    offset_height: int
     weight_offset: int
 
 
@@ -112,8 +112,8 @@ class SingleFontTaskConfig:
     mode: str
     horizontal_percent: float
     vertical_percent: float
-    horizontal_offset: float
-    vertical_offset: float
+    horizontal_offset: int
+    vertical_offset: int
     glyph_weight_offset: int
     metric_ascent: int | None
     metric_descent: int | None
@@ -432,14 +432,14 @@ class MergeFontsTableWidget(QTableWidget):
             self.insertRow(row)
             self.setItem(row, 0, QTableWidgetItem(path))
 
-            w_spin = QDoubleSpinBox()
-            w_spin.setRange(-5000.0, 5000.0)
-            w_spin.setValue(0.0)
+            w_spin = QSpinBox()
+            w_spin.setRange(-5000, 5000)
+            w_spin.setValue(0)
             self.setCellWidget(row, 1, w_spin)
 
-            h_spin = QDoubleSpinBox()
-            h_spin.setRange(-5000.0, 5000.0)
-            h_spin.setValue(0.0)
+            h_spin = QSpinBox()
+            h_spin.setRange(-5000, 5000)
+            h_spin.setValue(0)
             self.setCellWidget(row, 2, h_spin)
 
             weight_spin = QSpinBox()
@@ -700,16 +700,16 @@ class SingleFontProcessingTab(QWidget):
         self.horizontal_percent_spin.valueChanged.connect(self._sync_vertical_percent)
         self.vertical_percent_spin.valueChanged.connect(self._sync_horizontal_percent)
 
-        self.horizontal_offset_spin = QDoubleSpinBox()
-        self.horizontal_offset_spin.setRange(-5000.0, 5000.0)
-        self.horizontal_offset_spin.setValue(0.0)
+        self.horizontal_offset_spin = QSpinBox()
+        self.horizontal_offset_spin.setRange(-5000, 5000)
+        self.horizontal_offset_spin.setValue(0)
         self.horizontal_offset_spin.setToolTip(
             "横方向の位置補正です。正の値で右、負の値で左に移動します。"
         )
 
-        self.vertical_offset_spin = QDoubleSpinBox()
-        self.vertical_offset_spin.setRange(-5000.0, 5000.0)
-        self.vertical_offset_spin.setValue(0.0)
+        self.vertical_offset_spin = QSpinBox()
+        self.vertical_offset_spin.setRange(-5000, 5000)
+        self.vertical_offset_spin.setValue(0)
         self.vertical_offset_spin.setToolTip(
             "縦方向の位置補正です。正の値で上、負の値で下に移動します。"
         )
@@ -1149,8 +1149,8 @@ class SingleFontProcessingTab(QWidget):
     def _sync_horizontal_percent(self, value: float) -> None:
         if self._syncing_scale_values:
             return
-        delta = value - self._last_vertical_percent
-        self._last_vertical_percent = value
+        delta = value - self._last_horizontal_percent
+        self._last_horizontal_percent = value
         if not self.link_scale_check.isChecked():
             self._last_horizontal_percent = self.horizontal_percent_spin.value()
             return
@@ -1233,8 +1233,8 @@ class SingleFontProcessingTab(QWidget):
             w_spin = self.merge_table.cellWidget(row, 1)
             h_spin = self.merge_table.cellWidget(row, 2)
             weight_spin = self.merge_table.cellWidget(row, 3)
-            w_off = float(w_spin.value()) if isinstance(w_spin, QDoubleSpinBox) else 0.0
-            h_off = float(h_spin.value()) if isinstance(h_spin, QDoubleSpinBox) else 0.0
+            w_off = int(w_spin.value()) if isinstance(w_spin, QSpinBox) else 0
+            h_off = int(h_spin.value()) if isinstance(h_spin, QSpinBox) else 0
             wt_off = (
                 int(weight_spin.value()) if isinstance(weight_spin, QSpinBox) else 0
             )
@@ -1955,8 +1955,8 @@ class MainWindow(QMainWindow):
 
         scale_width = config.horizontal_percent / 100.0
         scale_height = config.vertical_percent / 100.0
-        offset_width = int(round(config.horizontal_offset))
-        offset_height = int(round(config.vertical_offset))
+        offset_width = config.horizontal_offset
+        offset_height = config.vertical_offset
 
         if config.mode == "base":
             self._validate_path_required(config.base_font_path, "基準フォント")
