@@ -48,12 +48,15 @@ def process_swf(params: Mapping[str, Any]) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_root = Path(temp_dir)
         
+        total_items = len(items)
         for index, item in enumerate(items, start=1):
             f_path_str = item.get("font_path")
             if not f_path_str:
                 continue
             font_path = Path(f_path_str).resolve()
             internal_name = item.get("internal_name") or font_path.stem
+            
+            print(f"[{index}/{total_items}] {font_path.name}")
             
             if not font_path.exists():
                 raise FileNotFoundError(f"Font file not found: {font_path}")

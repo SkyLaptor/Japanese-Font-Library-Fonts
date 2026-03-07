@@ -68,12 +68,15 @@ def patch_swf_internal_fontnames(
 ) -> bool:
     xml_path = swf_path.with_suffix(".xml")
     try:
+        print("SWF内部名を更新中: XMLエクスポート...")
         run_ffdec(["-swf2xml", str(swf_path), str(xml_path)])
 
+        print("SWF内部名を更新中: XMLパッチ適用...")
         xml_content = xml_path.read_text(encoding=ENCODE)
         patched = _patch_font_names_in_xml(xml_content, font_names_by_id)
         xml_path.write_text(patched, encoding=ENCODE)
 
+        print("SWF内部名を更新中: XMLインポート...")
         run_ffdec(["-xml2swf", str(xml_path), str(swf_path)])
         return True
     except Exception as e:
@@ -119,10 +122,12 @@ def replace_glyphs_in_swf(
         run_ffdec(["-xml2swf", str(expanded_xml_path), str(expanded_swf_path)])
 
         current_input = expanded_swf_path
+        total = len(ttf_paths)
         for index, ttf_path in enumerate(ttf_paths, start=1):
+            print(f"[{index}/{total}] 埋め込み中: {ttf_path.name}")
             next_output = (
                 output_path
-                if index == len(ttf_paths)
+                if index == total
                 else temp_root / f"step_{index}.swf"
             )
             ffdec_replace(

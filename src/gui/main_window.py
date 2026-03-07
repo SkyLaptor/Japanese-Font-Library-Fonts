@@ -1186,6 +1186,17 @@ class SingleFontProcessingTab(QWidget):
         config = self._build_single_font_config(require_output=True)
         if config is None:
             return
+
+        reply = QMessageBox.question(
+            self,
+            "確認",
+            "個別処理を開始しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.No:
+            return
+
         self.execute_requested.emit(config)
 
     def _emit_preview(self) -> None:
@@ -1404,6 +1415,16 @@ class SingleSwfEmbedTab(QWidget):
             QMessageBox.warning(self, "入力不足", "埋め込み対象フォントを1つ以上追加してください。")
             return
 
+        reply = QMessageBox.question(
+            self,
+            "確認",
+            "SWF埋め込み処理を開始しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.No:
+            return
+
         config = SingleEmbedTaskConfig(
             output_swf=output_swf,
             items=items,
@@ -1529,6 +1550,16 @@ class BatchFontProcessingTab(QWidget):
         recipe_path = self.recipe_edit.text().strip()
         if not recipe_path:
             QMessageBox.warning(self, "入力不足", "レシピファイルを選択してください。")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "確認",
+            "一括処理を開始しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.No:
             return
 
         config = BatchFontProcessingTaskConfig(
