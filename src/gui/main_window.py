@@ -598,7 +598,7 @@ class SingleFontProcessingTab(QWidget):
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout(self)
 
-        io_group = QGroupBox("入力 / 出力")
+        io_group = QGroupBox("入出力")
         io_layout = QVBoxLayout(io_group)
         self.input_ttf_edit = QLineEdit()
         self.output_ttf_edit = QLineEdit()
@@ -621,6 +621,10 @@ class SingleFontProcessingTab(QWidget):
         )
         btn_browse_input.setFixedWidth(io_button_width)
         btn_browse_output.setFixedWidth(io_button_width)
+
+        self.input_ttf_edit.editingFinished.connect(
+            self._update_metrics_display_from_input_font
+        )
 
         input_row = QWidget()
         input_row_layout = QHBoxLayout(input_row)
@@ -648,7 +652,8 @@ class SingleFontProcessingTab(QWidget):
         self.base_font_edit = QLineEdit()
         self.base_font_edit.setEnabled(True)
         self.base_font_edit.setToolTip(
-            "ここに基準となるフォントを入力した場合、大きさ及びメトリクス値を読み取り、入力されたフォントに適用します。その際、パラメーターの横幅％縦幅％の値は、まずは基準フォントに合わせた後に、指定の値で変形が行われます"
+            "ここに基準とするフォントを入力した場合、文字のサイズ及びメトリクス値を読み取り、入力されたフォントにそれらの情報を適用します。\n"
+            "その際、パラメーター設定にある横幅％/縦幅％の値は、まずは基準フォントの合わせた後に、指定の値で変形が行われる点に留意してください。"
         )
         self.base_font_edit.editingFinished.connect(
             self._update_metrics_display_from_base_font
@@ -704,14 +709,16 @@ class SingleFontProcessingTab(QWidget):
         self.horizontal_offset_spin.setRange(-5000, 5000)
         self.horizontal_offset_spin.setValue(0)
         self.horizontal_offset_spin.setToolTip(
-            "横方向の位置補正です。正の値で右、負の値で左に移動します。"
+            "横方向の位置補正です。正の値で右、負の値で左に移動します。\n"
+            "補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
         )
 
         self.vertical_offset_spin = QSpinBox()
         self.vertical_offset_spin.setRange(-5000, 5000)
         self.vertical_offset_spin.setValue(0)
         self.vertical_offset_spin.setToolTip(
-            "縦方向の位置補正です。正の値で上、負の値で下に移動します。"
+            "縦方向の位置補正です。正の値で上、負の値で下に移動します。\n"
+            "補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
         )
 
         self.glyph_weight_offset_spin = QSpinBox()
@@ -720,7 +727,7 @@ class SingleFontProcessingTab(QWidget):
         self.glyph_weight_offset_spin.setToolTip(
             "入力元フォントのグリフ輪郭の太さを調整します。\n"
             "正の値で太く、負の値で細くなります。\n"
-            "補完フォント（マージ対象）には適用されません。"
+            "補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
         )
 
         self.remove_empty_glyphs_check = QCheckBox("空白グリフを除去")
@@ -740,7 +747,7 @@ class SingleFontProcessingTab(QWidget):
         self.anonymize_font_name_edit.setText("Anonymous")
         self.anonymize_font_name_edit.setEnabled(False)
         self.anonymize_font_name_edit.setToolTip(
-            "匿名化後のフォント名を入力します。\n"
+            "匿名化後のフォントの名前情報を入力します。\n"
             "空白や記号は使用できません（英数字とアンダースコアのみ）。"
         )
         self.anonymize_check.toggled.connect(self.anonymize_font_name_edit.setEnabled)
@@ -748,7 +755,8 @@ class SingleFontProcessingTab(QWidget):
         self.manual_metrics_check = QCheckBox("メトリクス変更")
         self.manual_metrics_check.setChecked(False)
         self.manual_metrics_check.setToolTip(
-            "有効時は下の上端/下端/行間/下線位置/下線太さの値でメトリクスを変更します。"
+            "有効時は下の上端/下端/行間/下線位置/下線太さの値でメトリクスを変更します。\n"
+            "意味が分からない場合はデフォルト値から変更しないことをお勧めします。"
         )
 
         self.metric_ascent_spin = QSpinBox()
@@ -1003,6 +1011,7 @@ class SingleFontProcessingTab(QWidget):
         )
         if path:
             self.input_ttf_edit.setText(path)
+            self._update_metrics_display_from_input_font()
 
     def _select_output_ttf(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
@@ -1022,34 +1031,41 @@ class SingleFontProcessingTab(QWidget):
             self.base_font_edit.setText(path)
             self._update_metrics_display_from_base_font()
 
+    def _update_metrics_display_from_input_font(self) -> None:
+        path_str = self.input_ttf_edit.text().strip()
+        self._apply_metrics_from_font_path(path_str)
+
     def _update_metrics_display_from_base_font(self) -> None:
-        base_font_path_str = self.base_font_edit.text().strip()
-        if not base_font_path_str:
+        path_str = self.base_font_edit.text().strip()
+        self._apply_metrics_from_font_path(path_str)
+
+    def _apply_metrics_from_font_path(self, font_path_str: str) -> None:
+        if not font_path_str:
             return
 
-        path_obj = Path(base_font_path_str)
+        path_obj = Path(font_path_str)
         if not path_obj.exists():
             return
 
         try:
             # TTFontを直接コンテキストマネージャで開く
-            with TTFont(str(path_obj)) as base_font_obj:
+            with TTFont(str(path_obj)) as font_obj:
                 if is_otf_path(path_obj):
-                    otf_to_ttf(base_font_obj)
+                    otf_to_ttf(font_obj)
 
-                base_upm = int(base_font_obj["head"].unitsPerEm)
-                if base_upm <= 0:
+                upm = int(font_obj["head"].unitsPerEm)
+                if upm <= 0:
                     return
 
                 # NORMALIZED_UPM (1024) へのスケーリング係数
-                scale_for_1024 = float(NORMALIZED_UPM) / float(base_upm)
+                scale_for_1024 = float(NORMALIZED_UPM) / float(upm)
 
                 def _to_1024(value: int | float) -> int:
                     return int(round(float(value) * scale_for_1024))
 
-                hhea = base_font_obj.get("hhea")
-                os2 = base_font_obj.get("OS/2")
-                post = base_font_obj.get("post")
+                hhea = font_obj.get("hhea")
+                os2 = font_obj.get("OS/2")
+                post = font_obj.get("post")
 
                 # FontForge の Ascent/Descent は通常 hhea テーブルの値に対応する
                 asc, desc, lg = 0, 0, 0
@@ -1088,12 +1104,12 @@ class SingleFontProcessingTab(QWidget):
 
                 # ログ出力（デバッグ用）
                 print(
-                    f"基準フォントからメトリクスを読み取りました: {path_obj.name} "
+                    f"フォントからメトリクスを読み取りました: {path_obj.name} "
                     f"(Asc:{final_ascent}, Desc:{final_descent}, UPM:{final_ascent + abs(final_descent)})"
                 )
 
         except Exception as e:
-            print(f"基準フォントの読み取りに失敗しました: {e}")
+            print(f"フォントのメトリクス読み取りに失敗しました: {e}")
             return
 
     def _add_merge_fonts(self) -> None:
