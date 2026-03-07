@@ -79,6 +79,7 @@ from core.ffdec_wrapper import (
 )
 from core.font_loader import reopen_font
 from core.font_processor import is_otf_path, process_font
+from core.swf_processor import process_swf
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
@@ -2332,99 +2333,18 @@ class MainWindow(QMainWindow):
         config: SingleEmbedTaskConfig,
         log: Callable[[str], None],
     ) -> None:
-        self._validate_path_required(config.output_swf, "出力SWF")
-        if not config.items:
-            raise ValueError("埋め込み対象フォントが未指定です")
-
-        target_swf = TEMPLATE_FONTSWF_PATH
-        output_swf = self._resolve_user_path(config.output_swf)
-        self._validate_file_exists(target_swf, "テンプレートSWF")
-
-        output_swf.parent.mkdir(parents=True, exist_ok=True)
-
-        resolved_items: list[tuple[Path, str]] = []
-        for index, item in enumerate(config.items, start=1):
-            ttf_path = self._resolve_user_path(item.ttf_path)
-            self._validate_file_exists(ttf_path, f"埋め込みフォント[{index}]")
-            if ttf_path.suffix.lower() not in ACCEPTABLE_INPUT_FONT_SUFFIXES:
-                raise ValueError(
-                    f"埋め込みフォント[{index}] は .ttf または .otf を指定してください: {ttf_path}"
-                )
-            internal_name = item.internal_name.strip() or ttf_path.stem
-            resolved_items.append((ttf_path, internal_name))
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_root = Path(temp_dir)
-            prepared_items: list[tuple[Path, str]] = []
-            for index, (font_path, internal_name) in enumerate(resolved_items, start=1):
-                if self._is_otf_path(font_path):
-                    converted_ttf_path = self._convert_otf_to_temporary_ttf(
-                        font_path,
-                        temp_root,
-                        index=index,
-                        label=f"埋め込みフォント[{index}]",
-                        log=log,
-                    )
-                    prepared_items.append((converted_ttf_path, internal_name))
-                else:
-                    prepared_items.append((font_path, internal_name))
-
-            if len(prepared_items) == 1:
-                ttf_path, internal_name = prepared_items[0]
-
-                self._capture_module_output(
-                    log,
-                    lambda: replace_glyph_in_swf(target_swf, output_swf, ttf_path),
-                )
-                self._capture_module_output(
-                    log,
-                    lambda: patch_swf_internal_fontname(output_swf, internal_name),
-                )
-                log(f"[個別:SWF埋め込み] 完了: {output_swf}")
-                return
-
-            ttf_paths = [ttf_path for ttf_path, _ in prepared_items]
-            internal_names_by_id = {
-                index: internal_name
-                for index, (_, internal_name) in enumerate(prepared_items, start=1)
-            }
-
-            self._capture_module_output(
-                log,
-                lambda: replace_glyphs_in_swf(target_swf, output_swf, ttf_paths),
-            )
-            self._capture_module_output(
-                log,
-                lambda: patch_swf_internal_fontnames(output_swf, internal_names_by_id),
-            )
-            log(
-                f"[個別:SWF埋め込み] 完了: {output_swf} "
-                f"(埋め込み数: {len(prepared_items)})"
-            )
-
-    def _convert_otf_to_temporary_ttf(
-        self,
-        font_path: Path,
-        temp_root: Path,
-        *,
-        index: int,
-        label: str,
-        log: Callable[[str], None],
-    ) -> Path:
-        converted_font_obj = self._load_font_for_processing(
-            font_path,
-            label,
-            log=log,
-            log_prefix="[個別:SWF埋め込み][前処理]",
-        )
-        temp_ttf_path = temp_root / f"embed_{index:02d}_{font_path.stem}.ttf"
-        converted_font_obj.save(str(temp_ttf_path))
-        converted_font_obj.close()
-        log(
-            "[個別:SWF埋め込み][前処理] 変換済みフォントを一時生成: "
-            f"{font_path.name} -> {temp_ttf_path.name}"
-        )
-        return temp_ttf_path
+        params = {
+            "output_swf_path": self._resolve_user_path(config.output_swf),
+            "items": [
+                {
+                    "font_path": self._resolve_user_path(item.ttf_path),
+                    "internal_name": item.internal_name,
+                }
+                for item in config.items
+            ],
+            "debug": True,
+        }
+        self._capture_module_output(log, lambda: process_swf(params))
 
     def _run_font_proccessing_recipe(
         self,
