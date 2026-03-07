@@ -4,15 +4,18 @@ from copy import deepcopy
 from fontTools.ttLib import TTFont
 
 
-def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
+def merge_font(
+    base_font: TTFont, interp_font: TTFont, *, debug: bool = False
+) -> TTFont:
     """
     ピュアPython(fontToolsのみ)で、base_fontに不足しているUnicodeのグリフを
     interp_fontから必要分だけコピーして統合する。
     """
     try:
-        print(
-            f"[DEBUG:v2] マージ開始: Base(Glyphs={len(base_font.getGlyphOrder())}) <- Interp(Glyphs={len(interp_font.getGlyphOrder())})"
-        )
+        if debug:
+            print(
+                f"[DEBUG:v2] マージ開始: Base(Glyphs={len(base_font.getGlyphOrder())}) <- Interp(Glyphs={len(interp_font.getGlyphOrder())})"
+            )
 
         # 1) サポート判定: TrueType(glyf)のみ正式対応。
         has_glyf = "glyf" in base_font and "glyf" in interp_font
@@ -40,7 +43,8 @@ def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
             cp for cp in interp_best.keys() if cp not in base_best
         ]
 
-        print(f"[DEBUG:v2] 不足Unicode数: {len(missing_codepoints)}")
+        if debug:
+            print(f"[DEBUG:v2] 不足Unicode数: {len(missing_codepoints)}")
         if not missing_codepoints:
             return base_font
 
@@ -123,7 +127,7 @@ def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
             orig_name = interp_best.get(cp)
             if orig_name:
                 _copy_glyph_with_deps(orig_name)
-            if i > 0 and i % 1000 == 0:
+            if debug and i > 0 and i % 1000 == 0:
                 print(
                     f"[DEBUG:v2] 進捗: {i}/{len(missing_codepoints)} グリフコピー済み"
                 )
@@ -151,7 +155,8 @@ def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
 
                 new_st.cmap = deepcopy(existing_cmap)
                 base_font["cmap"].tables.append(new_st)
-                print("[DEBUG:v2] 追加: cmap Format 12 (platform=3, enc=10)")
+                if debug:
+                    print("[DEBUG:v2] 追加: cmap Format 12 (platform=3, enc=10)")
             except Exception:
                 # 生成失敗は致命ではないが、サロゲート文字が消える可能性がある
                 print("[WARN:v2] cmap Format 12 の生成に失敗しました。")
@@ -160,22 +165,26 @@ def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
         base_font.setGlyphOrder(base_glyph_order)
 
         # 6) テーブル整合性更新
-        print("[DEBUG:v2] テーブル整合性更新中...")
+        if debug:
+            print("[DEBUG:v2] テーブル整合性更新中...")
         if "maxp" in base_font:
             base_font["maxp"].numGlyphs = len(base_glyph_order)
-            print(f"[DEBUG:v2] maxp.numGlyphs = {base_font['maxp'].numGlyphs}")
+            if debug:
+                print(f"[DEBUG:v2] maxp.numGlyphs = {base_font['maxp'].numGlyphs}")
 
         if "hhea" in base_font:
             base_font["hhea"].numberOfHMetrics = len(base_hmtx.metrics)
-            print(
-                f"[DEBUG:v2] hhea.numberOfHMetrics = {base_font['hhea'].numberOfHMetrics}"
-            )
+            if debug:
+                print(
+                    f"[DEBUG:v2] hhea.numberOfHMetrics = {base_font['hhea'].numberOfHMetrics}"
+                )
 
         if has_base_vmtx and "vhea" in base_font:
             base_font["vhea"].numberOfVMetrics = len(base_vmtx.metrics)  # type: ignore[union-attr]
-            print(
-                f"[DEBUG:v2] vhea.numberOfVMetrics = {base_font['vhea'].numberOfVMetrics}"
-            )
+            if debug:
+                print(
+                    f"[DEBUG:v2] vhea.numberOfVMetrics = {base_font['vhea'].numberOfVMetrics}"
+                )
 
         # 6.1) Loca 32bit 化でオーバーフローを防止
         if "head" in base_font:
@@ -229,7 +238,8 @@ def merge_font(base_font: TTFont, interp_font: TTFont) -> TTFont:
         except Exception:
             pass
 
-        print(f"[DEBUG:v2] マージ完了 (最終グリフ数: {len(base_glyph_order)})")
+        if debug:
+            print(f"[DEBUG:v2] マージ完了 (最終グリフ数: {len(base_glyph_order)})")
         return base_font
 
     except Exception:

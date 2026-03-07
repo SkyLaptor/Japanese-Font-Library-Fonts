@@ -355,6 +355,7 @@ def process_font(params: Mapping[str, Any]) -> None:
                 base_font_obj = merge_font(
                     base_font=base_font_obj,
                     interp_font=sub_font_obj,
+                    debug=debug,
                 )
                 base_font_obj = reopen_font(base_font_obj)
 

@@ -5,7 +5,7 @@ import io
 import os
 import re
 import shutil
-import tempfile
+import yaml
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,7 +70,6 @@ from const import (
     PREVIEW_UNDERLINE_COLOR,
     PREVIEW_WINDOW_TITLE,
     SUBSETS_DIR,
-    TEMPLATE_FONTSWF_PATH,
 )
 from core.ffdec_wrapper import (
     detect_java_executable,
@@ -83,12 +82,6 @@ from core.swf_processor import process_swf
 from modules.change_weight import change_weight
 from modules.create_subset import create_subset
 from modules.harmonize_font_metrics import apply_font_transform, harmonize_font_metrics
-from modules.skyrim_swf_patcher import (
-    patch_swf_internal_fontname,
-    patch_swf_internal_fontnames,
-    replace_glyph_in_swf,
-    replace_glyphs_in_swf,
-)
 
 PREVIEW_SAMPLE_TEXT = "0Aa永あ"
 ACCEPTABLE_INPUT_FONT_SUFFIXES = {".ttf", ".otf"}
@@ -1210,7 +1203,9 @@ class SingleFontProcessingTab(QWidget):
             self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
         )
 
-    def _build_single_font_config(self, *, require_output: bool = True) -> SingleFontTaskConfig | None:
+    def _build_single_font_config(
+        self, *, require_output: bool = True
+    ) -> SingleFontTaskConfig | None:
         input_ttf = self.input_ttf_edit.text().strip()
         if not input_ttf:
             QMessageBox.warning(self, "入力不足", "対象フォントを選択してください。")
@@ -1412,7 +1407,9 @@ class SingleSwfEmbedTab(QWidget):
                 items.append(EmbedItem(ttf_path=ttf_path, internal_name=internal_name))
 
         if not items:
-            QMessageBox.warning(self, "入力不足", "埋め込み対象フォントを1つ以上追加してください。")
+            QMessageBox.warning(
+                self, "入力不足", "埋め込み対象フォントを1つ以上追加してください。"
+            )
             return
 
         reply = QMessageBox.question(
@@ -1535,6 +1532,18 @@ class BatchFontProcessingTab(QWidget):
         )
         if path:
             self.recipe_edit.setText(path)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    recipe = yaml.safe_load(f)
+                    if isinstance(recipe, dict):
+                        input_dir = recipe.get("input_dir")
+                        if input_dir:
+                            self.input_dir_edit.setText(str(input_dir))
+                        output_dir = recipe.get("output_dir")
+                        if output_dir:
+                            self.output_dir_edit.setText(str(output_dir))
+            except Exception:
+                pass
 
     def _select_input_dir(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "input_dirを選択")
@@ -1613,8 +1622,9 @@ class MainWindow(QMainWindow):
         "}"
     )
 
-    def __init__(self) -> None:
+    def __init__(self, *, debug: bool = False) -> None:
         super().__init__()
+        self._debug: bool = bool(debug)
         self._task_thread: QThread | None = None
         self._task_worker: BackgroundTaskWorker | None = None
         self._current_task_name: str | None = None
@@ -2024,7 +2034,7 @@ class MainWindow(QMainWindow):
             preview_font_obj = change_weight(
                 preview_font_obj,
                 offset_weight=config.glyph_weight_offset,
-                debug=True,
+                debug=self._debug,
             )
 
         scale_width = config.horizontal_percent / 100.0
@@ -2243,7 +2253,7 @@ class MainWindow(QMainWindow):
                 for item in config.merge_fonts
             ],
             "output_font_info": True,
-            "debug": True,
+            "debug": self._debug,
         }
         return params
 
@@ -2373,7 +2383,7 @@ class MainWindow(QMainWindow):
                 }
                 for item in config.items
             ],
-            "debug": True,
+            "debug": self._debug,
         }
         self._capture_module_output(log, lambda: process_swf(params))
 
@@ -2388,7 +2398,7 @@ class MainWindow(QMainWindow):
             recipe_path=self._resolve_user_path(config.recipe_path),
             input_path=self._resolve_user_path(config.input_dir),
             output_dir=self._resolve_user_path(config.output_dir),
-            debug=True,
+            debug=self._debug,
         )
         self._capture_module_output(log, lambda: run_batch(cli))
 

@@ -23,7 +23,7 @@ def parse_cli_args(argv: list[str]) -> tuple[bool, list[str]]:
 
 
 def run_app(app: QApplication, *, debug: bool = False) -> int:
-    window = MainWindow()
+    window = MainWindow(debug=debug)
     if debug:
         window.append_log("[DEBUG] Debug mode is enabled")
     window.show()
