@@ -1,6 +1,8 @@
 {
     "python-envs.terminal.autoActivationType": "off",
     "python.terminal.activateEnvironment": false,
+    "terminal.integrated.persistentSessionReviveProcess": "never",
+    "window.restoreWindows": "none",
     // Black Formatter の「お節介（クォートの自動変換）」を止める
     "black-formatter.args": [
         "--skip-string-normalization"
