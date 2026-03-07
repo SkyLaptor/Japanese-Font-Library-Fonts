@@ -46,6 +46,7 @@ from PyQt6.QtWidgets import (
 
 from const import (
     BLANK_GLYPHS,
+    DATA_DIR,
     MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
     PREVIEW_BASELINE_COLOR,
@@ -837,17 +838,20 @@ class SingleFontProcessingTab(QWidget):
         vertical_percent_unit_label = QLabel("%")
         horizontal_offset_unit_label = QLabel("em")
         vertical_offset_unit_label = QLabel("em")
+        glyph_weight_unit_label = QLabel("em")
 
         unit_label_width = max(
             horizontal_percent_unit_label.sizeHint().width(),
             vertical_percent_unit_label.sizeHint().width(),
             horizontal_offset_unit_label.sizeHint().width(),
             vertical_offset_unit_label.sizeHint().width(),
+            glyph_weight_unit_label.sizeHint().width(),
         )
         horizontal_percent_unit_label.setFixedWidth(unit_label_width)
         vertical_percent_unit_label.setFixedWidth(unit_label_width)
         horizontal_offset_unit_label.setFixedWidth(unit_label_width)
         vertical_offset_unit_label.setFixedWidth(unit_label_width)
+        glyph_weight_unit_label.setFixedWidth(unit_label_width)
 
         transform_label_width = max(
             horizontal_percent_label.sizeHint().width(),
@@ -904,6 +908,7 @@ class SingleFontProcessingTab(QWidget):
         weight_row_layout.setContentsMargins(0, 0, 0, 0)
         weight_row_layout.addWidget(glyph_weight_label)
         weight_row_layout.addWidget(self.glyph_weight_offset_spin)
+        weight_row_layout.addWidget(glyph_weight_unit_label)
         weight_row_layout.addStretch(1)
 
         options_row = QWidget()
@@ -1459,7 +1464,10 @@ class BatchFontProcessingTab(QWidget):
         self.recipe_edit = QLineEdit()
         self.input_dir_edit = QLineEdit()
         self.output_dir_edit = QLineEdit()
-        self.recipe_edit.setToolTip("フォント一括処理用のレシピ（YAML）を指定します。")
+        self.recipe_edit.setToolTip(
+            "フォント一括処理用のレシピ（YAML）を指定します。\n"
+            f"テンプレートは {DATA_DIR.resolve()}/recipe-template_font-process.yml です。任意の場所にコピーして利用して下さい。"
+        )
         self.input_dir_edit.setToolTip(
             "レシピで参照する加工対象フォントの親フォルダです。レシピ内の入力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
         )
@@ -1609,7 +1617,10 @@ class BatchSwfProcessingTab(QWidget):
         self.recipe_edit = QLineEdit()
         self.input_dir_edit = QLineEdit()
         self.output_edit = QLineEdit()
-        self.recipe_edit.setToolTip("SWF一括埋め込み用のレシピ（YAML）を指定します。")
+        self.recipe_edit.setToolTip(
+            "SWF一括埋め込み用のレシピ（YAML）を指定します。\n"
+            f"テンプレートは {DATA_DIR.resolve()}/recipe-template_swf-embedded.yml です。任意の場所にコピーして利用して下さい。"
+        )
         self.input_dir_edit.setToolTip(
             "レシピで参照する埋め込みフォントの親フォルダです。相対パスの基準になります。"
         )
