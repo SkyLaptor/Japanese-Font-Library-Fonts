@@ -1,3 +1,0 @@
-light: 0 ※標準
-medium: 16
-bold: 32

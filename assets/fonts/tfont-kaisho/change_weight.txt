@@ -1,4 +1,0 @@
-light: 0 ※元フォント
-medium: 8
-bold: 16
-heavy: 24
