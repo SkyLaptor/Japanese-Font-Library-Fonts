@@ -273,7 +273,11 @@ def process_font(params: Mapping[str, Any]) -> None:
 
         # 基準フォントモードの場合は自動調整を最初に行う
         ref_font_path = params.get("base_font_path")
-        if params.get("mode") == "base" and ref_font_path:
+        mode_val = str(params.get("mode", "")).strip().lower()
+        use_base_mode = (mode_val == "base") or (
+            bool(ref_font_path) and mode_val in {"", "auto"}
+        )
+        if use_base_mode and ref_font_path:
             with TTFont(str(ref_font_path)) as ref_font_obj:
                 base_font_obj = harmonize_font_metrics(
                     target_font_obj=base_font_obj,

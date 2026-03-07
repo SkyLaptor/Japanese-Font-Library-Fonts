@@ -63,8 +63,8 @@ steps:
     - output_font_path: "apricot/apricot_every_lightweight.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
     - output_font_path: "apricot/apricot_condensed.ttf"
-      scale_x: 70.0
+      scale_width: 70.0
     - output_font_path: "apricot/apricot_skinny.ttf"
-      scale_x: 50.0
+      scale_width: 50.0
     - output_font_path: "apricot/apricot_bold_every.ttf"
       weight_offset: 16

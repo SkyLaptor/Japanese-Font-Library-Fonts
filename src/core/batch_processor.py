@@ -116,7 +116,17 @@ def _compose_runtime_config(
         elif isinstance(raw_steps, dict):
             steps.append({**raw_steps})
         else:
-            raise ValueError("steps は配列またはマップである必要があります")
+            run_kwargs = {**global_params, **step}
+
+            # 互換エイリアスの吸収（レシピ記述ゆらぎ対策）
+            # Removed alias normalization for scale_x/y, horizontal/vertical_percent, remove_empty_glyphs, anonymize_font_name
+
+            # base_font_path が指定され、かつ mode が明示的に manual でない場合は
+            # 自動的にベース整合モードとして扱う（後方互換）
+            if run_kwargs.get("base_font_path") and str(
+                run_kwargs.get("mode", "")
+            ).strip().lower() not in {"manual", "base"}:
+                run_kwargs["mode"] = "base"
     else:
         # steps が無い場合は SWF 埋め込みモードの可能性があるため、ここでは例外を投げない。
         steps = []
