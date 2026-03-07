@@ -1252,8 +1252,8 @@ class SingleFontProcessingTab(QWidget):
                 return
 
         base_font_specified = bool(self.base_font_edit.text().strip())
-        is_manual_mode = not base_font_specified
-        if is_manual_mode and self.manual_metrics_check.isChecked():
+        # 基準フォントの有無に関わらず、メトリクス変更チェックが有効なら手動値を採用する
+        if self.manual_metrics_check.isChecked():
             metric_ascent = self.metric_ascent_spin.value()
             metric_descent = self.metric_descent_spin.value()
             metric_line_gap = self.metric_line_gap_spin.value()
@@ -2234,6 +2234,25 @@ class MainWindow(QMainWindow):
                     offset_height=offset_height,
                 )
                 preview_font_obj = result.font_obj
+
+            # ベース整合後、手動メトリクス指定があれば上書きを適用する
+            metrics_override = self._build_manual_metrics_override(config)
+            if metrics_override:
+                manual_new_upm: int | None = None
+                # 手動メトリクスから UPM を算出
+                manual_new_upm = int(config.metric_ascent) + abs(
+                    int(config.metric_descent)
+                )
+
+                preview_font_obj = apply_font_transform(
+                    target_font_obj=preview_font_obj,
+                    scale_width=1.0,
+                    scale_height=1.0,
+                    offset_width=0,
+                    offset_height=0,
+                    new_upm=manual_new_upm,
+                    metrics_override=metrics_override,
+                )
         else:
             metrics_override = self._build_manual_metrics_override(config)
             manual_new_upm: int | None = None
