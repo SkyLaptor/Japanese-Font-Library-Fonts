@@ -327,21 +327,39 @@ def harmonize_with_base(
         debug,
     )
 
-    if target_avg_size_result.avg_h == 0:
-        print(
-            f"ターゲットフォントの平均高さが {target_avg_size_result.avg_h:.1f} です。拡大率は 1.0 として計算します。",
+    # スケーリング算出に使用するグリフ種別の決定
+    if base_avg_size_result.count > 0 and target_avg_size_result.count > 0:
+        mode_label = "CJK"
+        base_w, base_h = base_avg_size_result.avg_w, base_avg_size_result.avg_h
+        target_w, target_h = target_avg_size_result.avg_w, target_avg_size_result.avg_h
+    elif base_avg_size_result.count_latin > 0 and target_avg_size_result.count_latin > 0:
+        mode_label = "Latin"
+        base_w, base_h = base_avg_size_result.avg_w_latin, base_avg_size_result.avg_h_latin
+        target_w, target_h = target_avg_size_result.avg_w_latin, target_avg_size_result.avg_h_latin
+    else:
+        mode_label = "Fallback(1.0)"
+        base_w, base_h = 1.0, 1.0
+        target_w, target_h = 1.0, 1.0
+
+    dprint(f"スケーリング算出モード: {mode_label}", debug)
+
+    if target_h == 0:
+        dprint(
+            f"ターゲットフォントの平均高さが 0 です。拡大率は 1.0 として計算します。",
+            debug,
         )
         scale_height_pure = 1.0
     else:
-        scale_height_pure = base_avg_size_result.avg_h / target_avg_size_result.avg_h
+        scale_height_pure = base_h / target_h
 
-    if target_avg_size_result.avg_w == 0:
-        print(
-            f"ターゲットフォントの平均幅が {target_avg_size_result.avg_w:.1f} です。拡大率は 1.0 として計算します。",
+    if target_w == 0:
+        dprint(
+            f"ターゲットフォントの平均幅が 0 です。拡大率は 1.0 として計算します。",
+            debug,
         )
         scale_width_pure = 1.0
     else:
-        scale_width_pure = base_avg_size_result.avg_w / target_avg_size_result.avg_w
+        scale_width_pure = base_w / target_w
 
     dprint(
         f"自動拡大率(平均サイズ比較): 横:x{scale_width_pure:.3f}, 縦:x{scale_height_pure:.3f}",
