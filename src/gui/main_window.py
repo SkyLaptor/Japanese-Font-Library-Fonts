@@ -1198,6 +1198,16 @@ class SingleFontProcessingTab(QWidget):
         )
 
     def _build_single_font_config(self) -> SingleFontTaskConfig | None:
+        input_ttf = self.input_ttf_edit.text().strip()
+        if not input_ttf:
+            QMessageBox.warning(self, "入力不足", "対象フォントを選択してください。")
+            return None
+
+        output_ttf = self.output_ttf_edit.text().strip()
+        if not output_ttf:
+            QMessageBox.warning(self, "入力不足", "フォント出力先を指定してください。")
+            return None
+
         metric_ascent = None
         metric_descent = None
         metric_line_gap = None
@@ -1374,6 +1384,11 @@ class SingleSwfEmbedTab(QWidget):
             self.embed_table.removeRow(row)
 
     def _emit_execute(self) -> None:
+        output_swf = self.output_swf_edit.text().strip()
+        if not output_swf:
+            QMessageBox.warning(self, "入力不足", "SWF出力先を指定してください。")
+            return
+
         items: list[EmbedItem] = []
         for row in range(self.embed_table.rowCount()):
             ttf_item = self.embed_table.item(row, 0)
@@ -1383,8 +1398,12 @@ class SingleSwfEmbedTab(QWidget):
             if ttf_path:
                 items.append(EmbedItem(ttf_path=ttf_path, internal_name=internal_name))
 
+        if not items:
+            QMessageBox.warning(self, "入力不足", "埋め込み対象フォントを1つ以上追加してください。")
+            return
+
         config = SingleEmbedTaskConfig(
-            output_swf=self.output_swf_edit.text().strip(),
+            output_swf=output_swf,
             items=items,
         )
         self.execute_requested.emit(config)
@@ -1505,8 +1524,13 @@ class BatchFontProcessingTab(QWidget):
             self.output_dir_edit.setText(path)
 
     def _emit_execute(self) -> None:
+        recipe_path = self.recipe_edit.text().strip()
+        if not recipe_path:
+            QMessageBox.warning(self, "入力不足", "レシピファイルを選択してください。")
+            return
+
         config = BatchFontProcessingTaskConfig(
-            recipe_path=self.recipe_edit.text().strip(),
+            recipe_path=recipe_path,
             input_dir=self.input_dir_edit.text().strip(),
             output_dir=self.output_dir_edit.text().strip(),
         )
