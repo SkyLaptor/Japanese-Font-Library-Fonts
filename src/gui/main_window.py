@@ -585,6 +585,7 @@ class MergeFontsTableWidget(QTableWidget):
 class SingleFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
     preview_requested = pyqtSignal(object)
+    log_emitted = pyqtSignal(str)
     _EXECUTE_LABEL = "個別処理を実行"
     _EXECUTING_LABEL = "個別処理を実行中..."
 
@@ -1103,13 +1104,13 @@ class SingleFontProcessingTab(QWidget):
                     )
 
                 # ログ出力（デバッグ用）
-                print(
+                self.log_emitted.emit(
                     f"フォントからメトリクスを読み取りました: {path_obj.name} "
                     f"(Asc:{final_ascent}, Desc:{final_descent}, UPM:{final_ascent + abs(final_descent)})"
                 )
 
         except Exception as e:
-            print(f"フォントのメトリクス読み取りに失敗しました: {e}")
+            self.log_emitted.emit(f"フォントのメトリクス読み取りに失敗しました: {e}")
             return
 
     def _add_merge_fonts(self) -> None:
@@ -1690,6 +1691,7 @@ class MainWindow(QMainWindow):
     def _bind_events(self) -> None:
         self.single_font_tab.execute_requested.connect(self._start_single_font_task)
         self.single_font_tab.preview_requested.connect(self._run_single_font_preview)
+        self.single_font_tab.log_emitted.connect(self.append_log)
         self.single_embed_tab.execute_requested.connect(self._start_single_embed_task)
         self.batch_tab.execute_requested.connect(self._start_batch_task)
         self.stop_task_button.clicked.connect(self._force_stop_current_task)
