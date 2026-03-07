@@ -1182,13 +1182,13 @@ class SingleFontProcessingTab(QWidget):
         self._syncing_scale_values = False
 
     def _emit_execute(self) -> None:
-        config = self._build_single_font_config()
+        config = self._build_single_font_config(require_output=True)
         if config is None:
             return
         self.execute_requested.emit(config)
 
     def _emit_preview(self) -> None:
-        config = self._build_single_font_config()
+        config = self._build_single_font_config(require_output=False)
         if config is None:
             return
         self.preview_requested.emit(config)
@@ -1198,14 +1198,14 @@ class SingleFontProcessingTab(QWidget):
             self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
         )
 
-    def _build_single_font_config(self) -> SingleFontTaskConfig | None:
+    def _build_single_font_config(self, *, require_output: bool = True) -> SingleFontTaskConfig | None:
         input_ttf = self.input_ttf_edit.text().strip()
         if not input_ttf:
             QMessageBox.warning(self, "入力不足", "対象フォントを選択してください。")
             return None
 
         output_ttf = self.output_ttf_edit.text().strip()
-        if not output_ttf:
+        if require_output and not output_ttf:
             QMessageBox.warning(self, "入力不足", "フォント出力先を指定してください。")
             return None
 
