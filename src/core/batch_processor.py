@@ -34,8 +34,9 @@ def _resolve_relative(value: str | Path | None, base: Path | None) -> Path | Non
 
 def _classify_key_role(key: str) -> str:
     k = key.lower()
-    if k in {"output_name", "output_dir", "output_font_path"}:
+    if k in {"output_name", "output_dir", "output_font_path", "output_swf_path"}:
         return "output"
+    # output_*_path は上で捕捉済み。それ以外の *_path は入力系として扱う。
     if k.endswith("_path") or k == "input_dir" or k == "merge_conf":
         return "input"
     return "none"
@@ -117,7 +118,8 @@ def _compose_runtime_config(
         else:
             raise ValueError("steps は配列またはマップである必要があります")
     else:
-        raise ValueError("recipe.yml に steps が見つかりません")
+        # steps が無い場合は SWF 埋め込みモードの可能性があるため、ここでは例外を投げない。
+        steps = []
 
     global_params: dict[str, Any] = {
         k: v for k, v in recipe_dict.items() if k not in {"steps", "actions"}
@@ -129,13 +131,87 @@ def _compose_runtime_config(
 
 def run_batch(cli: CLIArgs, debug: bool = False) -> int:
     base_in = _expand_and_resolve(cli.input_dir or cli.recipe_path.parent)
-    base_out = _expand_and_resolve(
-        cli.output_dir or (cli.recipe_path.parent / "output")
-    )
+    # output_dir が .swf で終わっている場合は、パス解決の基準は親フォルダを使用する
+    swf_override_path: Path | None = None
+    if cli.output_dir is not None:
+        od = _expand_and_resolve(cli.output_dir)
+        if od.suffix.lower() == ".swf":
+            swf_override_path = od
+            base_out = od.parent
+        else:
+            base_out = od
+    else:
+        base_out = _expand_and_resolve(cli.recipe_path.parent / "output")
 
     raw = _load_recipe_yaml(cli.recipe_path)
     normalized = _normalize_paths_recursive(raw, base_in, base_out)
 
+    # SWF 埋め込みモード（embeds）があるか先に判定
+    if "embeds" in normalized and normalized.get("embeds") is not None:
+        from core.swf_processor import process_swf
+
+        # ルートの基準入出力を計算（steps 無しでも基準は必要）
+        base_input_dir = normalized.get("input_dir") or base_in
+        base_output_dir = normalized.get("output_dir") or base_out
+        base_input_dir = _expand_and_resolve(base_input_dir)
+        base_output_dir = _expand_and_resolve(base_output_dir)
+
+        # 正規化を既に実施済みなので、ここでは items 形式へ変換のみ実施
+        raw_items = normalized.get("embeds")
+        if isinstance(raw_items, dict):
+            raw_items = [raw_items]
+        if not isinstance(raw_items, list) or not raw_items:
+            raise ValueError("embeds は1件以上の配列である必要があります")
+
+        items: list[dict[str, Any]] = []
+        for entry in raw_items:
+            if not isinstance(entry, dict):
+                raise ValueError("embeds の各要素はマップである必要があります")
+            # レシピ側のキー名をコア処理が期待するキー名へ変換
+            # input_font_path -> font_path, internal_font_name -> internal_name
+            font_path = entry.get("input_font_path") or entry.get("font_path")
+            internal_name = entry.get("internal_font_name") or entry.get(
+                "internal_name"
+            )
+            if not font_path:
+                continue
+            items.append(
+                {
+                    "font_path": font_path,
+                    "internal_name": internal_name,
+                }
+            )
+
+        if not items:
+            raise ValueError("埋め込み対象フォントが見つかりません")
+
+        output_swf_path = normalized.get("output_swf_path")
+        # GUI から .swf のフルパスが指定されていれば、それを最優先で使用
+        if swf_override_path is not None:
+            output_swf_path = swf_override_path
+        if not output_swf_path:
+            raise ValueError("output_swf_path がレシピ内に指定されていません")
+
+        run_kwargs: dict[str, Any] = {
+            # グローバル指定（debug など）
+            "debug": bool(normalized.get("debug", False) or cli.debug or debug),
+            # 出力先
+            "output_swf_path": output_swf_path,
+            # アイテム
+            "items": items,
+        }
+
+        # 出力先ディレクトリを作成
+        out_parent = Path(str(output_swf_path)).resolve().parent
+        out_parent.mkdir(parents=True, exist_ok=True)
+
+        print("[一括SWF埋め込み] 実行 (1/1)")
+        dprint(f"run_kwargs = {run_kwargs}", debug)
+        process_swf(run_kwargs)
+        print(f"[一括SWF埋め込み] 完了: {cli.recipe_path}")
+        return 0
+
+    # 通常のフォント加工モード（steps）
     input_dir, output_dir, global_params, steps = _compose_runtime_config(
         cli, normalized
     )
@@ -146,10 +222,70 @@ def run_batch(cli: CLIArgs, debug: bool = False) -> int:
         if not isinstance(step, dict):
             raise ValueError(f"steps[{i}] の形式が不正です: {step}")
 
+        # SWF埋め込みステップ判定（embed_fonts / embeds いずれかを含む）
+        if (
+            ("embed_fonts" in step and step.get("embed_fonts") is not None)
+            or ("embeds" in step and step.get("embeds") is not None)
+            or (
+                # 後方互換: output_swf_path のみ存在する場合も埋め込み扱い
+                "output_swf_path" in step
+                and not step.get("input_font_path")
+            )
+        ):
+            from core.swf_processor import process_swf
+
+            raw_items = step.get("embed_fonts")
+            if raw_items is None:
+                raw_items = step.get("embeds")
+            if isinstance(raw_items, dict):
+                raw_items = [raw_items]
+            if not isinstance(raw_items, list) or not raw_items:
+                raise ValueError(
+                    "embed_fonts/embeds は1件以上の配列である必要があります"
+                )
+
+            items: list[dict[str, Any]] = []
+            for entry in raw_items:
+                if not isinstance(entry, dict):
+                    raise ValueError(
+                        "embed_fonts/embeds の各要素はマップである必要があります"
+                    )
+                font_path = entry.get("input_font_path") or entry.get("font_path")
+                internal_name = entry.get("internal_font_name") or entry.get(
+                    "internal_name"
+                )
+                if not font_path:
+                    continue
+                items.append({"font_path": font_path, "internal_name": internal_name})
+
+            if not items:
+                raise ValueError("埋め込み対象フォントが見つかりません")
+
+            output_swf_path = step.get("output_swf_path") or global_params.get(
+                "output_swf_path"
+            )
+            # GUI から .swf のフルパスが渡されていればそれを最優先で適用
+            if 'swf_override_path' in locals() and swf_override_path is not None:
+                output_swf_path = swf_override_path
+            if not output_swf_path:
+                raise ValueError(
+                    "output_swf_path が指定されていません（ステップ/グローバル）"
+                )
+
+            run_kwargs = {
+                "output_swf_path": output_swf_path,
+                "items": items,
+                "debug": bool(global_params.get("debug", False) or debug),
+            }
+            print(f"[一括SWF埋め込み] 実行 ({i}/{len(steps)})")
+            dprint(f"run_kwargs = {run_kwargs}", debug)
+            process_swf(run_kwargs)
+            continue
+
+        # デフォルトはフォント加工ステップ
         run_kwargs = {**global_params, **step}
         print(f"[一括フォント加工] 実行 ({i}/{len(steps)})")
         dprint(f"run_kwargs = {run_kwargs}", debug)
-        # 個別処理を呼び出し
         process_font(run_kwargs)
 
     print(f"[一括フォント加工] 完了: {cli.recipe_path}")

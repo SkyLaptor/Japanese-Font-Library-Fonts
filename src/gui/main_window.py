@@ -5,12 +5,12 @@ import io
 import os
 import re
 import shutil
-import yaml
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+import yaml
 from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
 from PIL import Image, ImageDraw, ImageFont
@@ -133,6 +133,13 @@ class SingleEmbedTaskConfig:
 
 @dataclass(slots=True)
 class BatchFontProcessingTaskConfig:
+    recipe_path: str
+    input_dir: str
+    output_dir: str
+
+
+@dataclass(slots=True)
+class BatchSwfProcessingTaskConfig:
     recipe_path: str
     input_dir: str
     output_dir: str
@@ -800,7 +807,7 @@ class SingleFontProcessingTab(QWidget):
 
         self.subset_text_edit = QLineEdit()
         self.subset_text_edit.setText(
-            str((SUBSETS_DIR / "subset_jp_full.txt").resolve())
+            str((SUBSETS_DIR / "subset_jp_skyrim_custom.txt").resolve())
         )
         self.subset_text_edit.setToolTip(
             "サブセット化に使用するテキストファイルのパスです。"
@@ -825,7 +832,7 @@ class SingleFontProcessingTab(QWidget):
         vertical_percent_label = QLabel("縦")
         horizontal_offset_label = QLabel("横オフセット")
         vertical_offset_label = QLabel("縦オフセット")
-        glyph_weight_label = QLabel("太さ変更量（em）")
+        glyph_weight_label = QLabel("太さ変更量")
         horizontal_percent_unit_label = QLabel("%")
         vertical_percent_unit_label = QLabel("%")
         horizontal_offset_unit_label = QLabel("em")
@@ -966,7 +973,7 @@ class SingleFontProcessingTab(QWidget):
         merge_layout = QVBoxLayout(merge_group)
         self.merge_table = MergeFontsTableWidget()
         self.merge_table.setHorizontalHeaderLabels(
-            ["フォントパス", "横オフセット", "縦オフセット", "太さ"]
+            ["フォントパス", "横オフセット(em)", "縦オフセット(em)", "太さ変更量(em)"]
         )
         self.merge_table.setToolTip(
             "補完フォント一覧です。ドラッグ&ドロップで追加、行の並べ替え、削除ができます。"
@@ -1584,6 +1591,156 @@ class BatchFontProcessingTab(QWidget):
         )
 
 
+class BatchSwfProcessingTab(QWidget):
+    execute_requested = pyqtSignal(object)
+    _EXECUTE_LABEL = "一括処理実行（SWF埋め込み）"
+    _EXECUTING_LABEL = "一括処理実行中..."
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        root_layout = QVBoxLayout(self)
+
+        form_group = QGroupBox("レシピ設定")
+        form_layout = QVBoxLayout(form_group)
+
+        self.recipe_edit = QLineEdit()
+        self.input_dir_edit = QLineEdit()
+        self.output_edit = QLineEdit()
+        self.recipe_edit.setToolTip("SWF一括埋め込み用のレシピ（YAML）を指定します。")
+        self.input_dir_edit.setToolTip(
+            "レシピで参照する埋め込みフォントの親フォルダです。相対パスの基準になります。"
+        )
+        self.output_edit.setToolTip(
+            "出力側の基準フォルダです。ステップの output_swf_path が相対指定の場合、このフォルダを基準に解決します。"
+        )
+
+        recipe_label = QLabel("レシピ")
+        input_dir_label = QLabel("対象フォルダ")
+        output_label = QLabel("出力フォルダ")
+
+        btn_recipe = QPushButton("選択")
+        btn_input_dir = QPushButton("選択")
+        btn_output_dir = QPushButton("選択")
+
+        btn_recipe.clicked.connect(self._select_recipe)
+        btn_input_dir.clicked.connect(self._select_input_dir)
+        btn_output_dir.clicked.connect(self._select_output_dir)
+
+        form_label_width = max(
+            recipe_label.sizeHint().width(),
+            input_dir_label.sizeHint().width(),
+            output_label.sizeHint().width(),
+        )
+        recipe_label.setFixedWidth(form_label_width)
+        input_dir_label.setFixedWidth(form_label_width)
+        output_label.setFixedWidth(form_label_width)
+
+        form_button_width = max(
+            btn_recipe.sizeHint().width(),
+            btn_input_dir.sizeHint().width(),
+            btn_output_dir.sizeHint().width(),
+        )
+        btn_recipe.setFixedWidth(form_button_width)
+        btn_input_dir.setFixedWidth(form_button_width)
+        btn_output_dir.setFixedWidth(form_button_width)
+
+        recipe_row = QWidget()
+        recipe_row_layout = QHBoxLayout(recipe_row)
+        recipe_row_layout.setContentsMargins(0, 0, 0, 0)
+        recipe_row_layout.addWidget(recipe_label)
+        recipe_row_layout.addWidget(self.recipe_edit)
+        recipe_row_layout.addWidget(btn_recipe)
+
+        input_dir_row = QWidget()
+        input_dir_row_layout = QHBoxLayout(input_dir_row)
+        input_dir_row_layout.setContentsMargins(0, 0, 0, 0)
+        input_dir_row_layout.addWidget(input_dir_label)
+        input_dir_row_layout.addWidget(self.input_dir_edit)
+        input_dir_row_layout.addWidget(btn_input_dir)
+
+        output_row = QWidget()
+        output_row_layout = QHBoxLayout(output_row)
+        output_row_layout.setContentsMargins(0, 0, 0, 0)
+        output_row_layout.addWidget(output_label)
+        output_row_layout.addWidget(self.output_edit)
+        output_row_layout.addWidget(btn_output_dir)
+
+        form_layout.addWidget(recipe_row)
+        form_layout.addWidget(input_dir_row)
+        form_layout.addWidget(output_row)
+
+        root_layout.addWidget(form_group)
+
+        self.execute_button = QPushButton(self._EXECUTE_LABEL)
+        self.execute_button.setProperty("importance", "primary")
+        self.execute_button.clicked.connect(self._emit_execute)
+        root_layout.addWidget(self.execute_button)
+        root_layout.addStretch(1)
+
+    def _select_recipe(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "レシピファイルを選択",
+            "",
+            "YAML (*.yml *.yaml)",
+        )
+        if path:
+            self.recipe_edit.setText(path)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    recipe = yaml.safe_load(f)
+                    if isinstance(recipe, dict):
+                        input_dir = recipe.get("input_dir")
+                        if input_dir:
+                            self.input_dir_edit.setText(str(input_dir))
+                        output_dir = recipe.get("output_dir")
+                        if output_dir:
+                            self.output_edit.setText(str(output_dir))
+            except Exception:
+                pass
+
+    def _select_input_dir(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "input_dirを選択")
+        if path:
+            self.input_dir_edit.setText(path)
+
+    def _select_output_dir(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "output_dirを選択")
+        if path:
+            self.output_edit.setText(path)
+
+    def _emit_execute(self) -> None:
+        recipe_path = self.recipe_edit.text().strip()
+        if not recipe_path:
+            QMessageBox.warning(self, "入力不足", "レシピファイルを選択してください。")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "確認",
+            "一括処理を開始しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.No:
+            return
+
+        config = BatchSwfProcessingTaskConfig(
+            recipe_path=recipe_path,
+            input_dir=self.input_dir_edit.text().strip(),
+            output_dir=self.output_edit.text().strip(),
+        )
+        self.execute_requested.emit(config)
+
+    def set_executing_state(self, executing: bool) -> None:
+        self.execute_button.setText(
+            self._EXECUTING_LABEL if executing else self._EXECUTE_LABEL
+        )
+
+
 class PreviewWindow(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -1697,6 +1854,7 @@ class MainWindow(QMainWindow):
         self.single_font_tab = SingleFontProcessingTab()
         self.single_embed_tab = SingleSwfEmbedTab()
         self.batch_tab = BatchFontProcessingTab()
+        self.batch_swf_tab = BatchSwfProcessingTab()
         self.stop_task_button = QPushButton("処理を強制停止")
         self.stop_task_button.setProperty("importance", "danger")
         self.stop_task_button.setSizePolicy(
@@ -1711,6 +1869,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.single_font_tab, "個別：フォント加工")
         self.tabs.addTab(self.single_embed_tab, "個別：SWF埋め込み")
         self.tabs.addTab(self.batch_tab, "一括：フォント加工")
+        self.tabs.addTab(self.batch_swf_tab, "一括：SWF埋め込み")
 
         top_layout.addWidget(self.tabs)
 
@@ -1736,6 +1895,7 @@ class MainWindow(QMainWindow):
         self.single_font_tab.log_emitted.connect(self.append_log)
         self.single_embed_tab.execute_requested.connect(self._start_single_embed_task)
         self.batch_tab.execute_requested.connect(self._start_batch_task)
+        self.batch_swf_tab.execute_requested.connect(self._start_batch_swf_task)
         self.stop_task_button.clicked.connect(self._force_stop_current_task)
 
     def append_log(self, message: str) -> None:
@@ -1769,6 +1929,7 @@ class MainWindow(QMainWindow):
         self.single_font_tab.set_executing_state(executing)
         self.single_embed_tab.set_executing_state(executing)
         self.batch_tab.set_executing_state(executing)
+        self.batch_swf_tab.set_executing_state(executing)
         self.stop_task_button.setEnabled(executing)
 
     def _set_status_error(self, is_error: bool) -> None:
@@ -2204,6 +2365,14 @@ class MainWindow(QMainWindow):
 
         self._start_worker("一括:フォント加工モード", task)
 
+    def _start_batch_swf_task(self, config: BatchSwfProcessingTaskConfig) -> None:
+        self.append_log(f"[一括:SWF埋め込み] 受信: {config}")
+
+        def task(log: Callable[[str], None]) -> None:
+            self._run_swf_processing_recipe(config, log)
+
+        self._start_worker("一括:SWF埋め込みモード", task)
+
     def _run_single_font_processing(
         self,
         config: SingleFontTaskConfig,
@@ -2398,6 +2567,28 @@ class MainWindow(QMainWindow):
             recipe_path=self._resolve_user_path(config.recipe_path),
             input_path=self._resolve_user_path(config.input_dir),
             output_dir=self._resolve_user_path(config.output_dir),
+            debug=self._debug,
+        )
+        self._capture_module_output(log, lambda: run_batch(cli))
+
+    def _run_swf_processing_recipe(
+        self,
+        config: BatchSwfProcessingTaskConfig,
+        log: Callable[[str], None],
+    ) -> None:
+        from core.batch_processor import CLIArgs, run_batch
+
+        # 出力欄はフォルダ想定。相対/絶対どちらも可。
+        output_for_cli = (
+            self._resolve_user_path(config.output_dir) if config.output_dir else None
+        )
+
+        cli = CLIArgs(
+            recipe_path=self._resolve_user_path(config.recipe_path),
+            input_path=(
+                self._resolve_user_path(config.input_dir) if config.input_dir else None
+            ),
+            output_dir=output_for_cli,
             debug=self._debug,
         )
         self._capture_module_output(log, lambda: run_batch(cli))
