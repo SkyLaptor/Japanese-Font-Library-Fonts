@@ -1,0 +1,44 @@
+[フォント情報]
+TrueType: True
+PostScript (CFF): False
+PostScript (CFF2 / Variable): False
+作成日時: 2021/02/25 14:45:43 (UTC)
+更新日時: 2026/03/08 06:38:37 (UTC)
+総グリフ数: 7995
+グリフ数(Unicode割当済): 6988
+UPM: 1024
+OS/2 ベンダーID: FTDS
+OS/2 WinAscent: 900
+OS/2 WinDescent: 124
+OS/2 TypoAscender: 900
+OS/2 TypoDescender: -124
+OS/2 Typo LineGap: 0
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 900
+HHEA Descent: -124
+HHEA LineGap: 0
+POST Underline Position: 0
+POST Underline Thickness: 50
+OpenType機能数: 17
+NAMEテーブル
+[NAMEレコード] 0, Copyright, Copyright 2021 The Shippori Mincho Project Authors (https://github.com/fontdasu/ShipporiMincho)
+[NAMEレコード] 1, Family Name, Shippori Mincho Medium
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, 3.110;FTDS;ShipporiMincho-Medium
+[NAMEレコード] 4, Full Name, Shippori Mincho Medium
+[NAMEレコード] 5, Version, Version 3.110; ttfautohint (v1.8.3)
+[NAMEレコード] 6, PostScript Name, ShipporiMincho-Medium
+[NAMEレコード] 13, License, This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL
+
+
+[サブセット欠損レポート]
+対象コードポイント数: 6988
+欠損総数: 0
+未マップ数: 0
+アウトライン無し数: 0
+
+[未マップ]
+(なし)
+
+[アウトライン無し]
+(なし)

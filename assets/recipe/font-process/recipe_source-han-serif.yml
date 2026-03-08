@@ -59,6 +59,7 @@ steps:
       base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
     - output_font_path: "source-han-serif/handwrite.ttf"
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
+    # 軽量版
     - output_font_path: "source-han-serif/every_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"

@@ -25,32 +25,28 @@ output_dir: "assets/fonts" # SWF出力先といった出力系パスを相対指
 # 処理ステップ
 # ------------------------------------------
 steps:
-    - output_swf_path: "apricot/fonts_apricot.swf"
+    - output_swf_path: "source-han-serif/fonts_source-han-serif.swf"
       embed_fonts: # 【必須】埋め込むフォントのリスト
-      - input_font_path: "apricot/every.ttf" # 【必須】埋め込むフォントのパス
-        internal_font_name: "apricot_every" # 【必須】内部フォント名 fontconfig.txt のマップ設定にて実際に使用する名前となります。名前の重複を防ぐため、フォントファミリー名_サイズなどフォントを特定できるような名前にすることを強く推奨します。
-      - input_font_path: "apricot/every_w70.ttf"
-        internal_font_name: "apricot_every_w70"
-      - input_font_path: "apricot/every_w50.ttf"
-        internal_font_name: "apricot_every_w50"
-      - input_font_path: "apricot/book.ttf"
-        internal_font_name: "apricot_book"
-      - input_font_path: "apricot/handwrite.ttf"
-        internal_font_name: "apricot_handwrite"
-      - input_font_path: "apricot-mono/mono.ttf"
-        internal_font_name: "apricot_mono"
+      - input_font_path: "source-han-serif/every.ttf" # 【必須】埋め込むフォントのパス
+        internal_font_name: "source-han-serif_every" # 【必須】内部フォント名 fontconfig.txt のマップ設定にて実際に使用する名前となります。名前の重複を防ぐため、フォントファミリー名_サイズなどフォントを特定できるような名前にすることを強く推奨します。
+      - input_font_path: "source-han-serif/every_w70.ttf"
+        internal_font_name: "source-han-serif_every_w70"
+      - input_font_path: "source-han-serif/every_w50.ttf"
+        internal_font_name: "source-han-serif_every_w50"
+      - input_font_path: "source-han-serif/book.ttf"
+        internal_font_name: "source-han-serif_book"
+      - input_font_path: "source-han-serif/handwrite.ttf"
+        internal_font_name: "source-han-serif_handwrite"
     # 軽量版
-    - output_swf_path: "apricot/fonts_apricot_lw.swf"
+    - output_swf_path: "source-han-serif/fonts_source-han-serif_lw.swf"
       embed_fonts: # 【必須】埋め込むフォントのリスト
-      - input_font_path: "apricot/every_lw.ttf" # 【必須】埋め込むフォントのパス
-        internal_font_name: "apricot_every" # 【必須】内部フォント名 fontconfig.txt のマップ設定にて実際に使用する名前となります。名前の重複を防ぐため、フォントファミリー名_サイズなどフォントを特定できるような名前にすることを強く推奨します。
-      - input_font_path: "apricot/every_w70_lw.ttf"
-        internal_font_name: "apricot_every_w70"
-      - input_font_path: "apricot/every_w50_lw.ttf"
-        internal_font_name: "apricot_every_w50"
-      - input_font_path: "apricot/book_lw.ttf"
-        internal_font_name: "apricot_book"
-      - input_font_path: "apricot/handwrite_lw.ttf"
-        internal_font_name: "apricot_handwrite"
-      - input_font_path: "apricot-mono/mono_lw.ttf"
-        internal_font_name: "apricot_mono"
+      - input_font_path: "source-han-serif/every_lw.ttf" # 【必須】埋め込むフォントのパス
+        internal_font_name: "source-han-serif_every" # 【必須】内部フォント名 fontconfig.txt のマップ設定にて実際に使用する名前となります。名前の重複を防ぐため、フォントファミリー名_サイズなどフォントを特定できるような名前にすることを強く推奨します。
+      - input_font_path: "source-han-serif/every_w70_lw.ttf"
+        internal_font_name: "source-han-serif_every_w70"
+      - input_font_path: "source-han-serif/every_w50_lw.ttf"
+        internal_font_name: "source-han-serif_every_w50"
+      - input_font_path: "source-han-serif/book_lw.ttf"
+        internal_font_name: "source-han-serif_book"
+      - input_font_path: "source-han-serif/handwrite_lw.ttf"
+        internal_font_name: "source-han-serif_handwrite"
