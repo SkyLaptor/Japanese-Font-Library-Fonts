@@ -3,7 +3,7 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2026/01/30 11:53:58 (UTC)
-更新日時: 2026/03/08 07:57:48 (UTC)
+更新日時: 2026/03/08 12:52:30 (UTC)
 総グリフ数: 2883
 グリフ数(Unicode割当済): 2882
 UPM: 1024
