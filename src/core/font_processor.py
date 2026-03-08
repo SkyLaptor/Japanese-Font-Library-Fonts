@@ -383,8 +383,8 @@ def process_font(params: Mapping[str, Any]) -> None:
                 base_font_obj = harmonize_font_metrics(
                     target_font_obj=base_font_obj,
                     base_font_obj=ref_font_obj,
-                    scale_width_manual=1.0,
-                    scale_height_manual=1.0,
+                    scale_width_manual=scale_width,
+                    scale_height_manual=scale_height,
                     offset_width=0,
                     offset_height=0,
                     debug=debug,

@@ -3,6 +3,8 @@ from copy import deepcopy
 
 from fontTools.ttLib import TTFont
 
+from utils.file_io import save_font
+
 
 def merge_font(
     base_font: TTFont, interp_font: TTFont, *, debug: bool = False
@@ -246,3 +248,24 @@ def merge_font(
         print("[ERROR:v2] マージ中に例外が発生しました:")
         traceback.print_exc()
         raise
+
+
+def action_merge_font(
+    *, base_path: str, interpolation_path: str, output_path: str, debug: bool = False
+) -> None:
+    """
+    単体マージ実行アクション。
+
+    - `base_path`: ベースとなるTTFパス
+    - `interpolation_path`: 取り込み元TTFパス
+    - `output_path`: 出力先パス
+    - `debug`: デバッグ出力の有無
+    """
+    # フォントを開いてマージし、保存するだけの薄いラッパー
+    with TTFont(str(base_path)) as base_font, TTFont(
+        str(interpolation_path)
+    ) as interp_font:
+        merged = merge_font(base_font=base_font, interp_font=interp_font, debug=debug)
+        save_font(
+            font_obj=merged, input_path=str(base_path), output_path=str(output_path)
+        )

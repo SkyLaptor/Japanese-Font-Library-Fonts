@@ -194,14 +194,18 @@ def run_batch(cli: CLIArgs, debug: bool = False) -> int:
         if not isinstance(step, dict):
             raise ValueError(f"steps[{i}] の形式が不正です: {step}")
 
+        # 各ステップのパラメータを作成（グローバル設定をステップ設定で上書き）
+        run_kwargs = {**global_params, **step}
+
+        # SWF埋め込みステップ判定（embed_fonts / embeds いずれかを含む）
         if (
-            ("embed_fonts" in step and step.get("embed_fonts") is not None)
-            or ("embeds" in step and step.get("embeds") is not None)
-            or ("output_swf_path" in step and not step.get("input_font_path"))
+            ("embed_fonts" in run_kwargs and run_kwargs.get("embed_fonts") is not None)
+            or ("embeds" in run_kwargs and run_kwargs.get("embeds") is not None)
+            or ("output_swf_path" in run_kwargs and not run_kwargs.get("input_font_path"))
         ):
             from core.swf_processor import process_swf
 
-            raw_items = step.get("embed_fonts") or step.get("embeds")
+            raw_items = run_kwargs.get("embed_fonts") or run_kwargs.get("embeds")
             if isinstance(raw_items, dict):
                 raw_items = [raw_items]
             if not isinstance(raw_items, list) or not raw_items:
@@ -223,24 +227,22 @@ def run_batch(cli: CLIArgs, debug: bool = False) -> int:
                     continue
                 items.append({"font_path": font_path, "internal_name": internal_name})
 
-            output_swf_path = step.get("output_swf_path") or global_params.get(
-                "output_swf_path"
-            )
+            output_swf_path = run_kwargs.get("output_swf_path")
             if swf_override_path is not None:
                 output_swf_path = swf_override_path
             if not output_swf_path:
                 raise ValueError("output_swf_path が指定されていません")
 
-            run_kwargs = {
+            swf_run_kwargs = {
                 "output_swf_path": output_swf_path,
                 "items": items,
-                "debug": bool(global_params.get("debug", False) or debug),
+                "debug": bool(run_kwargs.get("debug", False) or debug),
             }
             print(f"[一括SWF埋め込み] 実行 ({i}/{len(steps)})")
-            process_swf(run_kwargs)
+            process_swf(swf_run_kwargs)
             continue
 
-        run_kwargs = {**global_params, **step}
+        # フォント加工ステップ
         if run_kwargs.get("base_font_path") and str(
             run_kwargs.get("mode", "")
         ).strip().lower() not in {"manual", "base"}:
