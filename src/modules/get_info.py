@@ -107,6 +107,18 @@ def get_info(font_obj: TTFont, debug: bool = False) -> FontInfoResult:
             debug,
         )
 
+    post_underline_position = None
+    post_underline_thickness = None
+    if 'post' in font_obj:
+        post = font_obj['post']
+        post_underline_position = post.underlinePosition
+        post_underline_thickness = post.underlineThickness
+    else:
+        dprint(
+            "POSTテーブルを取得できませんでした。フォントが壊れている可能性があります。",
+            debug,
+        )
+
     opentype_feature_count = 0
     if 'GSUB' in font_obj and hasattr(font_obj['GSUB'], 'table'):
         gsub_table = font_obj['GSUB'].table
@@ -170,6 +182,8 @@ def get_info(font_obj: TTFont, debug: bool = False) -> FontInfoResult:
         hhea_ascent=hhea_ascent,
         hhea_descent=hhea_descent,
         hhea_linegap=hhea_linegap,
+        post_underline_position=post_underline_position,
+        post_underline_thickness=post_underline_thickness,
         opentype_feature_count=opentype_feature_count,
         name_records=name_records,
     )

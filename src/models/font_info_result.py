@@ -33,6 +33,8 @@ class FontInfoResult:
     hhea_ascent: Optional[int] = None
     hhea_descent: Optional[int] = None
     hhea_linegap: Optional[int] = None
+    post_underline_position: Optional[int] = None
+    post_underline_thickness: Optional[int] = None
     opentype_feature_count: Optional[int] = None
     name_records: list[NameRecord] = field(default_factory=list)
 
@@ -56,6 +58,8 @@ class FontInfoResult:
         output += f"HHEA Ascent: {self.hhea_ascent}\n"
         output += f"HHEA Descent: {self.hhea_descent}\n"
         output += f"HHEA LineGap: {self.hhea_linegap}\n"
+        output += f"POST Underline Position: {self.post_underline_position}\n"
+        output += f"POST Underline Thickness: {self.post_underline_thickness}\n"
         output += f"OpenType機能数: {self.opentype_feature_count}\n"
         output += "NAMEテーブル\n"
         for name in self.name_records:
