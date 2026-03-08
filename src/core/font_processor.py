@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import unicodedata
 from pathlib import Path
 from typing import Any, Mapping
@@ -244,6 +245,13 @@ def process_font(params: Mapping[str, Any]) -> None:
 
     weight_offset = int(round(float(params.get("weight_offset", 0))))
 
+    # 基準フォントモード判定
+    ref_font_path = params.get("base_font_path")
+    mode_val = str(params.get("mode", "")).strip().lower()
+    use_base_mode = (mode_val == "base") or (
+        bool(ref_font_path) and mode_val in {"", "auto"}
+    )
+
     # 1) 入力フォント読み込み
     with TTFont(str(input_font_path)) as base_font_obj:
         if is_otf_path(input_font_path):
@@ -269,18 +277,11 @@ def process_font(params: Mapping[str, Any]) -> None:
         offset_width = int(round(raw_offset_width * factor))
         offset_height = int(round(raw_offset_height * factor))
 
-        # 2) 変形適用
-        if debug:
-            print("入力フォントを変形しています...")
-
-        # 基準フォントモードの場合は自動調整を最初に行う
-        ref_font_path = params.get("base_font_path")
-        mode_val = str(params.get("mode", "")).strip().lower()
-        use_base_mode = (mode_val == "base") or (
-            bool(ref_font_path) and mode_val in {"", "auto"}
-        )
+        # 2) 変形適用（一次）
         if use_base_mode and ref_font_path:
             with TTFont(str(ref_font_path)) as ref_font_obj:
+                if debug:
+                    print("基準フォントに合わせて一次調整を行っています...")
                 base_font_obj = harmonize_font_metrics(
                     target_font_obj=base_font_obj,
                     base_font_obj=ref_font_obj,
@@ -290,20 +291,9 @@ def process_font(params: Mapping[str, Any]) -> None:
                     offset_height=offset_height,
                     debug=debug,
                 ).font_obj
-
-            # ベース整合後、手動メトリクス指定があれば上書きを適用する
-            if metrics_override:
-                base_font_obj = apply_font_transform(
-                    target_font_obj=base_font_obj,
-                    scale_width=1.0,
-                    scale_height=1.0,
-                    offset_width=0,
-                    offset_height=0,
-                    new_upm=NORMALIZED_UPM,
-                    metrics_override=metrics_override,
-                )
         else:
-            # マニュアルモードまたは基準フォント未指定
+            if debug:
+                print("入力フォントを変形しています...")
             base_font_obj = apply_font_transform(
                 target_font_obj=base_font_obj,
                 scale_width=scale_width * factor,
@@ -323,68 +313,103 @@ def process_font(params: Mapping[str, Any]) -> None:
         if not isinstance(merge_list, list):
             raise ValueError("merge_fonts はリストである必要があります")
 
-        for i, item in enumerate(merge_list, start=1):
-            if not isinstance(item, Mapping):
-                raise ValueError("merge_fonts の各要素はマップである必要があります")
-            sub_path = item.get("font_path")
-            if not sub_path:
-                continue
-            with TTFont(str(sub_path)) as sub_font_obj:
-                print(
-                    f"マージフォントを処理しています...: ({i}/{len(merge_list)}) {sub_path}"
-                )
+        # 基準フォントがあれば開いて保持する
+        with contextlib.ExitStack() as stack:
+            ref_font_obj = None
+            if use_base_mode and ref_font_path:
+                ref_font_obj = stack.enter_context(TTFont(str(ref_font_path)))
 
-                if is_otf_path(sub_path):
-                    otf_to_ttf(sub_font_obj)
-                if subset_text:
-                    sub_font_obj = create_subset(
-                        font_obj=sub_font_obj, subset_text=subset_text, debug=debug
+            for i, item in enumerate(merge_list, start=1):
+                if not isinstance(item, Mapping):
+                    raise ValueError("merge_fonts の各要素はマップである必要があります")
+                sub_path = item.get("font_path")
+                if not sub_path:
+                    continue
+                with TTFont(str(sub_path)) as sub_font_obj:
+                    print(
+                        f"マージフォントを処理しています...: ({i}/{len(merge_list)}) {sub_path}"
                     )
 
-                if bool(params.get("remove_blank_glyphs", True)):
-                    sub_font_obj = remove_empty_glyphs(sub_font_obj, debug=debug)
+                    if is_otf_path(sub_path):
+                        otf_to_ttf(sub_font_obj)
+                    if subset_text:
+                        sub_font_obj = create_subset(
+                            font_obj=sub_font_obj, subset_text=subset_text, debug=debug
+                        )
 
-                item_weight_offset = int(round(float(item.get("weight_offset", 0))))
-                if item_weight_offset != 0:
-                    sub_font_obj = change_weight(
-                        sub_font_obj, offset_weight=item_weight_offset, debug=debug
+                    if bool(params.get("remove_blank_glyphs", True)):
+                        sub_font_obj = remove_empty_glyphs(sub_font_obj, debug=debug)
+
+                    item_weight_offset = int(round(float(item.get("weight_offset", 0))))
+                    if item_weight_offset != 0:
+                        sub_font_obj = change_weight(
+                            sub_font_obj, offset_weight=item_weight_offset, debug=debug
+                        )
+
+                    item_offset_width = int(
+                        round(float(item.get("offset_width", 0)) * factor)
                     )
+                    item_offset_height = int(
+                        round(float(item.get("offset_height", 0)) * factor)
+                    )
+                    item_scale_width = float(item.get("scale_width", 100.0)) / 100.0
+                    item_scale_height = float(item.get("scale_height", 100.0)) / 100.0
 
-                item_offset_width = int(
-                    round(float(item.get("offset_width", 0)) * factor)
-                )
-                item_offset_height = int(
-                    round(float(item.get("offset_height", 0)) * factor)
-                )
-                item_scale_width = float(item.get("scale_width", 100.0)) / 100.0
-                item_scale_height = float(item.get("scale_height", 100.0)) / 100.0
+                    # サイズ調整のターゲットを決定
+                    # 基準フォントがあればそちらに合わせ、なければ現在のベースに合わせる
+                    harmonize_target = ref_font_obj if ref_font_obj else base_font_obj
 
-                # ベースフォントの現在のサイズに自動調和させる
-                sub_font_obj = harmonize_font_metrics(
-                    target_font_obj=sub_font_obj,
-                    base_font_obj=base_font_obj,
-                    scale_width_manual=item_scale_width,
-                    scale_height_manual=item_scale_height,
-                    offset_width=item_offset_width,
-                    offset_height=item_offset_height,
+                    sub_font_obj = harmonize_font_metrics(
+                        target_font_obj=sub_font_obj,
+                        base_font_obj=harmonize_target,
+                        scale_width_manual=item_scale_width,
+                        scale_height_manual=item_scale_height,
+                        offset_width=item_offset_width,
+                        offset_height=item_offset_height,
+                        debug=debug,
+                    ).font_obj
+
+                    base_font_obj = merge_font(
+                        base_font=base_font_obj,
+                        interp_font=sub_font_obj,
+                        debug=debug,
+                    )
+                    base_font_obj = reopen_font(base_font_obj)
+
+            # 5) 最終サイズ再調整 (基準フォントがある場合のみ)
+            if ref_font_obj:
+                if debug:
+                    print("マージ後の最終サイズ調整を行っています...")
+                base_font_obj = harmonize_font_metrics(
+                    target_font_obj=base_font_obj,
+                    base_font_obj=ref_font_obj,
+                    scale_width_manual=1.0,
+                    scale_height_manual=1.0,
+                    offset_width=0,
+                    offset_height=0,
                     debug=debug,
                 ).font_obj
 
-                base_font_obj = merge_font(
-                    base_font=base_font_obj,
-                    interp_font=sub_font_obj,
-                    debug=debug,
-                )
-                base_font_obj = reopen_font(base_font_obj)
+                # 最終的なメトリクス上書きを適用
+                if metrics_override:
+                    base_font_obj = apply_font_transform(
+                        target_font_obj=base_font_obj,
+                        scale_width=1.0,
+                        scale_height=1.0,
+                        offset_width=0,
+                        offset_height=0,
+                        new_upm=NORMALIZED_UPM,
+                        metrics_override=metrics_override,
+                    )
 
-        # 5) 匿名化
+        # 6) 匿名化
         if bool(params.get("anonymize", False)):
             font_name = params.get("font_name") or "Anonymous"
             base_font_obj = anonymize_info(
                 base_font_obj, font_name=str(font_name), debug=debug
             )
 
-        # 6) 保存
+        # 7) 保存
         saved_output = save_font(
             font_obj=base_font_obj,
             input_path=str(input_font_path),
