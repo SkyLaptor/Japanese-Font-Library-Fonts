@@ -319,19 +319,40 @@ def harmonize_with_base(
     target_avg_size_result = get_average_size(target_font_obj)
 
     dprint(
-        f"ベースフォントのグリフ平均サイズ: 横: {base_avg_size_result.avg_w:.1f}units, 縦: {base_avg_size_result.avg_h:.1f}units",
+        f"ベースフォントのグリフ平均サイズ: CJK:{base_avg_size_result.avg_w:.1f}x{base_avg_size_result.avg_h:.1f}, Latin:{base_avg_size_result.avg_w_latin:.1f}x{base_avg_size_result.avg_h_latin:.1f}",
         debug,
     )
     dprint(
-        f"ターゲットフォントのグリフ平均サイズ: 横: {target_avg_size_result.avg_w:.1f}units, 縦: {target_avg_size_result.avg_h:.1f}units",
+        f"ターゲットフォントのグリフ平均サイズ: CJK:{target_avg_size_result.avg_w:.1f}x{target_avg_size_result.avg_h:.1f}, Latin:{target_avg_size_result.avg_w_latin:.1f}x{target_avg_size_result.avg_h_latin:.1f}",
         debug,
     )
 
     # スケーリング算出に使用するグリフ種別の決定
+    force_proportional = False
     if base_avg_size_result.count > 0 and target_avg_size_result.count > 0:
         mode_label = "CJK"
         base_w, base_h = base_avg_size_result.avg_w, base_avg_size_result.avg_h
         target_w, target_h = target_avg_size_result.avg_w, target_avg_size_result.avg_h
+    elif target_avg_size_result.count == 0 and target_avg_size_result.count_latin > 0:
+        # 入力フォントが英字のみの場合（アスペクト比を維持）
+        force_proportional = True
+        if base_avg_size_result.count > 0:
+            # 基準フォントがCJKを持つなら、その80%の高さをターゲットにする（CJK近似）
+            mode_label = "Latin-to-CJK-Approx"
+            base_h = base_avg_size_result.avg_h * 0.8
+            target_h = target_avg_size_result.avg_h_latin
+            base_w = 1.0 # 縦倍率を流用するため未使用
+            target_w = 1.0
+        elif base_avg_size_result.count_latin > 0:
+            mode_label = "Latin-Only"
+            base_h = base_avg_size_result.avg_h_latin
+            target_h = target_avg_size_result.avg_h_latin
+            base_w = 1.0
+            target_w = 1.0
+        else:
+            mode_label = "Fallback(1.0)"
+            base_w, base_h = 1.0, 1.0
+            target_w, target_h = 1.0, 1.0
     elif base_avg_size_result.count_latin > 0 and target_avg_size_result.count_latin > 0:
         mode_label = "Latin"
         base_w, base_h = base_avg_size_result.avg_w_latin, base_avg_size_result.avg_h_latin
@@ -341,25 +362,21 @@ def harmonize_with_base(
         base_w, base_h = 1.0, 1.0
         target_w, target_h = 1.0, 1.0
 
-    dprint(f"スケーリング算出モード: {mode_label}", debug)
+    dprint(f"スケーリング算出モード: {mode_label} (Proportional={force_proportional})", debug)
 
     if target_h == 0:
-        dprint(
-            f"ターゲットフォントの平均高さが 0 です。拡大率は 1.0 として計算します。",
-            debug,
-        )
         scale_height_pure = 1.0
     else:
         scale_height_pure = base_h / target_h
 
-    if target_w == 0:
-        dprint(
-            f"ターゲットフォントの平均幅が 0 です。拡大率は 1.0 として計算します。",
-            debug,
-        )
-        scale_width_pure = 1.0
+    if force_proportional:
+        # 英字のみの場合は縦の倍率を横にも適用
+        scale_width_pure = scale_height_pure
     else:
-        scale_width_pure = base_w / target_w
+        if target_w == 0:
+            scale_width_pure = 1.0
+        else:
+            scale_width_pure = base_w / target_w
 
     dprint(
         f"自動拡大率(平均サイズ比較): 横:x{scale_width_pure:.3f}, 縦:x{scale_height_pure:.3f}",
