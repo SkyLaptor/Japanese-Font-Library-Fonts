@@ -20,7 +20,7 @@ output_dir: "assets/fonts" # フォント出力先といった出力系パスを
 # グローバル設定
 #   処理ステップ側で同名のパラメーターを指定している場合、そちらが優先されます。
 # ------------------------------------------
-input_font_path: "source-han-serif/source.ttf" # 【必須】入力フォントのパス
+input_font_path: "noto-sans/source.ttf" # 【必須】入力フォントのパス
 #output_font_path: "" # 【必須】出力フォントのパス 出力形式はTTF固定です。ステップ側で指定することをお勧めします。
 #base_font_path: "" # 【任意】基準フォントのパス デフォルト:未指定(基準比較を行いません。)
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
@@ -37,42 +37,25 @@ line_gap: 0 # 【任意】行間値 (em) デフォルト: フォントの元の�
 underline_position: 0 # 【任意】下線位置 (em) デフォルト: フォントの元の下線位置(基準フォントを指定している場合はそちらの値)
 underline_thickness: 50 # 【任意】下戦太さ (em) デフォルト: フォントの元の下線太さ(基準フォントを指定している場合はそちらの値)
 subset_text_path: "subsets/subset_jp_skyrim_custom.txt" # 【任意】サブセット化用テキストファイルのパス デフォルト:未指定(サブセット化しません。)
-# merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
-#   - font_path: "shippori-mincho/source.ttf"
-#     offset_height: -16 # 【任意】縦位置オフセット (em) デフォルト: 0
-#     weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
+merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
+  - font_path: "source-han-sans/source.ttf"
+    offset_height: -12 # 【任意】縦位置オフセット (em) デフォルト: 0
+    weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
 output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
 
 # ------------------------------------------
 # 処理ステップ
 # ------------------------------------------
 steps:
-    - output_font_path: "source-han-serif/every.ttf"
+    - output_font_path: "noto-sans/every.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
-    - output_font_path: "source-han-serif/every_w70.ttf"
-      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
-      scale_width: 70.0
-    - output_font_path: "source-han-serif/every_w50.ttf"
-      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
-      scale_width: 50.0
-    - output_font_path: "source-han-serif/book.ttf"
-      base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
-    - output_font_path: "source-han-serif/handwrite.ttf"
-      base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
-    - output_font_path: "source-han-serif/every_lw.ttf"
-      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "source-han-serif/every_w70_lw.ttf"
+    - output_font_path: "noto-sans/every_w70.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 70.0
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "source-han-serif/every_w50_lw.ttf"
+    - output_font_path: "noto-sans/every_w50.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 50.0
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "source-han-serif/book_lw.ttf"
+    - output_font_path: "noto-sans/book.ttf"
       base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "source-han-serif/handwrite_lw.ttf"
+    - output_font_path: "noto-sans/handwrite.ttf"
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
