@@ -2279,28 +2279,11 @@ class MainWindow(QMainWindow):
 
         measurement = Image.new("RGBA", (1, 1), (0, 0, 0, 255))
         measurement_draw = ImageDraw.Draw(measurement)
+        # textbbox returns (left, top, right, bottom) relative to anchor 'la' (Ascender line)
         left, top, right, bottom = measurement_draw.textbbox(
             (0, 0), config.preview_text, font=pil_font
         )
         text_width = max(1, right - left)
-        text_height = max(1, bottom - top)
-
-        padding = PREVIEW_PADDING
-        image_width = max(PREVIEW_MIN_WIDTH, text_width + padding * 2)
-        image_height = max(
-            PREVIEW_MIN_HEIGHT,
-            text_height + padding * 2 + PREVIEW_LEGEND_RESERVED_HEIGHT,
-        )
-        image = Image.new("RGBA", (image_width, image_height), (0, 0, 0, 255))
-        draw = ImageDraw.Draw(image)
-        text_x = padding - left
-        text_y = padding - top
-        draw.text(
-            (text_x, text_y),
-            config.preview_text,
-            fill=(255, 255, 255, 255),
-            font=pil_font,
-        )
 
         upm = (
             int(preview_font_obj['head'].unitsPerEm)
@@ -2314,8 +2297,49 @@ class MainWindow(QMainWindow):
         ascent, descent, line_gap, underline_position, underline_thickness = (
             self._get_preview_metrics_for_overlay(preview_font_obj)
         )
-        pil_ascent, _pil_descent = pil_font.getmetrics()
-        baseline_y = int(round(text_y + pil_ascent))
+        ascent_px = float(ascent) * pixel_per_unit
+        descent_px = float(descent) * pixel_per_unit
+        line_gap_px = float(line_gap) * pixel_per_unit
+
+        pil_ascent, _ = pil_font.getmetrics()
+        padding = PREVIEW_PADDING
+
+        # Calculate baseline position based on font metrics and glyph ink.
+        # Ensure Ascent line fits even if glyphs don't reach it.
+        required_above_baseline = max(ascent_px, float(pil_ascent - top))
+        baseline_y = int(round(padding + required_above_baseline))
+
+        # Space below baseline should cover Descent line and any glyph ink.
+        required_below_baseline = max(
+            abs(descent_px) + line_gap_px, float(bottom - pil_ascent)
+        )
+
+        image_width = max(PREVIEW_MIN_WIDTH, int(round(text_width + padding * 2)))
+        image_height = max(
+            PREVIEW_MIN_HEIGHT,
+            int(
+                round(
+                    baseline_y
+                    + required_below_baseline
+                    + padding
+                    + PREVIEW_LEGEND_RESERVED_HEIGHT
+                )
+            ),
+        )
+
+        image = Image.new("RGBA", (image_width, image_height), (0, 0, 0, 255))
+        draw = ImageDraw.Draw(image)
+
+        # Baseline is at baseline_y. 'la' anchor is at baseline_y - pil_ascent.
+        text_x = padding - left
+        text_y = int(round(baseline_y - pil_ascent))
+
+        draw.text(
+            (text_x, text_y),
+            config.preview_text,
+            fill=(255, 255, 255, 255),
+            font=pil_font,
+        )
 
         x_start = padding
         x_end = image_width - padding
@@ -2326,8 +2350,8 @@ class MainWindow(QMainWindow):
             width=PREVIEW_BASELINE_WIDTH,
         )
 
-        ascender_y = int(round(baseline_y - float(ascent) * pixel_per_unit))
-        descender_y = int(round(baseline_y - float(descent) * pixel_per_unit))
+        ascender_y = int(round(baseline_y - ascent_px))
+        descender_y = int(round(baseline_y - descent_px))
         self._draw_dashed_horizontal_line(
             draw,
             y=ascender_y,
@@ -2345,7 +2369,7 @@ class MainWindow(QMainWindow):
             width=PREVIEW_METRIC_WIDTH,
         )
 
-        line_gap_y = int(round(descender_y + float(line_gap) * pixel_per_unit))
+        line_gap_y = int(round(descender_y + line_gap_px))
         self._draw_dashed_horizontal_line(
             draw,
             y=line_gap_y,
@@ -2355,9 +2379,7 @@ class MainWindow(QMainWindow):
             width=PREVIEW_METRIC_WIDTH,
         )
 
-        underline_y = int(
-            round(baseline_y - float(underline_position) * pixel_per_unit)
-        )
+        underline_y = int(round(baseline_y - float(underline_position) * pixel_per_unit))
         underline_height = max(
             1,
             int(round(abs(float(underline_thickness) * pixel_per_unit))),
