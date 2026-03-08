@@ -20,14 +20,14 @@ output_dir: "assets/fonts" # フォント出力先といった出力系パスを
 # グローバル設定
 #   処理ステップ側で同名のパラメーターを指定している場合、そちらが優先されます。
 # ------------------------------------------
-input_font_path: "apricot/source.ttf" # 【必須】入力フォントのパス
+input_font_path: "acgyosyo/source.ttf" # 【必須】入力フォントのパス
 #output_font_path: "" # 【必須】出力フォントのパス 出力形式はTTF固定です。ステップ側で指定することをお勧めします。
 #base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf" # 【任意】基準フォントのパス デフォルト:未指定(基準比較を行いません。)
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
 #scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
 #offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
-offset_height: -16 # 【任意】縦位置オフセット (em) デフォルト: 0
-#weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
+offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
+weight_offset: 22 # 【任意】太さ変更量 (em) デフォルト: 0
 #remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
 #anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。
 #font_name: "Anonymous" # 【任意】匿名化時のフォント名 匿名化が無効の場合は無視されます。 デフォルト: Anonymous。
@@ -38,64 +38,42 @@ underline_position: 0 # 【任意】下線位置 (em) デフォルト: フォン
 underline_thickness: 50 # 【任意】下戦太さ (em) デフォルト: フォントの元の下線太さ(基準フォントを指定している場合はそちらの値)
 subset_text_path: "subsets/subset_jp_skyrim_custom.txt" # 【任意】サブセット化用テキストファイルのパス デフォルト:未指定(サブセット化しません。)
 merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
-  - font_path: "genjyuu-gothic/source.ttf"
+  - font_path: "source-han-serif/source.ttf"
     offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
-    weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
-  - font_path: "source-han-sans/source.ttf"
-    offset_height: 0
-    weight_offset: 0
+    weight_offset: 8 # 【任意】太さ変更量 (em) デフォルト: 0
 output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
 
 # ------------------------------------------
 # 処理ステップ
 # ------------------------------------------
 steps:
-    - output_font_path: "apricot/every.ttf"
+    - output_font_path: "acgyosyo/every.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
-    - output_font_path: "apricot/every_w70.ttf"
+    - output_font_path: "acgyosyo/every_w70.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 70.0
-    - output_font_path: "apricot/every_w50.ttf"
+    - output_font_path: "acgyosyo/every_w50.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 50.0
-    - output_font_path: "apricot/book.ttf"
+    - output_font_path: "acgyosyo/book.ttf"
       base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
-    - output_font_path: "apricot/handwrite.ttf"
+    - output_font_path: "acgyosyo/handwrite.ttf"
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
-    - output_font_path: "apricot-mono/mono.ttf"
-      input_font_path: "apricot-mono/source.ttf"
-      merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
-        - font_path: "genjyuu-gothic-mono/source.ttf"
-          offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
-          weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
-        - font_path: "source-han-code-jp-mono/source.ttf"
-          offset_height: 0
-          weight_offset: 0
     # 軽量版
-    - output_font_path: "apricot/every_lw.ttf"
+    - output_font_path: "acgyosyo/every_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "apricot/every_w70_lw.ttf"
+    - output_font_path: "acgyosyo/every_w70_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 70.0
       subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "apricot/every_w50_lw.ttf"
+    - output_font_path: "acgyosyo/every_w50_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 50.0
       subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "apricot/book_lw.ttf"
+    - output_font_path: "acgyosyo/book_lw.ttf"
       base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "apricot/handwrite_lw.ttf"
+    - output_font_path: "acgyosyo/handwrite_lw.ttf"
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
-    - output_font_path: "apricot-mono/mono_lw.ttf"
-      input_font_path: "apricot-mono/source.ttf"
-      subset_text_path: "subsets/subset_jp_skyrim.txt"
-      merge_fonts:
-        - font_path: "genjyuu-gothic-mono/source.ttf"
-          offset_height: 0
-          weight_offset: 0
-        - font_path: "source-han-code-jp-mono/source.ttf"
-          offset_height: 0
-          weight_offset: 0

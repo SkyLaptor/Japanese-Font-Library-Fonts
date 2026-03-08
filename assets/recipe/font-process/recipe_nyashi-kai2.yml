@@ -1,0 +1,79 @@
+# ==========================================
+# フォント一括加工用レシピファイル例
+#   1フォントファミリー毎に用意するのをお勧めします。
+#   サイズ変更や各種メトリクス値については、一度個別処理にてプレビューを確認してからレシピファイルにまとめることをお勧めします。
+#   【任意】と付いた設定値はコメントアウトすることでデフォルト値が使用されます。
+#   注意:
+#     ファイルパス類は、区切り文字はバッククォート(\)ではなく、スラッシュ (/) を使用してください
+#     入力フォントファイル/基準フォントファイル/マージフォントファイルはTTFの他にOTFも使用可能ですが、内部にてTTF変換処理が行われるため処理に時間がかかります。
+#       事前にTTF変換してからレシピファイルに記載することをお勧めします。
+# ==========================================
+
+# ------------------------------------------
+# パス基準設定
+#   注意:output_dir を input_dir と同じにする場合は、出力フォントのファイル名を入力フォントとは別のものにしてください（入力フォントが上書きされてしまいます）
+# ------------------------------------------
+input_dir: "assets/fonts" # 対象フォント、サブセットテキスト、マージフォントといった入力系パスを相対指定した場合、これが基準となります。UI側で指定した場合はそちらが優先されます。
+output_dir: "assets/fonts" # フォント出力先といった出力系パスを相対指定した場合、これが基準にとなります。UI側で指定した場合はそちらが優先されます。
+
+# ------------------------------------------
+# グローバル設定
+#   処理ステップ側で同名のパラメーターを指定している場合、そちらが優先されます。
+# ------------------------------------------
+input_font_path: "nyashi-kai2/source.ttf" # 【必須】入力フォントのパス
+#output_font_path: "" # 【必須】出力フォントのパス 出力形式はTTF固定です。ステップ側で指定することをお勧めします。
+#base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf" # 【任意】基準フォントのパス デフォルト:未指定(基準比較を行いません。)
+#scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
+#scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
+#offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
+offset_height: 20 # 【任意】縦位置オフセット (em) デフォルト: 0
+weight_offset: 16 # 【任意】太さ変更量 (em) デフォルト: 0
+#remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
+#anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。
+#font_name: "Anonymous" # 【任意】匿名化時のフォント名 匿名化が無効の場合は無視されます。 デフォルト: Anonymous。
+ascent: 900 # 【任意】上端値 (em) descentの絶対値との合計は1024となるように調整して下さい。デフォルト: フォントの元の上端値(基準フォントを指定している場合はそちらの値)
+descent: -124 # 【任意】下端値 (em) デフォルト: フォントの元の下端値(基準フォントを指定している場合はそちらの値)
+line_gap: 0 # 【任意】行間値 (em) デフォルト: フォントの元の行間値(基準フォントを指定している場合はそちらの値)
+underline_position: 0 # 【任意】下線位置 (em) デフォルト: フォントの元の下線位置(基準フォントを指定している場合はそちらの値)
+underline_thickness: 50 # 【任意】下戦太さ (em) デフォルト: フォントの元の下線太さ(基準フォントを指定している場合はそちらの値)
+subset_text_path: "subsets/subset_jp_skyrim_custom.txt" # 【任意】サブセット化用テキストファイルのパス デフォルト:未指定(サブセット化しません。)
+merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
+  - font_path: "genjyuu-gothic/source.ttf"
+    offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
+    weight_offset: 8 # 【任意】太さ変更量 (em) デフォルト: 0
+output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
+
+# ------------------------------------------
+# 処理ステップ
+# ------------------------------------------
+steps:
+    - output_font_path: "nyashi-kai2/every.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+    - output_font_path: "nyashi-kai2/every_w70.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      scale_width: 70.0
+    - output_font_path: "nyashi-kai2/every_w50.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      scale_width: 50.0
+    - output_font_path: "nyashi-kai2/book.ttf"
+      base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
+    - output_font_path: "nyashi-kai2/handwrite.ttf"
+      base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
+    # 軽量版
+    - output_font_path: "nyashi-kai2/every_lw.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      subset_text_path: "subsets/subset_jp_skyrim.txt"
+    - output_font_path: "nyashi-kai2/every_w70_lw.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      scale_width: 70.0
+      subset_text_path: "subsets/subset_jp_skyrim.txt"
+    - output_font_path: "nyashi-kai2/every_w50_lw.ttf"
+      base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      scale_width: 50.0
+      subset_text_path: "subsets/subset_jp_skyrim.txt"
+    - output_font_path: "nyashi-kai2/book_lw.ttf"
+      base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
+      subset_text_path: "subsets/subset_jp_skyrim.txt"
+    - output_font_path: "nyashi-kai2/handwrite_lw.ttf"
+      base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
+      subset_text_path: "subsets/subset_jp_skyrim.txt"

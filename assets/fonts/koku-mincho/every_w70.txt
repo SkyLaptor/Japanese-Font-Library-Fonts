@@ -1,0 +1,44 @@
+[フォント情報]
+TrueType: True
+PostScript (CFF): False
+PostScript (CFF2 / Variable): False
+作成日時: 1969/12/31 22:40:00 (UTC)
+更新日時: 2026/03/08 10:52:29 (UTC)
+総グリフ数: 7509
+グリフ数(Unicode割当済): 6989
+UPM: 1024
+OS/2 ベンダーID: Take
+OS/2 WinAscent: 900
+OS/2 WinDescent: 124
+OS/2 TypoAscender: 900
+OS/2 TypoDescender: -124
+OS/2 Typo LineGap: 0
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 900
+HHEA Descent: -124
+HHEA LineGap: 0
+POST Underline Position: 0
+POST Underline Thickness: 50
+OpenType機能数: 1
+NAMEテーブル
+[NAMEレコード] 0, Copyright, (c) freefontnoki, Information-technology Promotion Agency, Japan (IPA)
+[NAMEレコード] 1, Family Name, 刻明朝 Regular
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, 刻明朝 Regular
+[NAMEレコード] 4, Full Name, 刻明朝 Regular
+[NAMEレコード] 5, Version, Version 1.00
+[NAMEレコード] 6, PostScript Name, Koku-Mincho-Regular
+[NAMEレコード] 13, License, (Not Found)
+
+
+[サブセット欠損レポート]
+対象コードポイント数: 6988
+欠損総数: 0
+未マップ数: 0
+アウトライン無し数: 0
+
+[未マップ]
+(なし)
+
+[アウトライン無し]
+(なし)

@@ -1,0 +1,44 @@
+[フォント情報]
+TrueType: True
+PostScript (CFF): False
+PostScript (CFF2 / Variable): False
+作成日時: 2020/08/26 17:11:30 (UTC)
+更新日時: 2026/03/08 10:48:36 (UTC)
+総グリフ数: 7407
+グリフ数(Unicode割当済): 6990
+UPM: 1024
+OS/2 ベンダーID: UKWN
+OS/2 WinAscent: 900
+OS/2 WinDescent: 124
+OS/2 TypoAscender: 900
+OS/2 TypoDescender: -124
+OS/2 Typo LineGap: 0
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 900
+HHEA Descent: -124
+HHEA LineGap: 0
+POST Underline Position: 0
+POST Underline Thickness: 50
+OpenType機能数: 8
+NAMEテーブル
+[NAMEレコード] 0, Copyright, Copyright(c) 2019 M+ FONTS PROJECT,Copyright(c) flopdesign.com
+[NAMEレコード] 1, Family Name, ラノベPOP v2
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, 2.001;UKWN;LightNovelPopV2-V2
+[NAMEレコード] 4, Full Name, ラノベPOP v2
+[NAMEレコード] 5, Version, Version 2.001;hotconv 1.0.109;makeotfexe 2.5.65596
+[NAMEレコード] 6, PostScript Name, LightNovelPopV2-V2
+[NAMEレコード] 13, License, (Not Found)
+
+
+[サブセット欠損レポート]
+対象コードポイント数: 6988
+欠損総数: 0
+未マップ数: 0
+アウトライン無し数: 0
+
+[未マップ]
+(なし)
+
+[アウトライン無し]
+(なし)

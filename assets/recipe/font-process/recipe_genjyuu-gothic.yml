@@ -27,7 +27,7 @@ input_font_path: "genjyuu-gothic/source.ttf" # 【必須】入力フォントの
 #scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
 #offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
 offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
-#weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
+weight_offset: 6 # 【任意】太さ変更量 (em) デフォルト: 0
 #remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
 #anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。
 #font_name: "Anonymous" # 【任意】匿名化時のフォント名 匿名化が無効の場合は無視されます。 デフォルト: Anonymous。
@@ -37,10 +37,10 @@ line_gap: 0 # 【任意】行間値 (em) デフォルト: フォントの元の�
 underline_position: 0 # 【任意】下線位置 (em) デフォルト: フォントの元の下線位置(基準フォントを指定している場合はそちらの値)
 underline_thickness: 50 # 【任意】下戦太さ (em) デフォルト: フォントの元の下線太さ(基準フォントを指定している場合はそちらの値)
 subset_text_path: "subsets/subset_jp_skyrim_custom.txt" # 【任意】サブセット化用テキストファイルのパス デフォルト:未指定(サブセット化しません。)
-# merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
-#   - font_path: "source-han-sans/source.ttf"
-#     offset_height: 0
-#     weight_offset: 0
+merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
+  - font_path: "source-han-sans/source.ttf"
+    offset_height: 0
+    weight_offset: 8
 output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
 
 # ------------------------------------------
@@ -60,6 +60,11 @@ steps:
     - output_font_path: "genjyuu-gothic/handwrite.ttf"
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
     - output_font_path: "genjyuu-gothic-mono/mono.ttf"
+      input_font_path: "genjyuu-gothic-mono/source.ttf"
+      merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
+        - font_path: "source-han-code-jp-mono/source.ttf"
+          offset_height: 0
+          weight_offset: 8
     # 軽量版
     - output_font_path: "genjyuu-gothic/every_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
@@ -79,4 +84,9 @@ steps:
       base_font_path: "skyrim/5_Skyrim_JP_HandWriteFont_0805.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
     - output_font_path: "genjyuu-gothic-mono/mono_lw.ttf"
+      input_font_path: "genjyuu-gothic-mono/source.ttf"
       subset_text_path: "subsets/subset_jp_skyrim.txt"
+      merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
+        - font_path: "source-han-code-jp-mono/source.ttf"
+          offset_height: 0
+          weight_offset: 8

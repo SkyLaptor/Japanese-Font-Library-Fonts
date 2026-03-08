@@ -26,7 +26,7 @@ input_font_path: "851tegaki-zatsu/source.ttf" # 【必須】入力フォント�
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
 #scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
 #offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
-offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
+offset_height: -16 # 【任意】縦位置オフセット (em) デフォルト: 0
 #weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
 #remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
 #anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。

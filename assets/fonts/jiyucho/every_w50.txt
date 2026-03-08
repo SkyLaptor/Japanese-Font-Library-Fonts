@@ -1,0 +1,44 @@
+[フォント情報]
+TrueType: True
+PostScript (CFF): False
+PostScript (CFF2 / Variable): False
+作成日時: 2019/08/29 19:15:10 (UTC)
+更新日時: 2026/03/08 08:06:06 (UTC)
+総グリフ数: 7510
+グリフ数(Unicode割当済): 6990
+UPM: 1024
+OS/2 ベンダーID: Take
+OS/2 WinAscent: 900
+OS/2 WinDescent: 124
+OS/2 TypoAscender: 900
+OS/2 TypoDescender: -124
+OS/2 Typo LineGap: 0
+OS/2 Use TypoMetrics: False
+HHEA Ascent: 900
+HHEA Descent: -124
+HHEA LineGap: 0
+POST Underline Position: 0
+POST Underline Thickness: 50
+OpenType機能数: 1
+NAMEテーブル
+[NAMEレコード] 0, Copyright, 2012-2026 マルセ / プロジェクトU-Fo
+[NAMEレコード] 1, Family Name, じゆうちょうフォント
+[NAMEレコード] 2, Subfamily Name, Regular
+[NAMEレコード] 3, Unique ID, じゆうちょうフォント
+[NAMEレコード] 4, Full Name, じゆうちょうフォント
+[NAMEレコード] 5, Version, Version 2.110
+[NAMEレコード] 6, PostScript Name, Jiyucho
+[NAMEレコード] 13, License, Cr:TTE01080190830041510A000208 Mo:TTE1330251230234309C000883
+
+
+[サブセット欠損レポート]
+対象コードポイント数: 6988
+欠損総数: 0
+未マップ数: 0
+アウトライン無し数: 0
+
+[未マップ]
+(なし)
+
+[アウトライン無し]
+(なし)

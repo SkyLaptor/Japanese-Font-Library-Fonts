@@ -26,8 +26,8 @@ input_font_path: "shippori-mincho/source.ttf" # 【必須】入力フォント�
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
 #scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
 #offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
-offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
-#weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
+offset_height: 18 # 【任意】縦位置オフセット (em) デフォルト: 0
+weight_offset: 18 # 【任意】太さ変更量 (em) デフォルト: 0
 #remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
 #anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。
 #font_name: "Anonymous" # 【任意】匿名化時のフォント名 匿名化が無効の場合は無視されます。 デフォルト: Anonymous。
@@ -38,9 +38,9 @@ underline_position: 0 # 【任意】下線位置 (em) デフォルト: フォン
 underline_thickness: 50 # 【任意】下戦太さ (em) デフォルト: フォントの元の下線太さ(基準フォントを指定している場合はそちらの値)
 subset_text_path: "subsets/subset_jp_skyrim_custom.txt" # 【任意】サブセット化用テキストファイルのパス デフォルト:未指定(サブセット化しません。)
 merge_fonts: # 【任意】マージするフォントのリスト デフォルト:未指定(マージを行いません。)
-  - font_path: "source-han-sans/source.ttf"
+  - font_path: "source-han-serif/source.ttf"
     offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
-    weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
+    weight_offset: 8 # 【任意】太さ変更量 (em) デフォルト: 0
 output_font_info: true # 【任意】フォント情報(サブセット欠落グリフなど)を出力するかどうか 出力フォント名と同名の.txtが生成されます。 デフォルト: false(フォント情報テキストを生成しません。)。
 
 # ------------------------------------------
