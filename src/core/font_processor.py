@@ -183,10 +183,12 @@ def build_metrics_override(
     v = _to_int(asc_out * factor)
     hhea_vals["ascent"] = v
     os2_vals["sTypoAscender"] = v
+    os2_vals["usWinAscent"] = v
 
     v = _to_int(desc_out * factor)
     hhea_vals["descent"] = v
     os2_vals["sTypoDescender"] = v
+    os2_vals["usWinDescent"] = abs(v)
 
     v = _to_int(lg_out * factor)
     hhea_vals["lineGap"] = v
@@ -288,6 +290,18 @@ def process_font(params: Mapping[str, Any]) -> None:
                     offset_height=offset_height,
                     debug=debug,
                 ).font_obj
+
+            # ベース整合後、手動メトリクス指定があれば上書きを適用する
+            if metrics_override:
+                base_font_obj = apply_font_transform(
+                    target_font_obj=base_font_obj,
+                    scale_width=1.0,
+                    scale_height=1.0,
+                    offset_width=0,
+                    offset_height=0,
+                    new_upm=NORMALIZED_UPM,
+                    metrics_override=metrics_override,
+                )
         else:
             # マニュアルモードまたは基準フォント未指定
             base_font_obj = apply_font_transform(
