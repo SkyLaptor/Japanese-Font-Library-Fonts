@@ -220,10 +220,7 @@ __marimo__/
 *.otf
 *.woff
 *.woff2
-!assets/**/*.ttf
-!assets/**/*.otf
-!assets/**/*.woff
-!assets/**/*.woff2
+*.swf
 
 # Archive files
 *.zip
@@ -240,11 +237,13 @@ desktop.ini
 # MEGASync
 .megaignore
 
-# Temporary files
+# Temporary and working files
 *.tmp
 *.temp
 *.bak
 *.log
+local/
+working/
 
 # Auto deployment files
 data/java/
@@ -254,4 +253,5 @@ data/ffdec/
 
 # Data
 !data/
+!assets/
 !tests/data/
