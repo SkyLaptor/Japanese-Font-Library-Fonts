@@ -72,8 +72,8 @@ def generate_subset_jp_jisx0208(validnamechars_escape: bool = False) -> str:
             except UnicodeDecodeError:
                 continue
 
-    for code in EXTRA_UNICODES:
-        target_chars.add(chr(code))
+    # for code in EXTRA_UNICODES:
+    #     target_chars.add(chr(code))
 
     subset_text = "".join(sorted(target_chars))
 
