@@ -106,6 +106,12 @@ def _apply_theme(app: QApplication, *, dark_mode: bool) -> None:
 def main() -> None:
     debug, app_argv = parse_cli_args(sys.argv)
 
+    # Windowsでタスクバーアイコンを正しく表示させるための設定
+    if sys.platform == "win32":
+        import ctypes
+        my_app_id = "com.github.t-yarimizu.tesvfontforge"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
+
     app = QApplication(app_argv)
     _apply_theme(app, dark_mode=_detect_dark_mode(app))
     sys.exit(run_app(app, debug=debug))

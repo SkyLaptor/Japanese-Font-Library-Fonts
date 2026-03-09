@@ -15,7 +15,14 @@ from fontTools.ttLib import TTFont
 from otf2ttf.cli import otf_to_ttf
 from PIL import Image, ImageDraw, ImageFont
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QKeyEvent, QPixmap
+from PyQt6.QtGui import (
+    QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QIcon,
+    QKeyEvent,
+    QPixmap,
+)
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -49,6 +56,7 @@ from const import (
     DATA_DIR,
     MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
+    APP_ICON_PATH,
     PREVIEW_BASELINE_COLOR,
     PREVIEW_BASELINE_WIDTH,
     PREVIEW_DASH_GAP,
@@ -1803,6 +1811,8 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self) -> None:
         self.setWindowTitle(MAIN_WINDOW_TITLE)
+        if APP_ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(APP_ICON_PATH)))
         self.resize(1080, 760)
         self.setStyleSheet(
             """

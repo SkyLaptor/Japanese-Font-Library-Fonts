@@ -12,6 +12,8 @@ DATA_DIR = BASE_DIR / "data"
 ASSETS_DIR = BASE_DIR / "assets"
 BUILD_DIR = BASE_DIR / "build"
 SUBSETS_DIR = DATA_DIR / "subsets"
+# アプリケーションアイコン
+APP_ICON_PATH = ASSETS_DIR / "images" / "icon.png"
 # FFDecとJavaの自動ダウンロード用URL
 FFDEC_ARCHIVE_URL = "https://github.com/jindrapetrik/jpexs-decompiler/releases/download/version25.1.2/ffdec_25.1.2.zip"
 JAVA_ARCHIVE_URL = "https://corretto.aws/downloads/resources/25.0.2.10.1/amazon-corretto-25.0.2.10.1-windows-x64-jdk.zip"
