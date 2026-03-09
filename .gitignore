@@ -236,6 +236,7 @@ desktop.ini
 
 # MEGASync
 .megaignore
+Rubbish/
 
 # Temporary and working files
 *.tmp

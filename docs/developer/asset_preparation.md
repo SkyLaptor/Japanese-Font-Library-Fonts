@@ -3,8 +3,8 @@
 本プロジェクトで必要なベースフォントやテンプレートSWFの作成手順です。
 
 ## ゲームデフォルトの日本語フォントの取り出し
-1. 最新版のSkyrimSE 英語版をインストールします（v1.6.1170以降には日本語フォントが含まれています）。
-2. `Data\Skyrim - Interface.bsa` をBSA Browserで開きます。
+1. 最新版のSkyrimSE 英語版をインストールします。（v1.6.1170以降には日本語フォントが含まれています）。
+2. `Skyrim\Data\Skyrim - Interface.bsa` をBSA Browserで開きます。
 3. `interface\fonts_ja.swf` を取り出し、FFDecで開きます。
 4. 左ツリーの「フォント」から、任意のフォントを右クリックして「エクスポート」します。
 
@@ -16,7 +16,7 @@
    * **Book**: `22_Skyrim_JP_BookFont_0805`
    * **Handwrite**: `5_Skyrim_JP_HandWriteFont_0805`
 2. GUIの「個別処理」タブで、空白グリフ除去を有効にして保存します。
-   * 保存先: `data\base_fonts\skyrim\every.ttf` / `book.ttf` / `handwrite.ttf`
+   * 保存先: `contents\skyrim\every.ttf` / `book.ttf` / `handwrite.ttf`
 
 ## コアフォントSWF (`fonts_core.swf`) の作成
 ゲーム内で使用する特殊フォント（ボタン、ドラゴン文字等）をまとめたSWFです。
