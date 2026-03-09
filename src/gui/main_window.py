@@ -2718,6 +2718,43 @@ class MainWindow(QMainWindow):
 
         return loaded_font_obj
 
+    def _convert_otf_to_temporary_ttf(
+        self,
+        otf_path: Path,
+        tmp_dir: Path,
+        *,
+        index: int,
+        label: str,
+        log: Callable[[str], None] | None = None,
+        log_prefix: str = "[個別:SWF埋め込み][前処理]",
+    ) -> Path:
+        """OTFを一時ディレクトリにTTFとして保存して返す。
+
+        - OTF の場合はオンメモリ変換後に .ttf を保存
+        - 既に TTF の場合はそのまま .ttf 名で一時保存
+        """
+        if not otf_path.exists() or not otf_path.is_file():
+            raise ValueError(f"{label} が存在しません: {otf_path}")
+
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        out_path = tmp_dir / f"embed_{index:02d}_{otf_path.stem}.ttf"
+
+        if is_otf_path(otf_path):
+            with TTFont(str(otf_path)) as source_font_obj:
+                loaded_font_obj = reopen_font(source_font_obj)
+            if loaded_font_obj.sfntVersion != "OTTO" or "CFF " not in loaded_font_obj:
+                raise ValueError(f"{label} がOTF形式として解釈できません: {otf_path}")
+            otf_to_ttf(loaded_font_obj)
+            loaded_font_obj.save(str(out_path))
+            if log is not None:
+                log(f"{log_prefix} 変換済みフォントを一時生成: {out_path.name}")
+        else:
+            shutil.copyfile(str(otf_path), str(out_path))
+            if log is not None:
+                log(f"{log_prefix} TTFを一時保存: {out_path.name}")
+
+        return out_path
+
     @staticmethod
     def _resolve_user_path(value: str) -> Path:
         raw_value = value.strip()
