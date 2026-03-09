@@ -52,11 +52,11 @@ from PyQt6.QtWidgets import (
 )
 
 from const import (
+    APP_ICON_PATH,
     BLANK_GLYPHS,
     DATA_DIR,
     MAIN_WINDOW_TITLE,
     NORMALIZED_UPM,
-    APP_ICON_PATH,
     PREVIEW_BASELINE_COLOR,
     PREVIEW_BASELINE_WIDTH,
     PREVIEW_DASH_GAP,
@@ -592,6 +592,30 @@ class MergeFontsTableWidget(QTableWidget):
         self._apply_column_ratio()
 
 
+class DropLineEdit(QLineEdit):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls:
+                # 最初の1つのパスを取得してセット
+                path = urls[0].toLocalFile()
+                self.setText(path)
+                self.editingFinished.emit()  # メトリクス読み取りなどの更新処理をキック
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
+
+
 class SingleFontProcessingTab(QWidget):
     execute_requested = pyqtSignal(object)
     preview_requested = pyqtSignal(object)
@@ -611,8 +635,10 @@ class SingleFontProcessingTab(QWidget):
 
         io_group = QGroupBox("入出力")
         io_layout = QVBoxLayout(io_group)
-        self.input_ttf_edit = QLineEdit()
-        self.output_ttf_edit = QLineEdit()
+        self.input_ttf_edit = DropLineEdit()
+        self.output_ttf_edit = DropLineEdit()
+        self.input_ttf_edit.setPlaceholderText("加工対象のフォント")
+        self.output_ttf_edit.setPlaceholderText("加工済みフォント出力先")
         input_label = QLabel("対象フォント")
         output_label = QLabel("フォント出力先")
         btn_browse_input = QPushButton("選択")
@@ -660,7 +686,7 @@ class SingleFontProcessingTab(QWidget):
         params_group = QGroupBox("パラメータ")
         params_layout = QVBoxLayout(params_group)
 
-        self.base_font_edit = QLineEdit()
+        self.base_font_edit = DropLineEdit()
         self.base_font_edit.setEnabled(True)
         self.base_font_edit.setToolTip(
             "ここに基準とするフォントを入力した場合、文字のサイズ及びメトリクス値を読み取り、入力されたフォントにそれらの情報を適用します。\n"
@@ -814,7 +840,7 @@ class SingleFontProcessingTab(QWidget):
             self.metric_underline_thickness_spin.setEnabled
         )
 
-        self.subset_text_edit = QLineEdit()
+        self.subset_text_edit = DropLineEdit()
         self.subset_text_edit.setText(
             str((SUBSETS_DIR / "subset_jp_skyrim_custom.txt").resolve())
         )
@@ -1340,7 +1366,7 @@ class SingleSwfEmbedTab(QWidget):
 
         target_group = QGroupBox("出力")
         target_layout = QVBoxLayout(target_group)
-        self.output_swf_edit = QLineEdit()
+        self.output_swf_edit = DropLineEdit()
         self.output_swf_edit.setToolTip("埋め込み後の出力SWFファイルを指定します。")
         output_label = QLabel("SWF出力先")
         btn_output = QPushButton("選択")
@@ -1469,9 +1495,9 @@ class BatchFontProcessingTab(QWidget):
         form_group = QGroupBox("レシピ設定")
         form_layout = QVBoxLayout(form_group)
 
-        self.recipe_edit = QLineEdit()
-        self.input_dir_edit = QLineEdit()
-        self.output_dir_edit = QLineEdit()
+        self.recipe_edit = DropLineEdit()
+        self.input_dir_edit = DropLineEdit()
+        self.output_dir_edit = DropLineEdit()
         self.recipe_edit.setToolTip(
             "フォント一括処理用のレシピ（YAML）を指定します。\n"
             f"テンプレートは {DATA_DIR.resolve()}/recipe-template_font-process.yml です。任意の場所にコピーして利用して下さい。"
@@ -1482,6 +1508,8 @@ class BatchFontProcessingTab(QWidget):
         self.output_dir_edit.setToolTip(
             "加工後のフォントの出力先親フォルダです。レシピ内の出力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
         )
+
+        self.recipe_edit.editingFinished.connect(self._load_recipe_dirs)
 
         recipe_label = QLabel("レシピ")
         input_dir_label = QLabel("対象フォルダ")
@@ -1546,6 +1574,23 @@ class BatchFontProcessingTab(QWidget):
         root_layout.addWidget(self.execute_button)
         root_layout.addStretch(1)
 
+    def _load_recipe_dirs(self) -> None:
+        path = self.recipe_edit.text().strip()
+        if not path or not os.path.exists(path):
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                recipe = yaml.safe_load(f)
+                if isinstance(recipe, dict):
+                    input_dir = recipe.get("input_dir")
+                    if input_dir:
+                        self.input_dir_edit.setText(str(input_dir))
+                    output_dir = recipe.get("output_dir")
+                    if output_dir:
+                        self.output_dir_edit.setText(str(output_dir))
+        except Exception:
+            pass
+
     def _select_recipe(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1555,18 +1600,7 @@ class BatchFontProcessingTab(QWidget):
         )
         if path:
             self.recipe_edit.setText(path)
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    recipe = yaml.safe_load(f)
-                    if isinstance(recipe, dict):
-                        input_dir = recipe.get("input_dir")
-                        if input_dir:
-                            self.input_dir_edit.setText(str(input_dir))
-                        output_dir = recipe.get("output_dir")
-                        if output_dir:
-                            self.output_dir_edit.setText(str(output_dir))
-            except Exception:
-                pass
+            self._load_recipe_dirs()
 
     def _select_input_dir(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "input_dirを選択")
@@ -1622,9 +1656,9 @@ class BatchSwfProcessingTab(QWidget):
         form_group = QGroupBox("レシピ設定")
         form_layout = QVBoxLayout(form_group)
 
-        self.recipe_edit = QLineEdit()
-        self.input_dir_edit = QLineEdit()
-        self.output_edit = QLineEdit()
+        self.recipe_edit = DropLineEdit()
+        self.input_dir_edit = DropLineEdit()
+        self.output_edit = DropLineEdit()
         self.recipe_edit.setToolTip(
             "SWF一括埋め込み用のレシピ（YAML）を指定します。\n"
             f"テンプレートは {DATA_DIR.resolve()}/recipe-template_swf-embedded.yml です。任意の場所にコピーして利用して下さい。"
@@ -1635,6 +1669,8 @@ class BatchSwfProcessingTab(QWidget):
         self.output_edit.setToolTip(
             "出力側の基準フォルダです。ステップの output_swf_path が相対指定の場合、このフォルダを基準に解決します。"
         )
+
+        self.recipe_edit.editingFinished.connect(self._load_recipe_dirs)
 
         recipe_label = QLabel("レシピ")
         input_dir_label = QLabel("対象フォルダ")
@@ -1699,6 +1735,23 @@ class BatchSwfProcessingTab(QWidget):
         root_layout.addWidget(self.execute_button)
         root_layout.addStretch(1)
 
+    def _load_recipe_dirs(self) -> None:
+        path = self.recipe_edit.text().strip()
+        if not path or not os.path.exists(path):
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                recipe = yaml.safe_load(f)
+                if isinstance(recipe, dict):
+                    input_dir = recipe.get("input_dir")
+                    if input_dir:
+                        self.input_dir_edit.setText(str(input_dir))
+                    output_dir = recipe.get("output_dir")
+                    if output_dir:
+                        self.output_edit.setText(str(output_dir))
+        except Exception:
+            pass
+
     def _select_recipe(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1708,18 +1761,7 @@ class BatchSwfProcessingTab(QWidget):
         )
         if path:
             self.recipe_edit.setText(path)
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    recipe = yaml.safe_load(f)
-                    if isinstance(recipe, dict):
-                        input_dir = recipe.get("input_dir")
-                        if input_dir:
-                            self.input_dir_edit.setText(str(input_dir))
-                        output_dir = recipe.get("output_dir")
-                        if output_dir:
-                            self.output_edit.setText(str(output_dir))
-            except Exception:
-                pass
+            self._load_recipe_dirs()
 
     def _select_input_dir(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "input_dirを選択")
@@ -2389,7 +2431,9 @@ class MainWindow(QMainWindow):
             width=PREVIEW_METRIC_WIDTH,
         )
 
-        underline_y = int(round(baseline_y - float(underline_position) * pixel_per_unit))
+        underline_y = int(
+            round(baseline_y - float(underline_position) * pixel_per_unit)
+        )
         underline_height = max(
             1,
             int(round(abs(float(underline_thickness) * pixel_per_unit))),
