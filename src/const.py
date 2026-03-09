@@ -9,6 +9,7 @@ PREVIEW_WINDOW_TITLE = "プレビュー"
 # 各種ディレクトリ
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
+ASSETS_DIR = BASE_DIR / "assets"
 BUILD_DIR = BASE_DIR / "build"
 SUBSETS_DIR = DATA_DIR / "subsets"
 # FFDecとJavaの自動ダウンロード用URL
@@ -115,8 +116,7 @@ PREVIEW_LEGEND_RESERVED_HEIGHT = 56
 
 # 凡例用フォント候補（上から優先）
 PREVIEW_LEGEND_FONT_CANDIDATES = (
-    DATA_DIR / "ui-fonts" / "system.otf",
-    BASE_DIR / "resources" / "ui-fonts" / "system.otf",
+    ASSETS_DIR / "fonts" / "system.otf",
     Path("C:/Windows/Fonts/msgothic.ttc"),
     Path("C:/Windows/Fonts/meiryo.ttc"),
 )

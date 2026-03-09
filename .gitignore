@@ -215,15 +215,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Content files
-contents/**/*.ttf
-contents/**/*.swf
-
 # Font files
 *.ttf
 *.otf
 *.woff
 *.woff2
+!assets/**/*.ttf
+!assets/**/*.otf
+!assets/**/*.woff
+!assets/**/*.woff2
 
 # Archive files
 *.zip
