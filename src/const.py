@@ -12,6 +12,11 @@ DATA_DIR = BASE_DIR / "data"
 ASSETS_DIR = BASE_DIR / "assets"
 BUILD_DIR = BASE_DIR / "build"
 SUBSETS_DIR = DATA_DIR / "subsets"
+LANG_DIR = DATA_DIR / "lang"
+
+# デフォルト言語設定
+DEFAULT_LANG_CODE = "ja-jp"
+DEFAULT_LANG_FILE = LANG_DIR / f"{DEFAULT_LANG_CODE}.yml"
 # アプリケーションアイコン
 APP_ICON_PATH = ASSETS_DIR / "images" / "icon.png"
 # FFDecとJavaの自動ダウンロード用URL

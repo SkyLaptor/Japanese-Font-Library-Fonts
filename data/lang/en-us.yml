@@ -1,0 +1,235 @@
+tabs:
+  single_font: "Single: Font Process"
+  single_embed: "Single: SWF Embed"
+  batch_font: "Batch: Font Process"
+  batch_swf: "Batch: SWF Embed"
+
+common:
+  select: "Select"
+  add: "Add"
+  remove: "Remove"
+  stop: "Stop"
+  force_stop: "Force Stop Task"
+  logs: "Logs"
+  preview: "Preview"
+  default_task_name: "Task"
+  errors:
+    invalid_otf: "{label} cannot be interpreted as OTF: {path}"
+    not_found: "{label} not found: {path}"
+    module_failed: "Module processing failed. Check logs."
+    required_missing: "{label} is required"
+  placeholder:
+    input_font: "Input font to process"
+    output_font: "Processed font output path"
+  labels:
+    target_font: "Target Font"
+    output_font: "Output Font"
+    base_font: "Base Font"
+    anonymized_font_name: "Anonymized Font Name"
+    subset_text: "Subset Text"
+    preview_text: "Preview Text"
+    swf_output: "SWF Output"
+    internal_name: "Internal Name"
+    font_path: "Font Path"
+    h_offset_em: "H-Offset (em)"
+    v_offset_em: "V-Offset (em)"
+    weight_em: "Weight Delta (em)"
+    output: "Output"
+    recipe: "Recipe"
+    input_dir: "Input Dir"
+    output_dir: "Output Dir"
+  suffix:
+    mode: " Mode"
+
+single_font:
+  execute: "Run Single Processing"
+  executing: "Running Single Processing..."
+  io_group: "I/O"
+  browse_input: "Select"
+  browse_output: "Select"
+  params_group: "Parameters"
+  base_font_button: "Select Base Font"
+  tooltips:
+    base_font: "If a base font is specified here, its glyph size and metrics are read and applied to the input font.\nNote: After aligning to the base font, the width/height percentages are applied as additional transforms."
+    horizontal_percent: "Horizontal scale. 100% means no change."
+    vertical_percent: "Vertical scale. 100% means no change."
+    link_scale: "When enabled, horizontal/vertical scales are linked."
+    link_scale_mode: "Equal: Set the other to the same value.\nDelta: Apply the same delta to the other."
+    horizontal_offset: "Horizontal offset. Positive moves right, negative left.\nNot applied to merge fonts; set them in the merge list."
+    vertical_offset: "Vertical offset. Positive moves up, negative down.\nNot applied to merge fonts; set them in the merge list."
+    glyph_weight: "Adjusts glyph outline thickness of the input font.\nPositive makes thicker, negative thinner.\nNot applied to merge fonts; set them in the merge list."
+    remove_empty_glyphs: "Removes unintended blank glyphs without outlines.\nIntended blanks like space are excluded."
+    anonymize: "Anonymizes font name info and metadata such as timestamps."
+    anonymize_font_name: "Name to use after anonymization.\nOnly alphanumerics and underscore are allowed."
+    manual_metrics: "When enabled, overrides metrics by the values below (ascent/descent/line gap/underline pos/thickness).\nIf unsure, keep defaults."
+    subset_text: "Path to a text file to subset."
+    preview_text: "Text shown in the preview image."
+    merge_table: "List of merge fonts. Drag & drop to add, reorder, and delete."
+  link_scale_modes:
+    equal: "Equal"
+    delta: "Delta"
+  transform_labels:
+    horizontal: "H"
+    vertical: "V"
+    h_offset: "H-Offset"
+    v_offset: "V-Offset"
+    weight: "Weight Delta"
+  units:
+    percent: "%"
+    em: "em"
+  options:
+    remove_empty_glyphs: "Remove blank glyphs"
+    anonymize: "Anonymize"
+    manual_metrics: "Modify metrics"
+  metrics_labels:
+    ascent: "Ascent"
+    descent: "Descent"
+    line_gap: "Line Gap"
+    u_pos: "Underline Pos"
+    u_thick: "Underline Thick"
+  labels:
+    input_source: "Input Source"
+  subset_browse: "Select Subset Text"
+  preview_button: "Preview"
+  merge_group: "Merge Fonts (Supplemental)"
+  merge_buttons:
+    add: "Add"
+    remove: "Remove"
+  file_dialogs:
+    select_input_font: "Select Input Font"
+    save_output_font: "Select Save Path"
+    font_filter: "Font (*.ttf *.otf)"
+    ttf_filter: "Font (*.ttf)"
+    select_base_font: "Select Base Font"
+    select_subset_text: "Select Subset Text"
+    text_filter: "Text (*.txt)"
+    select_merge_fonts: "Select Merge Fonts"
+  confirms:
+    start_single: "Start single processing?"
+    force_stop: "Force stop {task_name}?\nUnsaved progress may be lost."
+  titles:
+    confirm: "Confirm"
+    insufficient_input: "Insufficient Input"
+    input_error: "Input Error"
+    upm_warning: "UPM Warning"
+    stop: "Stop"
+    force_stop_confirm: "Force Stop Confirmation"
+    running: "Running"
+    env_prep_failed: "Environment Preparation Failed"
+    preview_failed: "Preview Failed"
+    run_failed: "Run Failed"
+  errors:
+    already_running: "Another task is already running. Please wait until it finishes."
+  messages:
+    specify_target_font: "Please select a target font."
+    specify_output_font: "Please specify an output font path."
+    enter_anonymized_name: "Please enter an anonymized font name."
+    invalid_anonymized_name: "Anonymized font name can contain only alphanumerics and underscore."
+    upm_mismatch: "UPM derived from ascent/descent is not {expected}.\nValue: {actual} (ascent={ascent}, descent={descent})"
+    no_task_to_stop: "No running task to stop."
+    force_stopping: "[{task_name}] Force stop requested by user"
+    force_stopped_status: "{task_name} force-stopped"
+    starting_env: "Preparing runtime..."
+    startup_log_start: "[Startup] Preparing runtime..."
+    ffdec_ready: "[Startup] FFDec ready: {path}"
+    java_runtime_ready: "[Startup] Java runtime ready: {path}"
+    java_ready: "[Startup] Java ready: {path}"
+    env_prep_failed_log: "[Startup] Failed to prepare runtime: {error}"
+    ensure_internet: "Failed to prepare runtime.\nPlease ensure internet access is available."
+    task_start: "{task_name} running..."
+    task_done: "{task_name} done"
+    task_failed: "{task_name} failed"
+    received_config: "[{task_name}] received: {config}"
+    preview_received: "[Single:Font][Preview] received: {config}"
+    preview_failed_log: "[Single:Font][Preview] failed: {error}"
+    preview_done: "[Single:Font][Preview] done"
+    read_metrics_from_font: "Read metrics from font: {font_name} (Asc:{ascent}, Desc:{descent}, UPM:{upm})"
+    read_metrics_failed: "Failed to read font metrics: {error}"
+    log_otf_in_memory_convert: "{prefix} Converted OTF in-memory: {font_name}"
+    temp_converted_saved: "{prefix} Saved converted font temporarily: {name}"
+    temp_ttf_saved: "{prefix} Saved TTF temporarily: {name}"
+  status_icons:
+    link_on: "🔗"
+    link_off: "🔓"
+  preview_window:
+    not_generated: "No preview yet"
+    failed: "Failed to generate preview"
+
+single_embed:
+  execute: "Run Embedding"
+  executing: "Running Embedding..."
+  table_group: "Fonts (with Internal Name)"
+  tooltips:
+    output_swf: "Specify output SWF after embedding."
+    table: "Fonts to embed with internal names. Internal name is the identifier inside SWF."
+  buttons:
+    add_font: "Add Font"
+    remove_selected: "Remove Selected"
+  file_dialogs:
+    select_output_swf: "Select Output SWF"
+    swf_filter: "SWF (*.swf)"
+    select_embed_fonts: "Select Fonts to Embed"
+  messages:
+    specify_output_swf: "Please specify SWF output path."
+    add_one_or_more_fonts: "Please add one or more fonts to embed."
+
+batch_font:
+  execute: "Run Batch (Font)"
+  executing: "Running Batch..."
+  form_group: "Recipe Settings"
+  tooltips:
+    recipe: "Specify a YAML recipe for batch font processing.\nTemplate: {template_path}. Copy anywhere to use."
+    input_dir: "Parent folder containing target fonts. Base for relative inputs in recipe."
+    output_dir: "Parent folder for processed fonts. Base for relative outputs in recipe."
+  file_dialogs:
+    select_recipe: "Select Recipe File"
+    yaml_filter: "YAML (*.yml *.yaml)"
+    select_input_dir: "Select input_dir"
+    select_output_dir: "Select output_dir"
+  messages:
+    specify_recipe: "Please select a recipe file."
+
+batch_swf:
+  execute: "Run Batch (SWF Embed)"
+  executing: "Running Batch..."
+  form_group: "Recipe Settings"
+  tooltips:
+    recipe: "Specify a YAML recipe for batch SWF embedding.\nTemplate: {template_path}. Copy anywhere to use."
+    input_dir: "Parent folder of fonts to embed. Base for relative paths."
+    output_dir: "Base output folder. If a step's output_swf_path is relative, it resolves from here."
+  file_dialogs:
+    select_recipe: "Select Recipe File"
+    yaml_filter: "YAML (*.yml *.yaml)"
+    select_input_dir: "Select input_dir"
+    select_output_dir: "Select output_dir"
+  messages:
+    specify_recipe: "Please select a recipe file."
+
+preview:
+  legend:
+    baseline: "Baseline"
+    underline: "Underline"
+    metrics: "Asc/Desc/LineGap"
+
+modules:
+  change_weight:
+    messages:
+      changed: "Changed glyph weight: offset: {offset_weight}"
+      saved: "Saved font with modified weight: {path}"
+      simplify_failed: "Skipping glyph '{name}' due to simplify failure."
+    errors:
+      not_supported_cff: "This function does not support CFF/CFF2."
+  get_glyphs:
+    messages:
+      count: "Glyph count: {count}"
+      saved: "Saved glyphs contained in font: {path}"
+  validate_subset:
+    messages:
+      missing_count: "Chars in subset but missing in font: {count}"
+      saved_missing: "Saved chars missing from font: {path}"
+
+startup:
+  background_task:
+    start: "[{task_name}] Start"
+    done: "[{task_name}] Done"
+    failed: "[{task_name}] Failed: {error}"

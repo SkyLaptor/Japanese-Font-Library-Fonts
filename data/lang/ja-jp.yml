@@ -1,0 +1,235 @@
+tabs:
+  single_font: "個別：フォント加工"
+  single_embed: "個別：SWF埋め込み"
+  batch_font: "一括：フォント加工"
+  batch_swf: "一括：SWF埋め込み"
+
+common:
+  select: "選択"
+  add: "追加"
+  remove: "削除"
+  stop: "停止"
+  force_stop: "処理を強制停止"
+  logs: "ログ"
+  preview: "プレビュー"
+  default_task_name: "処理"
+  errors:
+    invalid_otf: "{label} がOTF形式として解釈できません: {path}"
+    not_found: "{label} が存在しません: {path}"
+    module_failed: "モジュール処理が失敗しました。ログを確認してください。"
+    required_missing: "{label} が未指定です"
+  placeholder:
+    input_font: "加工対象のフォント"
+    output_font: "加工済みフォント出力先"
+  labels:
+    target_font: "対象フォント"
+    output_font: "フォント出力先"
+    base_font: "基準フォント"
+    anonymized_font_name: "匿名化後フォント名"
+    subset_text: "サブセットテキスト"
+    preview_text: "プレビュー文字列"
+    swf_output: "SWF出力先"
+    internal_name: "内部名"
+    font_path: "フォントパス"
+    h_offset_em: "横オフセット(em)"
+    v_offset_em: "縦オフセット(em)"
+    weight_em: "太さ変更量(em)"
+    output: "出力"
+    recipe: "レシピ"
+    input_dir: "対象フォルダ"
+    output_dir: "出力フォルダ"
+  suffix:
+    mode: "モード"
+
+single_font:
+  execute: "個別処理を実行"
+  executing: "個別処理を実行中..."
+  io_group: "入出力"
+  browse_input: "選択"
+  browse_output: "選択"
+  params_group: "パラメータ"
+  base_font_button: "基準フォントを選択"
+  tooltips:
+    base_font: "ここに基準とするフォントを入力した場合、文字のサイズ及びメトリクス値を読み取り、入力されたフォントにそれらの情報を適用します。\nその際、パラメーター設定にある横幅％/縦幅％の値は、まずは基準フォントの合わせた後に、指定の値で変形が行われる点に留意してください。"
+    horizontal_percent: "横方向の拡大率です。100%で等倍です。"
+    vertical_percent: "縦方向の拡大率です。100%で等倍です。"
+    link_scale: "有効時は選択したモードで横%と縦%を連動させます。"
+    link_scale_mode: "同値連動: 片方を変更するともう片方を同じ値にします。\n増減連動: 片方の増減量をもう片方にも適用します。"
+    horizontal_offset: "横方向の位置補正です。正の値で右、負の値で左に移動します。\n補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
+    vertical_offset: "縦方向の位置補正です。正の値で上、負の値で下に移動します。\n補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
+    glyph_weight: "入力元フォントのグリフ輪郭の太さを調整します。\n正の値で太く、負の値で細くなります。\n補完フォント（マージ対象）には適用されません。マージ一覧側で個別に設定してください。"
+    remove_empty_glyphs: "アウトラインを持たない意図しない空白グリフを除去します。\nスペース記号など、意図された空白グリフは除外対象外です。"
+    anonymize: "フォントの名前情報や作成日時などのメタデータを匿名化します。"
+    anonymize_font_name: "匿名化後のフォントの名前情報を入力します。\n空白や記号は使用できません（英数字とアンダースコアのみ）。"
+    manual_metrics: "有効時は下の上端/下端/行間/下線位置/下線太さの値でメトリクスを変更します。\n意味が分からない場合はデフォルト値から変更しないことをお勧めします。"
+    subset_text: "サブセット化に使用するテキストファイルのパスです。"
+    preview_text: "プレビュー画像に表示する文字列を指定します。"
+    merge_table: "補完フォント一覧です。ドラッグ&ドロップで追加、行の並べ替え、削除ができます。"
+  link_scale_modes:
+    equal: "同値連動"
+    delta: "増減連動"
+  transform_labels:
+    horizontal: "横"
+    vertical: "縦"
+    h_offset: "横オフセット"
+    v_offset: "縦オフセット"
+    weight: "太さ変更量"
+  units:
+    percent: "%"
+    em: "em"
+  options:
+    remove_empty_glyphs: "空白グリフを除去"
+    anonymize: "匿名化"
+    manual_metrics: "メトリクス変更"
+  metrics_labels:
+    ascent: "上端"
+    descent: "下端"
+    line_gap: "行間"
+    u_pos: "下線位置"
+    u_thick: "下線太さ"
+  labels:
+    input_source: "入力元"
+  subset_browse: "サブセットテキストを選択"
+  preview_button: "プレビュー"
+  merge_group: "マージ機能（補完フォント）"
+  merge_buttons:
+    add: "追加"
+    remove: "削除"
+  file_dialogs:
+    select_input_font: "加工対象フォントを選択"
+    save_output_font: "保存先を選択"
+    font_filter: "Font (*.ttf *.otf)"
+    ttf_filter: "フォント (*.ttf)"
+    select_base_font: "基準フォントを選択"
+    select_subset_text: "サブセットテキストを選択"
+    text_filter: "Text (*.txt)"
+    select_merge_fonts: "補完用フォントを選択"
+  confirms:
+    start_single: "個別処理を開始しますか？"
+    force_stop: "{task_name} を強制停止しますか？\n未保存の途中成果は失われる可能性があります。"
+  titles:
+    confirm: "確認"
+    insufficient_input: "入力不足"
+    input_error: "入力エラー"
+    upm_warning: "UPM警告"
+    stop: "停止"
+    force_stop_confirm: "強制停止確認"
+    running: "実行中"
+    env_prep_failed: "実行環境の準備に失敗"
+    preview_failed: "プレビュー失敗"
+    run_failed: "実行失敗"
+  errors:
+    already_running: "別の処理が実行中です。完了後に再実行してください。"
+  messages:
+    specify_target_font: "対象フォントを選択してください。"
+    specify_output_font: "フォント出力先を指定してください。"
+    enter_anonymized_name: "匿名化後フォント名を入力してください。"
+    invalid_anonymized_name: "匿名化後フォント名には空白や記号は使用できません。\n英数字とアンダースコアのみ使用できます。"
+    upm_mismatch: "上端/下端 から算出される UPM が {expected} ではありません。\n計算値: {actual} (上端={ascent}, 下端={descent})"
+    no_task_to_stop: "停止対象の処理はありません。"
+    force_stopping: "[{task_name}] ユーザー要求により強制停止を実行"
+    force_stopped_status: "{task_name} 強制停止"
+    starting_env: "実行環境を準備中..."
+    startup_log_start: "[起動] 実行環境を準備中..."
+    ffdec_ready: "[起動] FFDec 確認完了: {path}"
+    java_runtime_ready: "[起動] Javaランタイム 確認完了: {path}"
+    java_ready: "[起動] Java 確認完了: {path}"
+    env_prep_failed_log: "[起動] 実行環境の準備に失敗: {error}"
+    ensure_internet: "実行環境の準備に失敗しました。\nインターネットにアクセス出来ることを確認してください。"
+    task_start: "{task_name} 実行中..."
+    task_done: "{task_name} 完了"
+    task_failed: "{task_name} 失敗"
+    received_config: "[{task_name}] 受信: {config}"
+    preview_received: "[個別:フォント加工][プレビュー] 受信: {config}"
+    preview_failed_log: "[個別:フォント加工][プレビュー] 失敗: {error}"
+    preview_done: "[個別:フォント加工][プレビュー] 完了"
+    read_metrics_from_font: "フォントからメトリクスを読み取りました: {font_name} (Asc:{ascent}, Desc:{descent}, UPM:{upm})"
+    read_metrics_failed: "フォントのメトリクス読み取りに失敗しました: {error}"
+    log_otf_in_memory_convert: "{prefix} OTFをオンメモリでフォント変換: {font_name}"
+    temp_converted_saved: "{prefix} 変換済みフォントを一時生成: {name}"
+    temp_ttf_saved: "{prefix} TTFを一時保存: {name}"
+  status_icons:
+    link_on: "🔗"
+    link_off: "🔓"
+  preview_window:
+    not_generated: "プレビュー未生成"
+    failed: "プレビュー生成に失敗しました"
+
+single_embed:
+  execute: "埋め込みを実行"
+  executing: "埋め込みを実行中..."
+  table_group: "フォントリスト（内部名付き）"
+  tooltips:
+    output_swf: "埋め込み後の出力SWFファイルを指定します。"
+    table: "埋め込むフォントと内部名の一覧です。内部名はSWF内の識別名です。"
+  buttons:
+    add_font: "フォント追加"
+    remove_selected: "選択行を削除"
+  file_dialogs:
+    select_output_swf: "出力SWFを選択"
+    swf_filter: "SWF (*.swf)"
+    select_embed_fonts: "埋め込みフォントを選択"
+  messages:
+    specify_output_swf: "SWF出力先を指定してください。"
+    add_one_or_more_fonts: "埋め込み対象フォントを1つ以上追加してください。"
+
+batch_font:
+  execute: "一括処理実行（フォント加工）"
+  executing: "一括処理実行中..."
+  form_group: "レシピ設定"
+  tooltips:
+    recipe: "フォント一括処理用のレシピ（YAML）を指定します。\nテンプレートは {template_path} です。任意の場所にコピーして利用して下さい。"
+    input_dir: "レシピで参照する加工対象フォントの親フォルダです。レシピ内の入力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
+    output_dir: "加工後のフォントの出力先親フォルダです。レシピ内の出力系パス指定にて、相対パスを使用する場合の基準ディレクトリになります。"
+  file_dialogs:
+    select_recipe: "レシピファイルを選択"
+    yaml_filter: "YAML (*.yml *.yaml)"
+    select_input_dir: "input_dirを選択"
+    select_output_dir: "output_dirを選択"
+  messages:
+    specify_recipe: "レシピファイルを選択してください。"
+
+batch_swf:
+  execute: "一括処理実行（SWF埋め込み）"
+  executing: "一括処理実行中..."
+  form_group: "レシピ設定"
+  tooltips:
+    recipe: "SWF一括埋め込み用のレシピ（YAML）を指定します。\nテンプレートは {template_path} です。任意の場所にコピーして利用して下さい。"
+    input_dir: "レシピで参照する埋め込みフォントの親フォルダです。相対パスの基準になります。"
+    output_dir: "出力側の基準フォルダです。ステップの output_swf_path が相対指定の場合、このフォルダを基準に解決します。"
+  file_dialogs:
+    select_recipe: "レシピファイルを選択"
+    yaml_filter: "YAML (*.yml *.yaml)"
+    select_input_dir: "input_dirを選択"
+    select_output_dir: "output_dirを選択"
+  messages:
+    specify_recipe: "レシピファイルを選択してください。"
+
+preview:
+  legend:
+    baseline: "ベースライン"
+    underline: "下線"
+    metrics: "上端/下端/行間"
+
+modules:
+  change_weight:
+    messages:
+      changed: "文字の太さを変更しました: 変更量: {offset_weight}"
+      saved: "太さを変更したフォントを保存しました: {path}"
+      simplify_failed: "グリフ '{name}' の簡略化に失敗したためスキップします。"
+    errors:
+      not_supported_cff: "この関数はCFF/CFF2には対応していません。"
+  get_glyphs:
+    messages:
+      count: "文字数: {count}"
+      saved: "フォントに含まれる文字を保存しました: {path}"
+  validate_subset:
+    messages:
+      missing_count: "サブセットにあってフォントに無い文字数: {count}"
+      saved_missing: "サブセットにあってフォントに無い文字を出力しました: {path}"
+
+startup:
+  background_task:
+    start: "[{task_name}] 開始"
+    done: "[{task_name}] 完了"
+    failed: "[{task_name}] 失敗: {error}"
