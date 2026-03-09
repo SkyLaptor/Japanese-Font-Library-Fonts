@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2015/06/01 21:07:36 (UTC)
-更新日時: 2026/03/08 13:24:42 (UTC)
-総グリフ数: 7253
+更新日時: 2026/03/09 14:22:05 (UTC)
+総グリフ数: 7252
 グリフ数(Unicode割当済): 6989
 UPM: 1024
 OS/2 ベンダーID: M+  
@@ -36,13 +36,13 @@ Copyright(c) 2015 M+ FONTS PROJECT
 
 
 [サブセット欠損レポート]
-対象コードポイント数: 6988
-欠損総数: 1
-未マップ数: 1
+対象コードポイント数: 6987
+欠損総数: 0
+未マップ数: 0
 アウトライン無し数: 0
 
 [未マップ]
-U+32FF	㋿	SQUARE ERA NAME REIWA
+(なし)
 
 [アウトライン無し]
 (なし)

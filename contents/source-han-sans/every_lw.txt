@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2025/06/18 07:15:30 (UTC)
-更新日時: 2026/03/08 13:40:07 (UTC)
-総グリフ数: 3808
+更新日時: 2026/03/09 14:39:48 (UTC)
+総グリフ数: 3805
 グリフ数(Unicode割当済): 2882
 UPM: 1024
 OS/2 ベンダーID: ADBO

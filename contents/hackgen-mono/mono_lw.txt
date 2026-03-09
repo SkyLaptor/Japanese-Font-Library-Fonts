@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2024/12/29 06:44:28 (UTC)
-更新日時: 2026/03/08 12:48:19 (UTC)
-総グリフ数: 3184
+更新日時: 2026/03/09 13:51:03 (UTC)
+総グリフ数: 3183
 グリフ数(Unicode割当済): 2882
 UPM: 1024
 OS/2 ベンダーID: PfEd

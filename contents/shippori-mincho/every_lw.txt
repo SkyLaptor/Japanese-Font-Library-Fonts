@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2021/02/25 14:45:43 (UTC)
-更新日時: 2026/03/08 13:40:28 (UTC)
-総グリフ数: 3547
+更新日時: 2026/03/09 14:29:27 (UTC)
+総グリフ数: 3545
 グリフ数(Unicode割当済): 2882
 UPM: 1024
 OS/2 ベンダーID: FTDS

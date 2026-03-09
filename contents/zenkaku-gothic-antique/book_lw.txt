@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2021/05/14 05:11:45 (UTC)
-更新日時: 2026/03/08 13:48:24 (UTC)
-総グリフ数: 2988
+更新日時: 2026/03/09 14:41:49 (UTC)
+総グリフ数: 2987
 グリフ数(Unicode割当済): 2882
 UPM: 1024
 OS/2 ベンダーID: ZEN!

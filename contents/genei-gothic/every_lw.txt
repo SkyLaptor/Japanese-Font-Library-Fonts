@@ -3,8 +3,8 @@ TrueType: True
 PostScript (CFF): False
 PostScript (CFF2 / Variable): False
 作成日時: 2015/09/30 12:00:12 (UTC)
-更新日時: 2026/03/08 13:05:33 (UTC)
-総グリフ数: 3796
+更新日時: 2026/03/09 13:50:16 (UTC)
+総グリフ数: 3793
 グリフ数(Unicode割当済): 2882
 UPM: 1024
 OS/2 ベンダーID: otmn
