@@ -215,11 +215,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Game files
-assets/hidden_fonts/
-assets/gamedata/
-assets/fonts/**/*.ttf
-assets/fonts/**/*.swf
+# Content files
+contents/**/*.ttf
+contents/**/*.swf
 
 # Font files
 *.ttf
