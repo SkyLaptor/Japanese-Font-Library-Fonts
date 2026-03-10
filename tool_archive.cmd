@@ -4,7 +4,7 @@ cd /d %~dp0
 
 set VERSION=1.0.0
 set APP_NAME=TESVFontForge
-set BUILD_DIR=build
+set BUILD_DIR=dist
 
 :: --- 設定エリア ---
 :: 出力ファイル名
@@ -19,7 +19,7 @@ set TARGETS="assets" "data" "docs" "src" ".python-version" "LICENSE" "README.md"
 set EXCLUDE=-x!data\ffdec\ -x!data\java\
 :: -----------------
 
-echo [ツールのビルドを開始します]
+echo [ツールを配布用にアーカイブします]
 echo 出力先: %OUT_NAME%
 
 :: 7za.exe を実行
