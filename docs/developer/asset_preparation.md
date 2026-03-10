@@ -32,8 +32,7 @@
 
 1. [New empty] から新規SWFを作成します。
 2. `DefineFont3` (chid:1) を追加し、フォント名を以下に設定します。
-   * `REPLACE_ME_FONT_NAME_LENGTH_MAX_XXXXXXXXXXXXXXX`
-3. この名前は `src/const.py` の `DUMMY_FONT_NAME_IN_SWF` と一致している必要があります。
+   * `dummy`
 
 ## テンプレートフォントコンフィグの作成
 `fontconfig.txt` のマスターを作成します。

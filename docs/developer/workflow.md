@@ -11,11 +11,15 @@
 5. 出力後、ログを確認し、サブセットの欠落がないか確認します。必要に応じてマージフォントで補完します。
 
 ## フォント紹介画像の生成
+
 紹介画像は以下のツールと設定で統一してください。
+
 * ツール: https://stmn.itch.io/font2bitmap
 * 設定: Shadow ON, 他はデフォルト
 * テキスト:
-  ```
-  0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz山路を登りながら、こう考えた。智に働けば角が立つ。情に棹させば流される。意地を通せば窮屈だ。とかくに人の世は住みにくい。
-  ```
+
+```
+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz山路を登りながら、こう考えた。智に働けば角が立つ。情に棹させば流される。意地を通せば窮屈だ。とかくに人の世は住みにくい。
+```
+
 * 命名規則: `フォント名(TTF名).png` または `SWF名_内部名.png`
