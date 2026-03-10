@@ -256,6 +256,11 @@ data/ffdec/
 !assets/
 !tests/data/
 
+# Symlink files
+dist
+build
+contents
+
 # Hidden
 hidden/
 *_hidden.*
