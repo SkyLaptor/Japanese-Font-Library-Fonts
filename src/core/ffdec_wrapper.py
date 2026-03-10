@@ -1,4 +1,5 @@
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -304,7 +305,29 @@ def build_ffdec_command(
         if ffdec_jar_path is not None
         else detect_ffdec_jar(project_root)
     )
-    return [resolved_java, "-jar", str(resolved_jar), *ffdec_args]
+    # ヒープ不足回避のため、環境変数からJavaオプションを差し込めるようにする。
+    # 優先度: JFL_JAVA_OPTS > JFL_JAVA_MAX_HEAP_MB
+    java_opts: list[str] = []
+    opts_env = os.environ.get("JFL_JAVA_OPTS")
+    if opts_env:
+        try:
+            java_opts = shlex.split(opts_env)
+        except Exception:
+            # 単純分割の後方互換
+            java_opts = [x for x in opts_env.split(" ") if x]
+    else:
+        max_mb = os.environ.get("JFL_JAVA_MAX_HEAP_MB") or os.environ.get(
+            "_JAVA_MAX_HEAP_MB"
+        )
+        if max_mb:
+            try:
+                mb_val = int(max_mb)
+                if mb_val > 0:
+                    java_opts.append(f"-Xmx{mb_val}m")
+            except Exception:
+                pass
+
+    return [resolved_java, *java_opts, "-jar", str(resolved_jar), *ffdec_args]
 
 
 def run_ffdec(
@@ -322,6 +345,11 @@ def run_ffdec(
         java_executable=java_executable,
         ffdec_jar_path=ffdec_jar_path,
     )
+    if os.environ.get("JFL_LOG_FFDEC_CMD"):
+        try:
+            print("[FFDec] Command:", " ".join(cmd))
+        except Exception:
+            pass
     return subprocess.run(
         cmd,
         check=check,
