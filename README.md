@@ -37,7 +37,12 @@ GUIの `個別：SWF埋め込み` タブにて、出力先とフォント内部�
 ![TESVFontForge-SWF埋め込み](https://github.com/user-attachments/assets/3f6662ba-a8ef-4102-af41-fa74067901e5)
 
 ### 5. ゲームへの導入
-生成されたSWFをゲームに反映させるには、姉妹ツールの [TESVFontPresetBuilder](https://github.com/SkyLaptor/TESVFontPresetBuilder) を使用するのが最も簡単で確実です。
+生成されたSWFをゲームで読み込ませるには、本来 `fontconfig.txt` の書き換えや定義ファイルの作成など、非常に煩雑な手順が必要です。
+
+これらの面倒な作業を自動化し、最も確実かつ簡単に導入できる姉妹ツール [TESVFontPresetBuilder](https://github.com/SkyLaptor/TESVFontPresetBuilder) の使用を強く推奨します。
+
+利用方法及びゲームへの反映手順については、リンク先をご確認ください。
+
 
 ## Tips / 困ったときは
 ### ツールが起動しない・起動が遅い
