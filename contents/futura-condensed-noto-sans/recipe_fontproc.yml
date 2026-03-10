@@ -26,7 +26,7 @@ input_font_path: "futura-condensed/source.ttf" # 【必須】入力フォント�
 #scale_width: 100.0 # 【任意】横方向倍率 (%) デフォルト: 100.0
 #scale_height: 100.0 # 【任意】縦方向倍率 (%) デフォルト: 100.0
 #offset_width: 0 # 【任意】横位置オフセット (em) デフォルト: 0
-offset_height: 0 # 【任意】縦位置オフセット (em) デフォルト: 0
+offset_height: -32 # 【任意】縦位置オフセット (em) デフォルト: 0
 weight_offset: 0 # 【任意】太さ変更量 (em) デフォルト: 0
 #remove_blank_glyphs: true # 【任意】空白グリフを削除するかどうか デフォルト: true。
 #anonymize: true # 【任意】フォント情報を匿名化するかどうか デフォルト: false。
@@ -53,10 +53,12 @@ steps:
     - output_font_path: "futura-condensed-noto-sans/every.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
     - output_font_path: "futura-condensed-noto-sans/every_w70.ttf"
+      input_font_path: "futura-condensed/source_w200.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
       scale_width: 70.0
     - output_font_path: "futura-condensed-noto-sans/every_w50.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      input_font_path: "futura-condensed/source_w380.ttf"
       scale_width: 50.0
     - output_font_path: "futura-condensed-noto-sans/book.ttf"
       base_font_path: "skyrim/22_Skyrim_JP_BookFont_0805.ttf"
@@ -68,10 +70,12 @@ steps:
       subset_text_path: "subsets/subset_jp_skyrim.txt"
     - output_font_path: "futura-condensed-noto-sans/every_w70_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      input_font_path: "futura-condensed/source_w200.ttf"
       scale_width: 70.0
       subset_text_path: "subsets/subset_jp_skyrim.txt"
     - output_font_path: "futura-condensed-noto-sans/every_w50_lw.ttf"
       base_font_path: "skyrim/1_Skyrim_JP_EveryFont_0805.ttf"
+      input_font_path: "futura-condensed/source_w380.ttf"
       scale_width: 50.0
       subset_text_path: "subsets/subset_jp_skyrim.txt"
     - output_font_path: "futura-condensed-noto-sans/book_lw.ttf"
