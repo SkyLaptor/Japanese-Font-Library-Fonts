@@ -2,7 +2,7 @@
 setlocal
 cd /d %~dp0
 
-set VERSION=1.0.1
+set VERSION=1.0.0
 set APP_NAME=TESVFontForge
 set BUILD_DIR=dist
 
