@@ -35,10 +35,16 @@ def _expand_font_slots_in_xml(xml_content: str, slot_count: int) -> str:
     template_item = font_items[0]
     base_font_id = int(template_item.attrib["fontID"])
 
+    # Find the position of the last font item to insert new items after it (Frame 1)
+    last_item = font_items[-1]
+    children = list(tags_element)
+    insert_pos = children.index(last_item) + 1
+
     while len(font_items) < slot_count:
         cloned = copy.deepcopy(template_item)
-        tags_element.append(cloned)
+        tags_element.insert(insert_pos, cloned)
         font_items.append(cloned)
+        insert_pos += 1
 
     for index, item in enumerate(font_items[:slot_count]):
         item.attrib["fontID"] = str(base_font_id + index)
